@@ -30,6 +30,8 @@ class CheckSubscriptions extends BaseCommand
             ->where('tenants.is_suspended', 0)
             ->findAll();
 
+
+
         if (empty($expiredSubs)) {
             CLI::write('Todos los clientes están al día. Ningún hotel suspendido.', 'green');
             return;
