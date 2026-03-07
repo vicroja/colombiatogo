@@ -63,6 +63,18 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
 //Configuración del Hotel
         $routes->get('settings', 'SettingsController::index');
         $routes->post('settings/update', 'SettingsController::update');
+
+    //Motor de Tarifas
+        $routes->get('rate-plans', 'RatePlanController::index');
+        $routes->post('rate-plans/store', 'RatePlanController::store');
+        $routes->get('rate-plans/matrix', 'RatePlanController::matrix');
+        $routes->post('rate-plans/update-matrix', 'RatePlanController::updateMatrix');
+        $routes->get('seasonal-rates', 'SeasonalRateController::index');
+        $routes->post('seasonal-rates/store', 'SeasonalRateController::store');
+        $routes->get('seasonal-rates/delete/(:num)', 'SeasonalRateController::delete/$1');
+
+        // Ruta de prueba para ver la magia de la calculadora en acción
+        $routes->get('seasonal-rates/test-calculator', 'SeasonalRateController::testCalculator');
 });
 
 //Rutas de Reservas
@@ -71,4 +83,6 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
         $routes->post('reservations/store', 'ReservationController::store');
         // Ruta para cambiar el estado de la reserva (FSM)
         $routes->post('reservations/update-status/(:num)', 'ReservationController::updateStatus/$1');
+
+
 
