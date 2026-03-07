@@ -9,6 +9,58 @@ use App\Services\ReservationStateMachineService;
 
 class ReservationController extends BaseController
 {
+
+
+    public function create()
+    {
+        $unitModel = new AccommodationUnitModel();
+        $planModel = new \App\Models\RatePlanModel();
+        $sourceModel = new \App\Models\ReservationSourceModel(); // NUEVO
+
+        // Si no hay fuentes, creamos las básicas para ayudar al hotel
+        if ($sourceModel->countAllResults() == 0) {
+            $sourceModel->createForTenant(['name' => 'Directa (Recepción)', 'color' => '#198754']);
+            $sourceModel->createForTenant(['name' => 'Booking.com', 'color' => '#003580']);
+            $sourceModel->createForTenant(['name' => 'Airbnb', 'color' => '#FF5A5F']);
+        }
+
+        $units = $unitModel->whereIn('status', ['available', 'occupied'])->findAll();
+        $plans = $planModel->where('is_active', 1)->findAll();
+        $sources = $sourceModel->where('is_active', 1)->findAll(); // NUEVO
+
+        return view('reservations/create', [
+            'units' => $units,
+            'plans' => $plans,
+            'sources' => $sources // NUEVO
+        ]);
+    }
+    // NUEVO MÉTODO: Endpoint AJAX para el Cerebro Matemático
+    public function calculatePrice()
+    {
+        $unitId = $this->request->getGet('unit_id');
+        $planId = $this->request->getGet('rate_plan_id');
+        $checkIn = $this->request->getGet('check_in');
+        $checkOut = $this->request->getGet('check_out');
+
+        if (!$unitId || !$planId || !$checkIn || !$checkOut) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Faltan datos']);
+        }
+
+        // Validación para que no pongan la salida antes de la llegada
+        if (strtotime($checkIn) >= strtotime($checkOut)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Fechas inválidas']);
+        }
+
+        $calculator = new \App\Services\PriceCalculatorService();
+        $result = $calculator->calculateStay($unitId, $planId, $checkIn, $checkOut);
+
+        return $this->response->setJSON([
+            'success'     => true,
+            'total_price' => $result['total_price'],
+            'nights'      => $result['nights']
+        ]);
+    }
+
     public function index()
     {
         $resModel = new ReservationModel();
@@ -23,14 +75,6 @@ class ReservationController extends BaseController
         return view('reservations/index', ['reservations' => $reservations]);
     }
 
-    public function create()
-    {
-        $unitModel = new AccommodationUnitModel();
-        // Solo mostramos habitaciones que no estén bloqueadas o en mantenimiento
-        $units = $unitModel->whereIn('status', ['available', 'occupied'])->findAll();
-
-        return view('reservations/create', ['units' => $units]);
-    }
 
     public function store()
     {
@@ -50,6 +94,7 @@ class ReservationController extends BaseController
         // 2. Creamos la reserva inicial (siempre nace 'pending')
         $resModel->createForTenant([
             'guest_id'              => $guestId,
+            'source_id'             => $this->request->getPost('source_id'),
             'accommodation_unit_id' => $this->request->getPost('unit_id'),
             'check_in_date'         => $this->request->getPost('check_in'),
             'check_out_date'        => $this->request->getPost('check_out'),
@@ -144,40 +189,81 @@ class ReservationController extends BaseController
         return $this->response->setJSON($events);
     }
 
-    // Muestra el Folio (Detalle completo de la reserva y pagos)
+
+    // Muestra el Folio (Detalle, Pagos y Consumos)
     public function show($id)
     {
         $resModel = new ReservationModel();
         $paymentModel = new \App\Models\PaymentModel();
+        $consumptionModel = new \App\Models\ReservationConsumptionModel();
+        $productModel = new \App\Models\ProductModel();
 
-        // 1. Obtener la reserva con sus relaciones
         $reservation = $resModel->select('reservations.*, guests.full_name, guests.document, guests.phone, accommodation_units.name as unit_name')
             ->join('guests', 'guests.id = reservations.guest_id')
             ->join('accommodation_units', 'accommodation_units.id = reservations.accommodation_unit_id')
             ->find($id);
 
-        if (!$reservation) {
-            return redirect()->to('/reservations')->with('error', 'Reserva no encontrada.');
-        }
+        if (!$reservation) return redirect()->to('/reservations')->with('error', 'Reserva no encontrada.');
 
-        // 2. Obtener el historial de pagos de esta reserva
         $payments = $paymentModel->where('reservation_id', $id)->orderBy('created_at', 'DESC')->findAll();
+        $consumptions = $consumptionModel->where('reservation_id', $id)->orderBy('created_at', 'DESC')->findAll();
+        $products = $productModel->where('is_active', 1)->orderBy('name', 'ASC')->findAll();
 
-        // 3. Calcular finanzas
-        $totalPaid = 0;
-        foreach ($payments as $p) {
-            $totalPaid += $p['amount'];
-        }
-        $balance = $reservation['total_price'] - $totalPaid;
+        //Traer acompañantes
+        $guestModel = new \App\Models\ReservationGuestModel();
+        $companions = $guestModel->where('reservation_id', $id)->findAll();
+        // Finanzas Actualizadas
+        $totalPaid = array_sum(array_column($payments, 'amount'));
+        $totalConsumptions = array_sum(array_column($consumptions, 'subtotal'));
 
-        $data = [
-            'reservation' => $reservation,
-            'payments'    => $payments,
-            'totalPaid'   => $totalPaid,
-            'balance'     => $balance
-        ];
+        $grandTotal = $reservation['total_price'] + $totalConsumptions;
+        $balance = $grandTotal - $totalPaid;
 
-        return view('reservations/show', $data);
+        return view('reservations/show', [
+            'reservation'       => $reservation,
+            'payments'          => $payments,
+            'consumptions'      => $consumptions,
+            'products'          => $products,
+            'companions'        => $companions, // NUEVO
+            'totalPaid'         => $totalPaid,
+            'totalConsumptions' => $totalConsumptions,
+            'grandTotal'        => $grandTotal,
+            'balance'           => $balance
+        ]);
+    }
+
+    // Procesar un nuevo consumo (POS)
+    public function addConsumption($id)
+    {
+        $productModel = new \App\Models\ProductModel();
+        $consumptionModel = new \App\Models\ReservationConsumptionModel();
+
+        $productId = $this->request->getPost('product_id');
+        $quantity = $this->request->getPost('quantity');
+
+        $product = $productModel->find($productId);
+        if(!$product) return redirect()->back()->with('error', 'Producto no válido.');
+
+        $subtotal = $product['unit_price'] * $quantity;
+
+        $consumptionModel->createForTenant([
+            'reservation_id' => $id,
+            'product_id'     => $product['id'],
+            'description'    => $product['name'],
+            'quantity'       => $quantity,
+            'unit_price'     => $product['unit_price'],
+            'subtotal'       => $subtotal
+        ]);
+
+        return redirect()->to("/reservations/show/{$id}")->with('success', 'Consumo agregado a la cuenta.');
+    }
+
+    // Eliminar un consumo (si el recepcionista se equivocó)
+    public function deleteConsumption($id, $consumptionId)
+    {
+        $consumptionModel = new \App\Models\ReservationConsumptionModel();
+        $consumptionModel->delete($consumptionId);
+        return redirect()->to("/reservations/show/{$id}")->with('success', 'Consumo eliminado.');
     }
 
     // Procesa un nuevo pago/abono
@@ -204,5 +290,91 @@ class ReservationController extends BaseController
         ]);
 
         return redirect()->to("/reservations/show/{$id}")->with('success', 'Pago registrado exitosamente.');
+    }
+    public function addCompanion($id)
+    {
+        $guestModel = new \App\Models\ReservationGuestModel();
+        $guestModel->insert([
+            'reservation_id' => $id,
+            'first_name'     => $this->request->getPost('first_name'),
+            'last_name'      => $this->request->getPost('last_name'),
+            'doc_type'       => $this->request->getPost('doc_type'),
+            'doc_number'     => $this->request->getPost('doc_number'),
+            'relationship'   => $this->request->getPost('relationship')
+        ]);
+        return redirect()->to("/reservations/show/{$id}")->with('success', 'Acompañante registrado (SIRE).');
+    }
+
+    public function deleteCompanion($id, $companionId)
+    {
+        $guestModel = new \App\Models\ReservationGuestModel();
+        $guestModel->delete($companionId);
+        return redirect()->to("/reservations/show/{$id}")->with('success', 'Acompañante eliminado.');
+    }
+    // Vista de Cierre de Cuenta (Factura Final)
+    public function closure($id)
+    {
+        $resModel = new ReservationModel();
+        $paymentModel = new \App\Models\PaymentModel();
+        $consumptionModel = new \App\Models\ReservationConsumptionModel();
+
+        // Traemos los datos
+        $reservation = $resModel->select('reservations.*, guests.full_name, guests.document, accommodation_units.name as unit_name')
+            ->join('guests', 'guests.id = reservations.guest_id')
+            ->join('accommodation_units', 'accommodation_units.id = reservations.accommodation_unit_id')
+            ->find($id);
+
+        if (!$reservation) return redirect()->to('/reservations')->with('error', 'Reserva no encontrada.');
+
+        $payments = $paymentModel->where('reservation_id', $id)->orderBy('created_at', 'ASC')->findAll();
+        $consumptions = $consumptionModel->where('reservation_id', $id)->orderBy('created_at', 'ASC')->findAll();
+
+        // Cálculos financieros
+        $totalPaid = array_sum(array_column($payments, 'amount'));
+        $totalConsumptions = array_sum(array_column($consumptions, 'subtotal'));
+
+        $grandTotal = $reservation['total_price'] + $totalConsumptions;
+        $balance = $grandTotal - $totalPaid;
+
+        return view('reservations/account_closure', [
+            'reservation'       => $reservation,
+            'payments'          => $payments,
+            'consumptions'      => $consumptions,
+            'totalPaid'         => $totalPaid,
+            'totalConsumptions' => $totalConsumptions,
+            'grandTotal'        => $grandTotal,
+            'balance'           => $balance
+        ]);
+    }
+
+    // Procesar el Check-out Definitivo
+    public function processCheckout($id)
+    {
+        $resModel = new ReservationModel();
+        $paymentModel = new \App\Models\PaymentModel();
+        $consumptionModel = new \App\Models\ReservationConsumptionModel();
+
+        $reservation = $resModel->find($id);
+        if (!$reservation) return redirect()->to('/reservations')->with('error', 'Reserva no encontrada.');
+
+        // 1. Verificación Estricta: ¿Debe dinero?
+        $totalPaid = array_sum(array_column($paymentModel->where('reservation_id', $id)->findAll(), 'amount'));
+        $totalConsumptions = array_sum(array_column($consumptionModel->where('reservation_id', $id)->findAll(), 'subtotal'));
+
+        $balance = ($reservation['total_price'] + $totalConsumptions) - $totalPaid;
+
+        if ($balance > 0) {
+            return redirect()->back()->with('error', 'No se puede hacer Check-out. El huésped aún debe $'.number_format($balance, 2));
+        }
+
+        // 2. Transición de Estado usando nuestra Máquina de Estados (FSM)
+        $fsm = new \App\Services\ReservationStateMachineService();
+        $result = $fsm->transitionState($id, 'checked_out');
+
+        if (!$result['success']) {
+            return redirect()->back()->with('error', $result['message']);
+        }
+
+        return redirect()->to('/reservations')->with('success', '¡Check-out completado! La habitación está libre nuevamente.');
     }
 }

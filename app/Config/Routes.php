@@ -28,8 +28,6 @@ $routes->group('super', ['filter' => 'superadmin_auth'], static function ($route
     $routes->post('billing/renew/(:num)', 'Super\BillingController::renew/$1');
 
 
-
-
 });
 
 // ====================================================================
@@ -61,28 +59,45 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
     $routes->get('reservations/show/(:num)', 'ReservationController::show/$1');
     $routes->post('reservations/add-payment/(:num)', 'ReservationController::addPayment/$1');
 //Configuración del Hotel
-        $routes->get('settings', 'SettingsController::index');
-        $routes->post('settings/update', 'SettingsController::update');
+    $routes->get('settings', 'SettingsController::index');
+    $routes->post('settings/update', 'SettingsController::update');
+
+    $routes->get('reservations/calculate-price', 'ReservationController::calculatePrice');
+
+    $routes->get('products', 'ProductController::index');
+    $routes->post('products/store-category', 'ProductController::storeCategory');
+    $routes->post('products/store-product', 'ProductController::storeProduct');
 
     //Motor de Tarifas
-        $routes->get('rate-plans', 'RatePlanController::index');
-        $routes->post('rate-plans/store', 'RatePlanController::store');
-        $routes->get('rate-plans/matrix', 'RatePlanController::matrix');
-        $routes->post('rate-plans/update-matrix', 'RatePlanController::updateMatrix');
-        $routes->get('seasonal-rates', 'SeasonalRateController::index');
-        $routes->post('seasonal-rates/store', 'SeasonalRateController::store');
-        $routes->get('seasonal-rates/delete/(:num)', 'SeasonalRateController::delete/$1');
+    $routes->get('rate-plans', 'RatePlanController::index');
+    $routes->post('rate-plans/store', 'RatePlanController::store');
+    $routes->get('rate-plans/matrix', 'RatePlanController::matrix');
+    $routes->post('rate-plans/update-matrix', 'RatePlanController::updateMatrix');
+    $routes->get('seasonal-rates', 'SeasonalRateController::index');
+    $routes->post('seasonal-rates/store', 'SeasonalRateController::store');
+    $routes->get('seasonal-rates/delete/(:num)', 'SeasonalRateController::delete/$1');
 
-        // Ruta de prueba para ver la magia de la calculadora en acción
-        $routes->get('seasonal-rates/test-calculator', 'SeasonalRateController::testCalculator');
+    // Ruta de prueba para ver la magia de la calculadora en acción
+    $routes->get('seasonal-rates/test-calculator', 'SeasonalRateController::testCalculator');
+
+    //  ESTAS LÍNEAS: Punto de Venta (Consumos)
+    $routes->post('reservations/add-consumption/(:num)', 'ReservationController::addConsumption/$1');
+    $routes->get('reservations/delete-consumption/(:num)/(:num)', 'ReservationController::deleteConsumption/$1/$2');
+
+    $routes->post('reservations/add-companion/(:num)', 'ReservationController::addCompanion/$1');
+    $routes->get('reservations/delete-companion/(:num)/(:num)', 'ReservationController::deleteCompanion/$1/$2');
+
+    $routes->get('reservations/closure/(:num)', 'ReservationController::closure/$1');
+    $routes->post('reservations/process-checkout/(:num)', 'ReservationController::processCheckout/$1');
+
 });
 
 //Rutas de Reservas
-        $routes->get('reservations', 'ReservationController::index');
-        $routes->get('reservations/create', 'ReservationController::create');
-        $routes->post('reservations/store', 'ReservationController::store');
-        // Ruta para cambiar el estado de la reserva (FSM)
-        $routes->post('reservations/update-status/(:num)', 'ReservationController::updateStatus/$1');
+$routes->get('reservations', 'ReservationController::index');
+$routes->get('reservations/create', 'ReservationController::create');
+$routes->post('reservations/store', 'ReservationController::store');
+// Ruta para cambiar el estado de la reserva (FSM)
+$routes->post('reservations/update-status/(:num)', 'ReservationController::updateStatus/$1');
 
 
 

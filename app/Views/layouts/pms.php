@@ -15,6 +15,7 @@
                 <li class="nav-item"><a class="nav-link" href="<?= base_url('/inventory') ?>">Inventario</a></li>
                 <li class="nav-item"><a class="nav-link" href="<?= base_url('/reservations') ?>">Reservas</a></li>
                 <li class="nav-item"><a class="nav-link" href="<?= base_url('/settings') ?>">Configuración</a></li>
+                <li class="nav-item"><a class="nav-link" href="<?= base_url('/products') ?>">Catálogo POS</a></li>
             </ul>
             <div class="d-flex text-white align-items-center">
                 <span class="me-3"><?= session('user_name') ?></span>

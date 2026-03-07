@@ -53,22 +53,94 @@
                     </form>
                 </div>
             </div>
+
+
+            <?php if(!in_array($reservation['status'], ['cancelled', 'checked_out'])): ?>
+                <div class="card shadow-sm border-warning mt-4">
+                    <div class="card-header bg-warning text-dark fw-bold">
+                        <i class="bi bi-cart-plus"></i> Cargar Consumo a la Habitación
+                    </div>
+                    <div class="card-body bg-light">
+                        <form action="<?= base_url('/reservations/add-consumption/'.$reservation['id']) ?>" method="post" class="row gx-2 align-items-end">
+                            <?= csrf_field() ?>
+                            <div class="col-md-7">
+                                <?php if(!in_array($reservation['status'], ['cancelled', 'checked_out'])): ?>
+                                    <div class="d-grid mb-4">
+                                        <a href="<?= base_url('/reservations/closure/'.$reservation['id']) ?>" class="btn btn-dark btn-lg fw-bold shadow-sm">
+                                            <i class="bi bi-receipt"></i> Cerrar Cuenta y Check-out &rarr;
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
+                                <label class="form-label small">Producto / Servicio</label>
+                                <select name="product_id" class="form-select form-select-sm" required>
+                                    <option value="">Seleccionar...</option>
+                                    <?php foreach($products as $prod): ?>
+                                        <option value="<?= $prod['id'] ?>"><?= esc($prod['name']) ?> ($<?= number_format($prod['unit_price'], 2) ?>)</option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Cant.</label>
+                                <input type="number" name="quantity" class="form-control form-control-sm" value="1" min="1" required>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <button type="submit" class="btn btn-sm btn-warning w-100 fw-bold">+</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="card-body p-0 border-top bg-white">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th class="small">Ítem</th>
+                                <th class="small text-center">Cant</th>
+                                <th class="small text-end">Subtotal</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <?php if(empty($consumptions)): ?>
+                                <tr><td colspan="4" class="text-center py-2 text-muted small">Sin consumos extra.</td></tr>
+                            <?php else: ?>
+                                <?php foreach($consumptions as $c): ?>
+                                    <tr>
+                                        <td class="small"><?= esc($c['description']) ?></td>
+                                        <td class="small text-center"><?= $c['quantity'] ?></td>
+                                        <td class="small text-end">$<?= number_format($c['subtotal'], 2) ?></td>
+                                        <td class="text-end">
+                                            <a href="<?= base_url('/reservations/delete-consumption/'.$reservation['id'].'/'.$c['id']) ?>" class="text-danger text-decoration-none" onclick="return confirm('¿Borrar consumo?');">&times;</a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+
         </div>
 
         <div class="col-md-7">
             <div class="card shadow-sm mb-4">
                 <div class="card-body text-center d-flex justify-content-around align-items-center">
                     <div>
-                        <h6 class="text-muted mb-0">Total Reserva</h6>
-                        <h3 class="mb-0">$<?= number_format($reservation['total_price'], 2) ?></h3>
+                        <h6 class="text-muted mb-0 small">Alojamiento</h6>
+                        <h5 class="mb-0">$<?= number_format($reservation['total_price'], 2) ?></h5>
                     </div>
                     <div>
-                        <h6 class="text-muted mb-0">Total Pagado</h6>
-                        <h3 class="mb-0 text-success">$<?= number_format($totalPaid, 2) ?></h3>
+                        <h6 class="text-muted mb-0 small">Extras (POS)</h6>
+                        <h5 class="mb-0 text-warning">$<?= number_format($totalConsumptions, 2) ?></h5>
                     </div>
                     <div>
-                        <h6 class="text-muted mb-0">Saldo Pendiente</h6>
-                        <h3 class="mb-0 <?= $balance > 0 ? 'text-danger' : 'text-secondary' ?>">$<?= number_format($balance, 2) ?></h3>
+                        <h6 class="text-muted mb-0 small">Total Pagado</h6>
+                        <h5 class="mb-0 text-success">$<?= number_format($totalPaid, 2) ?></h5>
+                    </div>
+                    <div class="bg-light p-2 rounded border">
+                        <h6 class="text-dark fw-bold mb-0">Saldo Pendiente</h6>
+                        <h4 class="mb-0 <?= $balance > 0 ? 'text-danger' : 'text-secondary' ?> fw-bold">$<?= number_format($balance, 2) ?></h4>
                     </div>
                 </div>
             </div>
@@ -136,3 +208,5 @@
     </div>
 
 <?= $this->endSection() ?>
+
+
