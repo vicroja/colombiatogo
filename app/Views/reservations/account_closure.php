@@ -6,7 +6,10 @@
 
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <a href="<?= base_url('/reservations/show/'.$reservation['id']) ?>" class="btn btn-outline-secondary">&larr; Volver al Folio</a>
-                <h3 class="mb-0 text-dark">Cierre de Cuenta y Check-out</h3>
+
+                <a href="<?= base_url('/reservations/invoice/'.$reservation['id']) ?>" target="_blank" class="btn btn-danger shadow-sm fw-bold">
+                    <i class="bi bi-file-earmark-pdf-fill"></i> Generar PDF
+                </a>
             </div>
 
             <div class="card shadow border-0 mb-4">

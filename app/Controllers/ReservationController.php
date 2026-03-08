@@ -10,7 +10,74 @@ use App\Services\ReservationStateMachineService;
 class ReservationController extends BaseController
 {
 
+    public function calculatePrice()
+    {
+        $unitId = $this->request->getGet('unit_id');
+        $ratePlanId = $this->request->getGet('rate_plan_id');
+        $checkIn = $this->request->getGet('check_in');
+        $checkOut = $this->request->getGet('check_out');
+        $promoCode = $this->request->getGet('promo_code'); // NUEVO: Recibimos el código
 
+        if (!$unitId || !$ratePlanId || !$checkIn || !$checkOut) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Faltan datos']);
+        }
+
+        $datetime1 = new \DateTime($checkIn);
+        $datetime2 = new \DateTime($checkOut);
+        $interval = $datetime1->diff($datetime2);
+        $nights = $interval->days;
+
+        if ($nights <= 0) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Fechas inválidas']);
+        }
+
+        // Lógica base de precio (Simplificada para el MVP)
+        $rateModel = new \App\Models\UnitRateModel();
+        $rate = $rateModel->where('unit_id', $unitId)
+            ->where('rate_plan_id', $ratePlanId)
+            ->first();
+
+        $basePricePerNight = $rate ? $rate['base_rate'] : 0;
+        $totalPrice = $basePricePerNight * $nights;
+        $originalPrice = $totalPrice;
+        $discountAmount = 0;
+        $promoId = null;
+
+        // NUEVO: Lógica de Promociones
+        if (!empty($promoCode) && $totalPrice > 0) {
+            $promoModel = new \App\Models\PromotionModel();
+            $promo = $promoModel->where('code', strtoupper($promoCode))
+                ->where('tenant_id', session('active_tenant_id'))
+                ->where('is_active', 1)
+                ->where('valid_from <=', date('Y-m-d'))
+                ->where('valid_until >=', date('Y-m-d'))
+                ->first();
+
+            // Si el cupón existe y tiene usos disponibles
+            if ($promo && ($promo['max_uses'] == 0 || $promo['current_uses'] < $promo['max_uses'])) {
+                if ($promo['discount_type'] == 'percentage') {
+                    $discountAmount = $totalPrice * ($promo['discount_value'] / 100);
+                } else {
+                    $discountAmount = $promo['discount_value'];
+                }
+
+                $totalPrice = max(0, $totalPrice - $discountAmount);
+                $promoId = $promo['id'];
+            } else {
+                return $this->response->setJSON(['success' => false, 'message' => 'Cupón inválido o agotado']);
+            }
+        }
+
+        return $this->response->setJSON([
+            'success'         => true,
+            'nights'          => $nights,
+            'original_price'  => number_format($originalPrice, 2, '.', ''),
+            'discount_amount' => number_format($discountAmount, 2, '.', ''),
+            'total_price'     => number_format($totalPrice, 2, '.', ''),
+            'promo_applied'   => $discountAmount > 0,
+            'promo_id'        => $promoId
+        ]);
+    }
     public function create()
     {
         $unitModel = new AccommodationUnitModel();
@@ -34,32 +101,8 @@ class ReservationController extends BaseController
             'sources' => $sources // NUEVO
         ]);
     }
-    // NUEVO MÉTODO: Endpoint AJAX para el Cerebro Matemático
-    public function calculatePrice()
-    {
-        $unitId = $this->request->getGet('unit_id');
-        $planId = $this->request->getGet('rate_plan_id');
-        $checkIn = $this->request->getGet('check_in');
-        $checkOut = $this->request->getGet('check_out');
 
-        if (!$unitId || !$planId || !$checkIn || !$checkOut) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Faltan datos']);
-        }
 
-        // Validación para que no pongan la salida antes de la llegada
-        if (strtotime($checkIn) >= strtotime($checkOut)) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Fechas inválidas']);
-        }
-
-        $calculator = new \App\Services\PriceCalculatorService();
-        $result = $calculator->calculateStay($unitId, $planId, $checkIn, $checkOut);
-
-        return $this->response->setJSON([
-            'success'     => true,
-            'total_price' => $result['total_price'],
-            'nights'      => $result['nights']
-        ]);
-    }
 
     public function index()
     {
@@ -107,7 +150,12 @@ class ReservationController extends BaseController
         if ($guestModel->db->transStatus() === false) {
             return redirect()->back()->with('error', 'Error al crear la reserva.');
         }
-
+// Registrar el uso del cupón si se aplicó
+        $promoId = $this->request->getPost('promo_id');
+        if ($promoId) {
+            $promoModel = new \App\Models\PromotionModel();
+            $promoModel->where('id', $promoId)->set('current_uses', 'current_uses+1', false)->update();
+        }
         return redirect()->to('/reservations')->with('success', 'Reserva creada exitosamente.');
     }
 
@@ -376,5 +424,68 @@ class ReservationController extends BaseController
         }
 
         return redirect()->to('/reservations')->with('success', '¡Check-out completado! La habitación está libre nuevamente.');
+    }
+
+    // Generar Factura en PDF (mPDF)
+    public function invoice($id)
+    {
+        $resModel = new ReservationModel();
+        $paymentModel = new \App\Models\PaymentModel();
+        $consumptionModel = new \App\Models\ReservationConsumptionModel();
+
+        $reservation = $resModel->select('reservations.*, guests.full_name, guests.document, accommodation_units.name as unit_name')
+            ->join('guests', 'guests.id = reservations.guest_id')
+            ->join('accommodation_units', 'accommodation_units.id = reservations.accommodation_unit_id')
+            ->find($id);
+
+        if (!$reservation) return redirect()->to('/reservations')->with('error', 'Reserva no encontrada.');
+
+        $payments = $paymentModel->where('reservation_id', $id)->orderBy('created_at', 'ASC')->findAll();
+        $consumptions = $consumptionModel->where('reservation_id', $id)->orderBy('created_at', 'ASC')->findAll();
+
+        $totalPaid = array_sum(array_column($payments, 'amount'));
+        $totalConsumptions = array_sum(array_column($consumptions, 'subtotal'));
+        $grandTotal = $reservation['total_price'] + $totalConsumptions;
+        $balance = $grandTotal - $totalPaid;
+
+        // Preparamos los datos para la vista del PDF
+        $data = [
+            'reservation'       => $reservation,
+            'payments'          => $payments,
+            'consumptions'      => $consumptions,
+            'totalPaid'         => $totalPaid,
+            'totalConsumptions' => $totalConsumptions,
+            'grandTotal'        => $grandTotal,
+            'balance'           => $balance,
+            'tenant_name'       => session('tenant_name') ?: 'Hotel Casa Lucerito',
+            'tenant_logo'       => session('tenant_logo'), // Si subiste logo en configuración
+            'currency'          => session('currency_symbol') ?: '$'
+        ];
+
+        // 1. Capturamos el HTML de la vista
+        $html = view('reservations/invoice_pdf', $data);
+
+        // 2. Instanciamos mPDF
+        // 'format' => 'Letter' (Carta) o 'A4'
+        $mpdf = new \Mpdf\Mpdf([
+            'mode'   => 'utf-8',
+            'format' => 'Letter',
+            'margin_top' => 15,
+            'margin_bottom' => 15,
+            'margin_left' => 15,
+            'margin_right' => 15,
+        ]);
+
+        // Opcional: Agregar pie de página
+        $mpdf->SetFooter('Generado el ' . date('d/m/Y H:i') . '||Pág. {PAGENO} de {nbpg}');
+        // 3. Escribimos el HTML en el PDF
+        $mpdf->WriteHTML($html);
+
+        // 4. Salida al navegador. 'I' abre en el navegador, 'D' fuerza la descarga directa.
+        $this->response->setHeader('Content-Type', 'application/pdf');
+        $mpdf->Output("Factura_Reserva_00{$id}.pdf", 'I');
+
+        // Evitamos que CodeIgniter intente renderizar algo más
+        exit();
     }
 }

@@ -14,7 +14,7 @@ class UserModel extends BaseMultiTenantModel
 
     protected $allowedFields    = [
         'tenant_id', 'name', 'email', 'password_hash',
-        'role', 'is_active', 'last_login_at'
+        'role', 'is_active', 'last_login_at','role_id'
     ];
 
     protected $useTimestamps = true;

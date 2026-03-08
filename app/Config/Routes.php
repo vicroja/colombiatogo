@@ -90,14 +90,67 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
     $routes->get('reservations/closure/(:num)', 'ReservationController::closure/$1');
     $routes->post('reservations/process-checkout/(:num)', 'ReservationController::processCheckout/$1');
 
+    // AGREGA ESTAS LÍNEAS: Gestión de Empleados
+    $routes->get('users', 'UserController::index');
+    $routes->post('users/store', 'UserController::store');
+    $routes->get('users/delete/(:num)', 'UserController::delete/$1');
+
+    $routes->get('maintenance', 'MaintenanceController::index');
+    $routes->post('maintenance/store', 'MaintenanceController::store');
+    $routes->post('maintenance/update-status/(:num)', 'MaintenanceController::updateStatus/$1');
+    $routes->get('maintenance/delete/(:num)', 'MaintenanceController::delete/$1');
+
+    //Proveedores
+        $routes->get('suppliers', 'SupplierController::index');
+        $routes->post('suppliers/store', 'SupplierController::store');
+
+    //Módulo de Compras
+    $routes->get('purchases', 'PurchaseController::index');
+    $routes->post('purchases/store', 'PurchaseController::store');
+    $routes->get('purchases/show/(:num)', 'PurchaseController::show/$1');
+    $routes->post('purchases/add-item/(:num)', 'PurchaseController::addItem/$1');
+    $routes->get('purchases/delete-item/(:num)/(:num)', 'PurchaseController::deleteItem/$1/$2');
+    $routes->post('purchases/add-payment/(:num)', 'PurchaseController::addPayment/$1');
+
+    //Configuración del Hotel
+        $routes->get('settings', 'SettingsController::index');
+        $routes->post('settings/update', 'SettingsController::update');
+        //Centro de Reportes
+            $routes->get('reports', 'ReportController::index');
+            $routes->post('reports/export', 'ReportController::export');
+
+    //Promociones
+        $routes->get('promotions', 'PromotionController::index');
+        $routes->post('promotions/store', 'PromotionController::store');
+        $routes->get('promotions/delete/(:num)', 'PromotionController::delete/$1');
+
+    $routes->get('reservations/invoice/(:num)', 'ReservationController::invoice/$1');
+
+    // AGREGA ESTAS LÍNEAS: Constructor del Sitio Web y Galería
+    $routes->get('website', 'WebsiteController::index');
+    $routes->post('website/update', 'WebsiteController::update');
+    $routes->post('website/upload-media', 'WebsiteController::uploadMedia');
+    $routes->get('website/delete-media/(:num)', 'WebsiteController::deleteMedia/$1');
+
+
+    //Rutas de Reservas
+    $routes->get('reservations', 'ReservationController::index');
+    $routes->get('reservations/create', 'ReservationController::create');
+    $routes->post('reservations/store', 'ReservationController::store');
+// Ruta para cambiar el estado de la reserva (FSM)
+    $routes->post('reservations/update-status/(:num)', 'ReservationController::updateStatus/$1');
 });
 
-//Rutas de Reservas
-$routes->get('reservations', 'ReservationController::index');
-$routes->get('reservations/create', 'ReservationController::create');
-$routes->post('reservations/store', 'ReservationController::store');
-// Ruta para cambiar el estado de la reserva (FSM)
-$routes->post('reservations/update-status/(:num)', 'ReservationController::updateStatus/$1');
+// ====================================================================
+// MOTOR DE RESERVAS DIRECTAS (PÁGINA WEB PÚBLICA DEL HOTEL)
+// ====================================================================
+// La URL será: misaas.com/book/casa-lucerito
+$routes->get('book/(:segment)', 'PublicWebsiteController::index/$1');
+$routes->post('book/(:segment)/confirm', 'PublicWebsiteController::confirm/$1');
+$routes->get('book/(:segment)/success', 'PublicWebsiteController::success/$1');
+
+
+
 
 
 
