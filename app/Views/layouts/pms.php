@@ -18,6 +18,7 @@
                 <li class="nav-item"><a class="nav-link" href="<?= base_url('/products') ?>">Catálogo POS</a></li>
                 <li class="nav-item"><a class="nav-link" href="<?= base_url('/reports') ?>"><i class="bi bi-bar-chart"></i> Reportes</a></li>
                 <li class="nav-item"><a class="nav-link" href="<?= base_url('/promotions') ?>"><i class="bi bi-tags"></i> Promociones</a></li>
+                <li class="nav-item"><a class="nav-link" href="<?= base_url('/agents') ?>"><i class="bi bi-briefcase"></i> Comisionistas</a></li>
                 <li class="nav-item"><a class="nav-link text-warning" href="<?= base_url('/website') ?>"><i class="bi bi-globe"></i> Mi Página Web</a></li>
             </ul>
             <div class="d-flex text-white align-items-center">

@@ -41,12 +41,20 @@
                 <?php if(empty($units)): ?>
                     <tr><td colspan="3" class="text-center py-4 text-muted">Aún no hay habitaciones configuradas.</td></tr>
                 <?php else: ?>
-                    <?php foreach($units as $u): ?>
+                    <?php foreach($units as $unit): ?>
                         <tr>
-                            <td><strong><?= esc($u['name']) ?></strong></td>
-                            <td><?= esc($u['type_name']) ?></td>
+                            <td><strong><?= esc($unit['name']) ?></strong></td>
+                            <td><?= esc($unit['type_name']) ?></td>
                             <td>
-                                <span class="badge bg-success">Disponible</span>
+                            <span class="badge bg-<?= $unit['status'] == 'available' ? 'success' : 'secondary' ?>">
+                    <?= esc($unit['status']) ?>
+                </span>
+                            </td>
+                            <td class="text-end">
+
+                                <a href="<?= base_url('inventory/unit/edit/' . $unit['id']) ?>" class="btn btn-sm btn-outline-primary shadow-sm" title="Ver y Editar Detalles">
+                                    <i class="bi bi-pencil-square"></i> Detalles
+                                </a>
                             </td>
                         </tr>
                     <?php endforeach; ?>

@@ -139,6 +139,21 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
     $routes->post('reservations/store', 'ReservationController::store');
 // Ruta para cambiar el estado de la reserva (FSM)
     $routes->post('reservations/update-status/(:num)', 'ReservationController::updateStatus/$1');
+
+    $routes->get('inventory/edit-unit/(:num)', 'InventoryController::editUnit/$1');
+    $routes->post('inventory/update-unit/(:num)', 'InventoryController::updateUnit/$1');
+    $routes->post('inventory/upload-unit-media', 'InventoryController::uploadUnitMedia');
+    $routes->get('inventory/delete-unit-media/(:num)', 'InventoryController::deleteUnitMedia/$1');
+
+    $routes->get('inventory/unit/edit/(:num)', 'InventoryController::editUnit/$1');
+    $routes->post('inventory/unit/update/(:num)', 'InventoryController::updateUnit/$1');
+    $routes->get('inventory/unit/media/delete/(:num)', 'InventoryController::deleteUnitMedia/$1');
+
+    // RUTAS PARA COMISIONISTAS Y AGENCIAS
+    $routes->get('agents', 'AgentController::index');
+    $routes->post('agents/store', 'AgentController::store');
+    $routes->get('agents/delete/(:num)', 'AgentController::delete/$1');
+
 });
 
 // ====================================================================
