@@ -154,6 +154,10 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
     $routes->post('agents/store', 'AgentController::store');
     $routes->get('agents/delete/(:num)', 'AgentController::delete/$1');
 
+    // LIQUIDACIÓN DE COMISIONES
+    $routes->get('commissions', 'CommissionController::index');
+    $routes->get('commissions/pay/(:num)', 'CommissionController::pay/$1');
+
 });
 
 // ====================================================================

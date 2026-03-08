@@ -12,6 +12,10 @@
     </style>
 </head>
 <body>
+<?php
+// Atrapamos el código de la URL si existe (ej. ?ref=PROMO10)
+$agentRef = isset($_GET['ref']) ? esc($_GET['ref']) : '';
+?>
 <div class="container py-5 text-center">
     <h1 class="display-3 text-primary mb-3"><?= esc($tenant['name']) ?></h1>
     <p class="lead text-muted mb-5"><?= esc($website['hero_subtitle']) ?></p>

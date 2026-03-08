@@ -26,7 +26,10 @@
     </style>
 </head>
 <body class="bg-light">
-
+<?php
+// Atrapamos el código de la URL si existe (ej. ?ref=PROMO10)
+$agentRef = isset($_GET['ref']) ? esc($_GET['ref']) : '';
+?>
 <nav class="navbar navbar-expand-lg navbar-light bg-white py-3 shadow-sm sticky-top">
     <div class="container">
         <a class="navbar-brand fw-bold text-primary" href="#">
@@ -87,6 +90,7 @@
                     <div class="modal-content border-0 shadow">
                         <form action="<?= base_url('/book/'.$tenant['slug'].'/confirm') ?>" method="post">
                             <input type="hidden" name="unit_id" value="<?= $unit['id'] ?>">
+                            <input type="hidden" name="agent_ref" value="<?= $agentRef ?>">
                             <div class="modal-header bg-primary text-white">
                                 <h5 class="modal-title">Reservar <?= esc($unit['name']) ?></h5>
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>

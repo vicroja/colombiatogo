@@ -105,6 +105,43 @@ class PublicWebsiteController extends BaseController
             'status'                => 'pending' // Pendiente de pago/confirmación
         ]);
 
+        // ==========================================
+        // NUEVO: RASTREO DE COMISIÓN DESDE LA WEB
+        // ==========================================
+        $refCode = $this->request->getPost('agent_ref');
+
+        if (!empty($refCode)) {
+            $agentModel = new \App\Models\CommissionAgentModel();
+
+            // Buscamos si existe un agente activo con ese código en este hotel
+            $agent = $agentModel->where('tenant_id', $tenant['id'])
+                ->where('tracking_code', strtoupper(trim($refCode)))
+                ->where('is_active', 1)
+                ->first();
+
+            if ($agent) {
+                $commissionModel = new \App\Models\CommissionModel();
+
+                // Calculamos cuánto le toca
+                $commissionAmount = 0;
+                if ($agent['commission_type'] == 'percentage') {
+                    $commissionAmount = $estimatedTotal * ($agent['commission_value'] / 100);
+                } else {
+                    $commissionAmount = $agent['commission_value'];
+                }
+
+                // Anotamos la deuda en el libro contable
+                $commissionModel->insert([
+                    'tenant_id'      => $tenant['id'],
+                    'reservation_id' => $reservationId, // Usamos el ID de la reserva que acabamos de crear
+                    'agent_id'       => $agent['id'],
+                    'amount'         => $commissionAmount,
+                    'status'         => 'pending'
+                ]);
+            }
+        }
+
+
         $db->transComplete();
 
         return redirect()->to("/book/{$slug}/success");

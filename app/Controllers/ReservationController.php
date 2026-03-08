@@ -32,12 +32,21 @@ class ReservationController extends BaseController
         }
 
         // Lógica base de precio (Simplificada para el MVP)
+// Lógica base de precio (A prueba de balas)
         $rateModel = new \App\Models\UnitRateModel();
         $rate = $rateModel->where('unit_id', $unitId)
             ->where('rate_plan_id', $ratePlanId)
             ->first();
 
-        $basePricePerNight = $rate ? $rate['base_rate'] : 0;
+        // 1. Intentar sacar el precio del plan de tarifas (probando los nombres de columna más comunes)
+        if ($rate) {
+            $basePricePerNight = $rate['rate'] ?? $rate['base_rate'] ?? $rate['price'] ?? 0;
+        } else {
+            // 2. Si no hay plan de tarifas asignado, usamos el precio estándar de la cabaña
+            $unitModel = new \App\Models\AccommodationUnitModel();
+            $unitInfo = $unitModel->find($unitId);
+            $basePricePerNight = $unitInfo['base_price'] ?? 0;
+        }
         $totalPrice = $basePricePerNight * $nights;
         $originalPrice = $totalPrice;
         $discountAmount = 0;
@@ -83,6 +92,7 @@ class ReservationController extends BaseController
         $unitModel = new AccommodationUnitModel();
         $planModel = new \App\Models\RatePlanModel();
         $sourceModel = new \App\Models\ReservationSourceModel(); // NUEVO
+        $agentModel = new \App\Models\CommissionAgentModel(); // NUEVO
 
         // Si no hay fuentes, creamos las básicas para ayudar al hotel
         if ($sourceModel->countAllResults() == 0) {
@@ -94,10 +104,13 @@ class ReservationController extends BaseController
         $units = $unitModel->whereIn('status', ['available', 'occupied'])->findAll();
         $plans = $planModel->where('is_active', 1)->findAll();
         $sources = $sourceModel->where('is_active', 1)->findAll(); // NUEVO
+        $tenantId = session('active_tenant_id');
+        $agents = $agentModel->where('tenant_id', $tenantId)->where('is_active', 1)->findAll();
 
         return view('reservations/create', [
             'units' => $units,
             'plans' => $plans,
+            'agents' => $agents, // NUEVO
             'sources' => $sources // NUEVO
         ]);
     }
@@ -135,7 +148,7 @@ class ReservationController extends BaseController
         ]);
 
         // 2. Creamos la reserva inicial (siempre nace 'pending')
-        $resModel->createForTenant([
+        $reservationId = $resModel->createForTenant([
             'guest_id'              => $guestId,
             'source_id'             => $this->request->getPost('source_id'),
             'accommodation_unit_id' => $this->request->getPost('unit_id'),
@@ -155,6 +168,41 @@ class ReservationController extends BaseController
         if ($promoId) {
             $promoModel = new \App\Models\PromotionModel();
             $promoModel->where('id', $promoId)->set('current_uses', 'current_uses+1', false)->update();
+        }
+
+        // ==========================================
+        // LÓGICA DE COMISIONISTAS Y AGENCIAS
+        // ==========================================
+        $agentId = $this->request->getPost('agent_id');
+
+        if (!empty($agentId)) {
+            $agentModel = new \App\Models\CommissionAgentModel();
+            $commissionModel = new \App\Models\CommissionModel();
+
+            $agent = $agentModel->where('tenant_id', session('active_tenant_id'))->find($agentId);
+
+            if ($agent) {
+                // Capturamos el total directamente del formulario
+                $precioAlojamiento = (float) $this->request->getPost('total_price');
+
+                // La comisión se calcula SOLO sobre el alojamiento, no sobre minibar o extras
+                $commissionAmount = 0;
+
+                if ($agent['commission_type'] == 'percentage') {
+                    $commissionAmount = $precioAlojamiento * ($agent['commission_value'] / 100);
+                } else {
+                    $commissionAmount = $agent['commission_value']; // Monto fijo
+                }
+
+                // Guardar la deuda como "Pendiente"
+                $commissionModel->insert([
+                    'tenant_id'      => session('active_tenant_id'),
+                    'reservation_id' => $reservationId,
+                    'agent_id'       => $agentId,
+                    'amount'         => $commissionAmount,
+                    'status'         => 'pending'
+                ]);
+            }
         }
         return redirect()->to('/reservations')->with('success', 'Reserva creada exitosamente.');
     }

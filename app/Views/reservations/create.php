@@ -48,6 +48,21 @@
                                 </select>
                             </div>
                             <div class="col-md-4 mb-3">
+                                <label class="form-label small text-muted fw-bold"><i class="bi bi-briefcase"></i> Agencia / Comisionista</label>
+                                <select name="agent_id" class="form-select">
+                                    <option value="">-- Ninguno (Reserva Directa) --</option>
+                                    <?php if(isset($agents)): ?>
+                                        <?php foreach($agents as $agent): ?>
+                                            <?php $comText = $agent['commission_type'] == 'percentage' ? $agent['commission_value'].'%' : session('currency_symbol').$agent['commission_value']; ?>
+                                            <option value="<?= $agent['id'] ?>">
+                                                <?= esc($agent['name']) ?> (Gana <?= $comText ?>)
+                                            </option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
+                                <small class="text-muted d-block mt-1">Opcional. Si eliges uno, se generará la comisión.</small>
+                            </div>
+                            <div class="col-md-4 mb-3">
                                 <label class="form-label small text-muted fw-bold">Habitación Asignada</label>
                                 <select name="unit_id" id="unit_id" class="form-select border-primary" required>
                                     <option value="">Seleccione habitación...</option>
