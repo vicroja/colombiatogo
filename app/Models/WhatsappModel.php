@@ -187,4 +187,55 @@ class WhatsappModel extends Model
 
         return $cleanedPhone;
     }
+
+    /**
+     * Obtiene la lista de conversaciones agrupadas para DataTables.
+     */
+    public function getConversationsDatatables($tenantId, $start, $length, $search, $filters)
+    {
+        $builder = $this->db->table($this->table . ' m');
+
+        // Subconsulta para obtener la última actividad por teléfono
+        $builder->select('
+            MAX(m.id) as last_id,
+            IF(m.direction = "incoming", m.sender_phone, m.recipient_phone) as phone_key,
+            MAX(m.created_at) as last_activity
+        ');
+        $builder->where('m.tenant_id', $tenantId);
+        $builder->groupBy('phone_key');
+
+        // Aplicar filtros de fecha si existen
+        if (!empty($filters['desde'])) $builder->where('m.created_at >=', $filters['desde'] . ' 00:00:00');
+        if (!empty($filters['hasta'])) $builder->where('m.created_at <=', $filters['hasta'] . ' 23:59:59');
+
+        $subQuery = $builder->getCompiledSelect();
+
+        // Consulta Principal uniendo con Guests
+        $mainBuilder = $this->db->table("($subQuery) as sub");
+        $mainBuilder->select('sub.*, m2.message_body, m2.direction, m2.conversation_state, g.full_name as guest_name, t.name as tenant_name');
+        $mainBuilder->join($this->table . ' m2', 'm2.id = sub.last_id');
+        $mainBuilder->join('guests g', 'g.phone = sub.phone_key AND g.tenant_id = ' . $tenantId, 'left');
+        $mainBuilder->join('tenants t', 't.id = ' . $tenantId);
+
+        if (!empty($search)) {
+            $mainBuilder->groupStart()
+                ->like('g.full_name', $search)
+                ->orLike('sub.phone_key', $search)
+                ->orLike('m2.message_body', $search)
+                ->groupEnd();
+        }
+
+        if (!empty($filters['estado'])) {
+            $mainBuilder->where('m2.conversation_state', $filters['estado']);
+        }
+
+        $mainBuilder->orderBy('sub.last_activity', 'DESC');
+
+        return $mainBuilder->get($length, $start)->getResult();
+    }
+
+    public function countAllConversations($tenantId)
+    {
+        return $this->db->table($this->table)->where('tenant_id', $tenantId)->groupBy('sender_phone')->countAllResults();
+    }
 }

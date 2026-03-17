@@ -2,92 +2,113 @@
 
 namespace App\Controllers;
 
-use CodeIgniter\Controller;
-
 class ChatPanel extends BaseController
 {
     /**
-     * Carga la vista principal del Chat (equivalente a tu detalle_chat_view)
+     * Vista de la tabla de conversaciones (DataTables)
      */
-    public function index()
+    public function conversations()
     {
-        // Obtener el Tenant logueado en la sesión web
-        $tenantId = session()->get('tenant_id') ?? 1;
-
-        $data = [
-            'title' => 'Panel de WhatsApp',
-            'tenant_id' => $tenantId
-        ];
-
-        return view('chat/detalle_chat_view', $data);
+        return view('chat/whatsapp_list_view', ['title' => 'Lista de Conversaciones']);
     }
 
     /**
-     * Endpoint AJAX: Enviar mensaje MANUAL desde el panel
+     * AJAX: Fuente de datos para DataTables
      */
-    public function sendManualMessage()
+    public function getConversationsListAjax()
     {
         $tenantId = session()->get('tenant_id') ?? 1;
-        $recipientPhone = $this->request->getPost('phone');
-        $messageText = $this->request->getPost('message');
-
-        // Asumimos que si envías desde la web principal, es la línea maestra (SaaS)
-        $isSaas = true;
-
         $whatsappModel = model('App\Models\WhatsappModel');
 
-        // 1. Enviar el mensaje por la API de Meta
-        $apiResponse = $whatsappModel->sendTextApi($recipientPhone, $messageText, $isSaas, $tenantId);
+        $start  = $this->request->getPost('start') ?? 0;
+        $length = $this->request->getPost('length') ?? 10;
+        $search = $this->request->getPost('search')['value'] ?? '';
 
-        if ($apiResponse && isset($apiResponse['messages'][0]['id'])) {
-            $wamid = $apiResponse['messages'][0]['id'];
+        $filters = [
+            'estado' => $this->request->getPost('filtro_estado_conv'),
+            'desde'  => $this->request->getPost('filtro_fecha_desde_conv'),
+            'hasta'  => $this->request->getPost('filtro_fecha_hasta_conv'),
+        ];
 
-            // 2. Guardar en BD asegurando que el estado cambia a 'HUMAN_MODE'
-            // Esto pausa automáticamente a la IA
-            $whatsappModel->saveMessage([
-                'whatsapp_message_id' => $wamid,
-                'direction'           => 'outgoing',
-                'sender_phone'        => getenv('SAAS_WA_PHONE_ID'), // O el número del tenant
-                'recipient_phone'     => $recipientPhone,
-                'message_body'        => $messageText,
-                'message_type'        => 'text',
-                'tenant_id'           => $tenantId,
-                'is_saas'             => $isSaas ? 1 : 0,
-                'conversation_state'  => 'HUMAN_MODE', // <--- ¡LA MAGIA!
-                'created_at'          => date('Y-m-d H:i:s')
-            ]);
+        $data = $whatsappModel->getConversationsDatatables($tenantId, $start, $length, $search, $filters);
 
-            return $this->response->setJSON(['success' => true, 'message' => 'Mensaje enviado y bot pausado.']);
+        $rows = [];
+        foreach ($data as $item) {
+            $estadoIA = ($item->conversation_state === 'HUMAN_MODE')
+                ? '<span class="badge badge-warning">Humano</span>'
+                : '<span class="badge badge-success">IA Activa</span>';
+
+            $rows[] = [
+                $item->last_id,
+                $item->phone_key,
+                $item->guest_name ?? '<i>Desconocido</i>',
+                $item->tenant_name,
+                mb_substr($item->message_body, 0, 50) . '...',
+                $estadoIA,
+                '<a href="' . site_url("chatpanel/room/{$item->phone_key}") . '" class="btn btn-sm btn-primary"><i class="fas fa-eye"></i> Ver Chat</a>'
+            ];
         }
 
-        return $this->response->setJSON(['success' => false, 'message' => 'Error enviando el mensaje a Meta.']);
+        return $this->response->setJSON([
+            "draw"            => intval($this->request->getPost('draw')),
+            "recordsTotal"    => $whatsappModel->countAllConversations($tenantId),
+            "recordsFiltered" => count($data), // Para simplificar en este ejemplo
+            "data"            => $rows
+        ]);
     }
 
     /**
-     * Endpoint AJAX: Devolver el control a la IA (Tu antiguo return_conversation_to_ai_ajax)
+     * AJAX: Buscador rápido de la barra lateral (Sidebar)
      */
-    public function returnToAi()
+    public function ajax_search_sidebar_contacts()
     {
         $tenantId = session()->get('tenant_id') ?? 1;
-        $contactPhone = $this->request->getPost('contact_phone');
+        $search = $this->request->getPost('search') ?? '';
 
-        // Para devolver a la IA, simplemente insertamos un registro de sistema o
-        // actualizamos el último mensaje para que el state vuelva a 'AI_MODE'
+        $whatsappModel = model('App\Models\WhatsappModel');
+        // Reutilizamos la lógica de búsqueda con un límite pequeño para el sidebar
+        $contacts = $whatsappModel->getConversationsDatatables($tenantId, 0, 15, $search, []);
+
+        $html = '';
+        foreach ($contacts as $c) {
+            $name = $c->guest_name ?? $c->phone_key;
+            $lastMsg = mb_substr($c->message_body, 0, 30) . '...';
+
+            $html .= "
+            <div class='contact-item p-3 border-bottom' style='cursor:pointer;' onclick='loadChat(\"{$c->phone_key}\", \"{$name}\")'>
+                <div class='d-flex align-items-center'>
+                    <div class='rounded-circle bg-success text-white d-flex justify-content-center align-items-center' style='width:40px; height:40px;'>
+                        <i class='fas fa-user'></i>
+                    </div>
+                    <div class='ml-3'>
+                        <h6 class='mb-0 font-weight-bold'>{$name}</h6>
+                        <small class='text-muted'>{$lastMsg}</small>
+                    </div>
+                </div>
+            </div>";
+        }
+
+        return $this->response->setJSON(['success' => true, 'html' => $html]);
+    }
+
+    /**
+     * AJAX: Cargar mensajes de un chat específico
+     */
+    public function getMessagesAjax()
+    {
+        $phone = $this->request->getPost('phone');
+        $tenantId = session()->get('tenant_id') ?? 1;
+
         $db = \Config\Database::connect();
-
-        $db->table('whatsapp_messages')
+        $messages = $db->table('whatsapp_messages')
             ->where('tenant_id', $tenantId)
             ->groupStart()
-            ->where('sender_phone', $contactPhone)
-            ->orWhere('recipient_phone', $contactPhone)
+            ->where('sender_phone', $phone)
+            ->orWhere('recipient_phone', $phone)
             ->groupEnd()
-            ->orderBy('created_at', 'DESC')
-            ->limit(1)
-            ->update(['conversation_state' => 'AI_MODE']);
+            ->orderBy('created_at', 'ASC')
+            ->get()->getResult();
 
-        return $this->response->setJSON([
-            'success' => true,
-            'message' => 'El control ha sido devuelto a Gemini. Responderá al próximo mensaje del huésped.'
-        ]);
+        return view('chat/messages_list_partial', ['messages' => $messages]);
     }
 }
