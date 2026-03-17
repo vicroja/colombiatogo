@@ -160,6 +160,8 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
 
 });
 
+$routes->match(['get', 'post'], 'whatsapp/webhook', 'Whatsapp::webhook');
+
 // ====================================================================
 // MOTOR DE RESERVAS DIRECTAS (PÁGINA WEB PÚBLICA DEL HOTEL)
 // ====================================================================

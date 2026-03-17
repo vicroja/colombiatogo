@@ -1,0 +1,172 @@
+<?php
+
+/**
+ * Helper de Contexto para el Asistente IA (PMS Multi-Tenant)
+ * Extrae y formatea toda la información relevante de un huésped en el hotel/cabaña.
+ */
+
+if (!function_exists('build_guest_context_data')) {
+
+    /**
+     * Construye el contexto completo del huésped para inyectarlo en Gemini.
+     *
+     * @param object $guest El objeto del huésped (tabla guests).
+     * @param int $tenantId El ID del inquilino (Hotel/Cabaña actual).
+     * @param string $senderPhone El teléfono con el que se está comunicando.
+     * @return string Texto formateado listo para concatenar al system_instruction.
+     */
+    function build_guest_context_data($guest, int $tenantId, string $senderPhone): string
+    {
+        $db = \Config\Database::connect();
+
+        // 1. OBTENER DATOS DEL ESTABLECIMIENTO (TENANT)
+        $tenant = $db->table('tenants')->where('id', $tenantId)->get()->getRow();
+
+        // Ajustar la zona horaria a la del tenant (Vital para que Gemini agende bien)
+        $tz = $tenant->timezone ?? 'America/Bogota';
+        date_default_timezone_set($tz);
+
+        $fechaActual = date('Y-m-d H:i:s');
+        $diaSemana = translate_day_to_spanish(date('l'));
+
+        // --- INICIO DEL CONTEXTO ---
+        $contexto = "========================================\n";
+        $contexto .= "[CONTEXTO DINÁMICO DEL SISTEMA Y HUÉSPED]\n";
+        $contexto .= "========================================\n";
+        $contexto .= "- Fecha y hora actual servidor: {$fechaActual} ({$diaSemana})\n";
+        $contexto .= "- Nombre del Establecimiento: {$tenant->name}\n";
+        $contexto .= "- Horarios Oficiales -> Check-in: {$tenant->checkin_time} | Check-out: {$tenant->checkout_time}\n";
+        $contexto .= "- Moneda Local: {$tenant->currency_code} ({$tenant->currency_symbol})\n\n";
+
+        // 2. DATOS DEL HUÉSPED
+        if ($guest) {
+            $contexto .= "[PERFIL DEL HUÉSPED]\n";
+            $contexto .= "- Nombre: {$guest->full_name}\n";
+            $contexto .= "- Teléfono: {$senderPhone}\n";
+            $contexto .= "- Documento: " . ($guest->document ?: 'No registrado') . "\n\n";
+
+            // 3. RESERVAS ACTIVAS O FUTURAS (Ignoramos canceladas o ya finalizadas)
+            $reservas = $db->table('reservations r')
+                ->select('r.*, u.name as unit_name')
+                ->join('accommodation_units u', 'u.id = r.accommodation_unit_id')
+                ->where('r.guest_id', $guest->id)
+                ->where('r.tenant_id', $tenantId)
+                ->whereIn('r.status', ['pending', 'confirmed', 'checked_in'])
+                ->orderBy('r.check_in_date', 'ASC')
+                ->get()
+                ->getResult();
+
+            if (count($reservas) > 0) {
+                $contexto .= "[RESERVAS DEL HUÉSPED]\n";
+                foreach ($reservas as $res) {
+                    $estadoTraducido = translate_reservation_status($res->status);
+
+                    $contexto .= "-> Reserva ID: {$res->id} | Estado: {$estadoTraducido}\n";
+                    $contexto .= "   Alojamiento: {$res->unit_name}\n";
+                    $contexto .= "   Fechas: Check-in {$res->check_in_date} al Check-out {$res->check_out_date}\n";
+
+                    // Calcular Pagos para obtener el Saldo Pendiente
+                    // Sumamos los montos de la tabla payments asociados a esta reserva
+                    $pagos = $db->table('payments')
+                        ->selectSum('amount')
+                        ->where('reservation_id', $res->id)
+                        ->get()
+                        ->getRow()->amount ?? 0;
+
+                    $saldo = $res->total_price - $pagos;
+
+                    // Formatear números
+                    $totalFormat = number_format($res->total_price, 0, ',', '.');
+                    $pagosFormat = number_format($pagos, 0, ',', '.');
+                    $saldoFormat = number_format($saldo, 0, ',', '.');
+
+                    $contexto .= "   Finanzas: Total {$tenant->currency_symbol}{$totalFormat} | Abonado: {$tenant->currency_symbol}{$pagosFormat} | SALDO PENDIENTE: {$tenant->currency_symbol}{$saldoFormat}\n";
+
+                    // Si el huésped ya está en el hotel, le mostramos a la IA los consumos que ha hecho
+                    if ($res->status === 'checked_in') {
+                        $consumos = $db->table('reservation_consumptions')
+                            ->where('reservation_id', $res->id)
+                            ->get()
+                            ->getResult();
+
+                        if (count($consumos) > 0) {
+                            $contexto .= "   Consumos Extra (Restaurante/Bar/Servicios):\n";
+                            foreach ($consumos as $c) {
+                                $subtotalF = number_format($c->subtotal, 0, ',', '.');
+                                $contexto .= "    * {$c->quantity}x {$c->description} - {$tenant->currency_symbol}{$subtotalF}\n";
+                            }
+                        } else {
+                            $contexto .= "   Consumos Extra: Ninguno registrado aún.\n";
+                        }
+                    }
+                    $contexto .= "\n";
+                }
+            } else {
+                $contexto .= "[RESERVAS]\n- El cliente no tiene reservas activas ni futuras en este momento.\n\n";
+            }
+
+        } else {
+            $contexto .= "[PERFIL DEL HUÉSPED]\n";
+            $contexto .= "- ¡ATENCIÓN! Este es un cliente NUEVO o prospecto. Aún no está registrado en la base de datos.\n";
+            $contexto .= "- Teléfono de contacto: {$senderPhone}\n\n";
+        }
+
+        // 4. HISTORIAL DE MENSAJES (Como en tu sistema anterior)
+        // Extraemos los últimos 4 mensajes para que la IA tenga un paneo textual inmediato
+        $mensajes = $db->table('whatsapp_messages')
+            ->where('tenant_id', $tenantId)
+            ->groupStart()
+            ->where('sender_phone', $senderPhone)
+            ->orWhere('recipient_phone', $senderPhone)
+            ->groupEnd()
+            ->orderBy('created_at', 'DESC')
+            ->limit(4)
+            ->get()
+            ->getResult();
+
+        if (count($mensajes) > 0) {
+            // Invertimos el array para que queden en orden cronológico (del más viejo al más nuevo)
+            $mensajes = array_reverse($mensajes);
+            $contexto .= "[HISTORIAL RECIENTE DE CHAT]\n";
+            foreach ($mensajes as $msg) {
+                $rol = ($msg->direction === 'incoming') ? 'Huésped' : 'Tú (Hotel/IA)';
+                // Limpiamos saltos de línea y truncamos si es muy largo
+                $texto = mb_substr($msg->message_body, 0, 150) . (mb_strlen($msg->message_body) > 150 ? '...' : '');
+                $texto = str_replace(["\r", "\n"], ' ', $texto);
+                $contexto .= "({$msg->created_at}) {$rol}: {$texto}\n";
+            }
+        }
+
+        return $contexto;
+    }
+}
+
+// --- FUNCIONES DE APOYO ---
+
+if (!function_exists('translate_day_to_spanish')) {
+    function translate_day_to_spanish($english_day) {
+        $days = [
+            'Monday'    => 'Lunes',
+            'Tuesday'   => 'Martes',
+            'Wednesday' => 'Miércoles',
+            'Thursday'  => 'Jueves',
+            'Friday'    => 'Viernes',
+            'Saturday'  => 'Sábado',
+            'Sunday'    => 'Domingo'
+        ];
+        return $days[$english_day] ?? $english_day;
+    }
+}
+
+if (!function_exists('translate_reservation_status')) {
+    function translate_reservation_status($status) {
+        $statuses = [
+            'pending'      => 'PENDIENTE DE PAGO/CONFIRMACIÓN',
+            'confirmed'    => 'CONFIRMADA',
+            'checked_in'   => 'HOSPEDADO (EN EL HOTEL)',
+            'checked_out'  => 'FINALIZADA',
+            'cancelled'    => 'CANCELADA'
+        ];
+        return $statuses[$status] ?? strtoupper($status);
+    }
+}
