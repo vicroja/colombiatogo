@@ -3,13 +3,42 @@
 <head>
     <title>Log Viewer - PMS</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
+
     <style>
-        body { background: #1a1a1a; color: #ccc; }
-        .log-container { background: #000; color: #fff; padding: 15px; font-family: monospace; height: 70vh; overflow-y: scroll; border: 1px solid #333; }
-        .level-ERROR { color: #ffffff; font-weight: bold; } /* Rojo claro */
-        .level-INFO  { color: #ffffff; }                   /* Azul claro */
-        .level-DEBUG { color: #ffffff; }                   /* Gris */
+        body {
+            background: #121212;
+            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .log-container {
+            background: #000000;
+            color: #ffffff; /* Letra blanca pura */
+            padding: 20px;
+            font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.6; /* Mayor espacio entre líneas para no cansar la vista */
+            height: 75vh;
+            overflow-y: auto;
+            border: 1px solid #333;
+            border-radius: 8px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        /* Esto ayuda a que el scrollbar también sea oscuro */
+        .log-container::-webkit-scrollbar { width: 10px; }
+        .log-container::-webkit-scrollbar-track { background: #1a1a1a; }
+        .log-container::-webkit-scrollbar-thumb { background: #444; border-radius: 5px; }
+        .log-container::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        pre {
+            color: inherit; /* Fuerza a que el pre herede el blanco */
+            margin-bottom: 0;
+            white-space: pre-wrap; /* Evita el scroll horizontal infinito */
+            word-wrap: break-word;
+        }
     </style>
+
 </head>
 <body class="p-4">
 <div class="container-fluid">
