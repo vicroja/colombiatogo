@@ -170,6 +170,8 @@ $routes->get('book/(:segment)', 'PublicWebsiteController::index/$1');
 $routes->post('book/(:segment)/confirm', 'PublicWebsiteController::confirm/$1');
 $routes->get('book/(:segment)/success', 'PublicWebsiteController::success/$1');
 
+$routes->get('admin/logs', 'Admin\LogViewer::index');
+
 
 
 
