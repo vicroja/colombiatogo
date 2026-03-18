@@ -13,7 +13,7 @@ class Whatsapp extends BaseController
      */
     public function webhook()
     {
-        $method = $this->request->getMethod();
+        $method = strtolower($this->request->getMethod());
 
         if ($method === 'get') {
             return $this->verifyWebhook();
