@@ -30,6 +30,7 @@ class Worker extends Controller
         // El watchdog lo volverá a levantar inmediatamente en el siguiente minuto.
         $startTime = time();
         $maxExecutionTime = 3600;
+        $maxExecutionTime = 300;
 
         while (true) {
             // Verificar si debe reiniciarse por tiempo
