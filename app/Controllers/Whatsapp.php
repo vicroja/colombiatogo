@@ -31,7 +31,7 @@ class Whatsapp extends BaseController
     {
         // Token global de verificación definido en tu archivo .env
         $verifyToken = getenv('META_WEBHOOK_VERIFY_TOKEN') ?: 'SmartVet2026_SecureToken';
-
+        $verifyToken='96155826';
         $mode      = $this->request->getGet('hub_mode');
         $token     = $this->request->getGet('hub_verify_token');
         $challenge = $this->request->getGet('hub_challenge');
