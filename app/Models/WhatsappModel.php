@@ -101,7 +101,8 @@ class WhatsappModel extends Model
 
         // 4. Asignar credenciales dinámicas
         // Ojo: Esto asume que en el JSON guardas estas llaves. Si el envío es de la línea maestra SaaS, usas credenciales maestras.
-        $accessToken   = $is_saas ? getenv('SAAS_WA_ACCESS_TOKEN') : ($settings['whatsapp_access_token'] ?? null);
+
+        $accessToken   = $is_saas ? getenv('SAAS_WA_ACCESS_TOKEN') : ($settings['whatsapp_token'] ?? null);
         $phoneNumberId = $is_saas ? getenv('SAAS_WA_PHONE_ID') : ($settings['whatsapp_phone_number_id'] ?? null);
         $baseUrl       = getenv('WA_API_BASE_URL') ?: 'https://graph.facebook.com/v19.0';
 
