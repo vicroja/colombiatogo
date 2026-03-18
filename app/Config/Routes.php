@@ -160,7 +160,9 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
 
 });
 
-$routes->match(['get', 'post'], 'whatsapp/webhook', 'Whatsapp::webhook');
+// Por esto (Sintaxis limpia y moderna):
+$routes->get('whatsapp/webhook', 'Whatsapp::webhook');
+$routes->post('whatsapp/webhook', 'Whatsapp::webhook');
 
 // ====================================================================
 // MOTOR DE RESERVAS DIRECTAS (PÁGINA WEB PÚBLICA DEL HOTEL)
