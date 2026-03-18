@@ -5,7 +5,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
     <style>
         body { background: #1a1a1a; color: #ccc; }
-        .log-container { background: #000; color: #0f0; padding: 15px; font-family: monospace; height: 70vh; overflow-y: scroll; border: 1px solid #333; }
+        .log-container { background: #000; color: #fff; padding: 15px; font-family: monospace; height: 70vh; overflow-y: scroll; border: 1px solid #333; }
         .level-ERROR { color: #ffffff; font-weight: bold; } /* Rojo claro */
         .level-INFO  { color: #ffffff; }                   /* Azul claro */
         .level-DEBUG { color: #ffffff; }                   /* Gris */
