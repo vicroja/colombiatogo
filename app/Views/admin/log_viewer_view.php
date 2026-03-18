@@ -6,9 +6,9 @@
     <style>
         body { background: #1a1a1a; color: #ccc; }
         .log-container { background: #000; color: #0f0; padding: 15px; font-family: monospace; height: 70vh; overflow-y: scroll; border: 1px solid #333; }
-        .level-ERROR { color: #ff6b6b; font-weight: bold; } /* Rojo claro */
-        .level-INFO  { color: #4dabf7; }                   /* Azul claro */
-        .level-DEBUG { color: #adb5bd; }                   /* Gris */
+        .level-ERROR { color: #ffffff; font-weight: bold; } /* Rojo claro */
+        .level-INFO  { color: #ffffff; }                   /* Azul claro */
+        .level-DEBUG { color: #ffffff; }                   /* Gris */
     </style>
 </head>
 <body class="p-4">
