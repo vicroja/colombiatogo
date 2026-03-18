@@ -8,6 +8,10 @@ class WhatsappWebhookService
     protected $whatsappModel;
     protected $geminiModel;
 
+    protected $currentTenantId;
+    protected $currentSenderPhone;
+    protected $isSaas;
+
     public function __construct()
     {
         // Instancias nativas de CI4
@@ -134,6 +138,8 @@ class WhatsappWebhookService
     public function processNotification(array $payload, string $jsonPayload, bool $isSaas, int $tenantId)
     {
         log_message('info', "[WebhookService] Iniciando procesamiento para Tenant ID: {$tenantId}");
+        $this->currentTenantId = $tenantId;
+        $this->isSaas = $isSaas;
 
         // 1. EXTRAER DATOS DEL PAYLOAD DE META
         $entry = $payload['entry'][0]['changes'][0]['value'] ?? [];
