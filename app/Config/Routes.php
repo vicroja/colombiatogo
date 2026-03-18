@@ -174,6 +174,16 @@ $routes->get('book/(:segment)/success', 'PublicWebsiteController::success/$1');
 
 $routes->get('admin/logs', 'Admin\LogViewer::index');
 
+// ====================================================================
+// RUTAS DE TERMINAL (CLI) PARA LOS WORKERS Y CRONJOBS
+// ====================================================================
+$routes->cli('worker/start', 'Worker::start');
+$routes->cli('worker/watchdog', 'Worker::watchdog');
+$routes->cli('worker/processOutgoingQueue', 'Worker::processOutgoingQueue');
+
+// Por si alguna vez usas el Cli.php (Plan B)
+$routes->cli('cli/processIncomingQueue', 'Cli::processIncomingQueue');
+
 
 
 
