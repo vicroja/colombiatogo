@@ -15,11 +15,12 @@
             <div class="d-flex justify-content-between text-muted small mb-1">
                 <span>Uso del Plan Actual</span>
                 <span>
-                <?= $limitInfo['used'] ?> / <?= $limitInfo['unlimited'] ? 'Ilimitadas' : $limitInfo['limit'] ?> unidades
-            </span>
+            <?= $limitInfo['used'] ?> / <?= $limitInfo['unlimited'] ? 'Ilimitadas' : $limitInfo['limit'] ?> unidades
+        </span>
             </div>
             <?php if (!$limitInfo['unlimited']): ?>
-                <?php $percent = ($limitInfo['used'] / $limitInfo['limit']) * 100; ?>
+                <?php $percent = ($limitInfo['limit'] > 0) ? ($limitInfo['used'] / $limitInfo['limit']) * 100 : 0; ?>
+
                 <div class="progress" style="height: 10px;">
                     <div class="progress-bar <?= $percent >= 100 ? 'bg-danger' : 'bg-info' ?>" style="width: <?= $percent ?>%"></div>
                 </div>
