@@ -152,8 +152,10 @@ class InventoryController extends BaseController
     }
     public function index()
     {
-        $unitModel = new \App\Models\AccommodationUnitModel();
-        $limitService = new \App\Libraries\PlanLimitService(); // O la ruta donde lo tengas
+
+        $unitModel = new AccommodationUnitModel();
+        $limitService = new PlanLimitService();
+
         $tenantId = session('active_tenant_id');
 
         // 1. Join manual con FILTRO MULTI-TENANT OBLIGATORIO
