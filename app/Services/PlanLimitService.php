@@ -29,21 +29,25 @@ class PlanLimitService
         $planModel = new SubscriptionPlanModel();
         $plan = $planModel->find($subscription['plan_id']);
 
+        if (!$plan || empty($plan['limits_json'])) {
+            return false;
+        }
+
         // Decodificamos el JSON de límites
         $limits = json_decode($plan['limits_json'], true);
+        $maxUnits = $limits['max_units'] ?? 0;
 
         // Si el límite es -1 (Enterprise), es ilimitado
-        if ($limits['max_units'] == -1) {
+        if ($maxUnits == -1) {
             return true;
         }
 
-        // 3. Contar cuántas unidades tiene actualmente
+        // 3. EL ARREGLO CRÍTICO: Contar SOLO las unidades de este hotel en específico
         $unitModel = new AccommodationUnitModel();
-        // Nota: countAllResults() aplicará automáticamente el filtro tenant_id gracias al BaseMultiTenantModel
-        $currentUnitsCount = $unitModel->countAllResults();
+        $currentUnitsCount = $unitModel->where('tenant_id', $tenantId)->countAllResults();
 
         // 4. Evaluar
-        return $currentUnitsCount < $limits['max_units'];
+        return $currentUnitsCount < $maxUnits;
     }
 
     /**
