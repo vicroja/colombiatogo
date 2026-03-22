@@ -160,7 +160,7 @@ class InventoryController extends BaseController
 
         // 1. Join manual con FILTRO MULTI-TENANT OBLIGATORIO
         $units = $unitModel->select('accommodation_units.*, accommodation_types.name as type_name')
-            ->join('accommodation_types', 'accommodation_types.id = accommodation_units.accommodation_type_id', 'left')
+            ->join('accommodation_types', 'accommodation_types.id = accommodation_units.type_id', 'left')
             ->where('accommodation_units.tenant_id', $tenantId)
             ->orderBy('accommodation_units.name', 'ASC')
             ->findAll();
