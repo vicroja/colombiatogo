@@ -35,9 +35,9 @@
                 <li class="nav-item"><a class="nav-link" href="<?= base_url('/reports') ?>"><i class="bi bi-bar-chart"></i> Reportes</a></li>
                 <li class="nav-item"><a class="nav-link" href="<?= base_url('/promotions') ?>"><i class="bi bi-percent"></i> Promociones</a></li>
                 <li class="nav-item"><a class="nav-link" href="<?= base_url('/agents') ?>"><i class="bi bi-briefcase"></i> Comisionistas</a></li>
-                <li class="nav-item"><a class="nav-link" href="<?= base__url('/commissions') ?>"><i class="bi bi-cash-coin"></i> Liquidar</a></li>
+                <li class="nav-item"><a class="nav-link" href="<?= base_url('/commissions') ?>"><i class="bi bi-cash-coin"></i> Liquidar</a></li>
                 <li class="nav-item"><a class="nav-link text-warning" href="<?= base_url('/website') ?>"><i class="bi bi-globe"></i> Mi Web</a></li>
-                <li class="nav-item"><a class="nav-link" href="<?= base_url('/settings') ?>"><i class="bi bi-gear"></i></a></li>
+                <li class="nav-item"><a class="nav-link ms-2" href="<?= base_url('/settings') ?>"><i class="bi bi-gear"></i></a></li>
             </ul>
 
             <div class="d-flex text-white align-items-center">
