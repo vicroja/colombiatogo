@@ -152,14 +152,18 @@ class InventoryController extends BaseController
     }
     public function index()
     {
-        $unitModel = new AccommodationUnitModel();
-        $limitService = new PlanLimitService();
+        $unitModel = new \App\Models\AccommodationUnitModel();
+        $limitService = new \App\Libraries\PlanLimitService(); // O la ruta donde lo tengas
+        $tenantId = session('active_tenant_id');
 
-        // Join manual para traer el nombre del tipo de habitación en la misma consulta
+        // 1. Join manual con FILTRO MULTI-TENANT OBLIGATORIO
         $units = $unitModel->select('accommodation_units.*, accommodation_types.name as type_name')
-            ->join('accommodation_types', 'accommodation_types.id = accommodation_units.type_id')
+            ->join('accommodation_types', 'accommodation_types.id = accommodation_units.accommodation_type_id', 'left')
+            ->where('accommodation_units.tenant_id', $tenantId)
+            ->orderBy('accommodation_units.name', 'ASC')
             ->findAll();
 
+        // 2. Traer información de los límites
         $data = [
             'units'     => $units,
             'limitInfo' => $limitService->getUnitUsageInfo()
