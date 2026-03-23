@@ -1,131 +1,976 @@
-/* ==========================================================================
-   TEMA MAVILUSA: MODERN PASTEL SAAS
-   ========================================================================== */
+/* ============================================================
+   PMS CUSTOM DESIGN SYSTEM
+   Importar en layouts/pms.php DESPUÉS de Bootstrap:
+   <link rel="stylesheet" href="<?= base_url('assets/css/pms-custom.css') ?>">
+   ============================================================ */
 
+/* ── Google Fonts ───────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
+
+/* ── Variables globales ─────────────────────────────────────── */
 :root {
-    /* 1. PALETA DE COLORES PASTEL (Sobrescribiendo variables de Bootstrap) */
-    --bs-body-bg: #f4f7f9;           /* Fondo general del sistema: gris/azul muy sutil */
-    --bs-body-color: #475569;        /* Texto general: Gris pizarra oscuro (más suave que el negro puro) */
+    /* Paleta principal */
+    --pms-bg-app:          #0f1117;
+    --pms-bg-sidebar:      #14161e;
+    --pms-bg-sidebar-hover:#1d2030;
+    --pms-sidebar-active:  rgba(94, 120, 255, 0.14);
+    --pms-sidebar-border:  rgba(255,255,255,0.06);
+    --pms-accent:          #5e78ff;
+    --pms-accent-soft:     rgba(94, 120, 255, 0.12);
+    --pms-accent-text:     #8fa3ff;
 
-    --bs-primary: #8baade;           /* Azul pastel (Botones principales, headers) */
-    --bs-primary-rgb: 139, 170, 222;
+    /* Superficies del contenido (área blanca) */
+    --pms-surface:         #ffffff;
+    --pms-surface-2:       #f7f8fa;
+    --pms-surface-3:       #eef0f4;
+    --pms-border:          rgba(0, 0, 0, 0.07);
+    --pms-border-strong:   rgba(0, 0, 0, 0.13);
 
-    --bs-success: #9ad6b3;           /* Verde menta pastel (Confirmaciones, checks) */
-    --bs-success-rgb: 154, 214, 179;
+    /* Tipografía */
+    --pms-text-primary:    #111827;
+    --pms-text-secondary:  #6b7280;
+    --pms-text-muted:      #9ca3af;
+    --pms-text-sidebar:    rgba(255,255,255,0.55);
+    --pms-text-sidebar-active: #ffffff;
 
-    --bs-warning: #fce29f;           /* Amarillo/Durazno pastel (Alertas) */
-    --bs-danger: #f5a6a6;            /* Rojo/Rosa pastel (Errores, eliminar) */
-    --bs-info: #a0d2eb;              /* Cyan pastel */
-    --bs-secondary: #94a3b8;         /* Gris azulado (Textos mutados, botones secundarios) */
+    /* Estados semánticos */
+    --pms-success:         #10b981;
+    --pms-success-bg:      #ecfdf5;
+    --pms-success-text:    #065f46;
+    --pms-warning:         #f59e0b;
+    --pms-warning-bg:      #fffbeb;
+    --pms-warning-text:    #78350f;
+    --pms-danger:          #ef4444;
+    --pms-danger-bg:       #fef2f2;
+    --pms-danger-text:     #7f1d1d;
+    --pms-info:            #3b82f6;
+    --pms-info-bg:         #eff6ff;
+    --pms-info-text:       #1e3a8a;
 
-    --bs-link-color: #6a8ec2;        /* Enlaces un poco más oscuros que el primary para legibilidad */
-    --bs-link-hover-color: #4f73a6;
+    /* Dimensiones del layout */
+    --pms-sidebar-w:       220px;
+    --pms-topbar-h:        52px;
+    --pms-radius:          10px;
+    --pms-radius-sm:       7px;
+    --pms-radius-lg:       14px;
 
-    /* 2. BORDES MÁS REDONDEADOS (Efecto burbuja/moderno) */
-    --bs-border-radius: 14px;
-    --bs-border-radius-sm: 10px;
-    --bs-border-radius-lg: 18px;
+    /* Sombras */
+    --pms-shadow-sm:       0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.05);
+    --pms-shadow-md:       0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05);
+    --pms-shadow-card:     0 0 0 1px var(--pms-border), 0 2px 8px rgba(0,0,0,0.05);
 }
 
-/* ==========================================================================
-   TARJETAS (CARDS) - Estilo limpio tipo Apple/Stripe
-   ========================================================================== */
+/* ── Reset base ─────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 400;
+    color: var(--pms-text-primary);
+    background: var(--pms-surface-2);
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+}
+
+/* ============================================================
+   LAYOUT PRINCIPAL — Sidebar + Contenido
+   ============================================================ */
+
+/* Eliminar el container de Bootstrap en el layout principal */
+body > .container {
+    max-width: 100%;
+    padding: 0;
+}
+
+/* Wrapper del layout */
+.pms-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ── Sidebar ────────────────────────────────────────────────── */
+.pms-sidebar {
+    width: var(--pms-sidebar-w);
+    min-width: var(--pms-sidebar-w);
+    background: var(--pms-bg-sidebar);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 200;
+    border-right: 1px solid var(--pms-sidebar-border);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.pms-sidebar::-webkit-scrollbar { width: 4px; }
+.pms-sidebar::-webkit-scrollbar-track { background: transparent; }
+.pms-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+/* Brand del sidebar */
+.pms-sidebar-brand {
+    padding: 20px 18px 18px;
+    border-bottom: 1px solid var(--pms-sidebar-border);
+    flex-shrink: 0;
+}
+
+.pms-sidebar-brand-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pms-sidebar-brand-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    margin-top: 2px;
+}
+
+/* Navegación */
+.pms-sidebar-nav {
+    flex: 1;
+    padding: 10px 0 16px;
+}
+
+.pms-nav-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: rgba(255,255,255,0.25);
+    padding: 14px 18px 5px;
+}
+
+.pms-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 18px;
+    font-size: 12.5px;
+    font-weight: 400;
+    color: var(--pms-text-sidebar);
+    text-decoration: none;
+    border-radius: 0;
+    transition: background 0.15s, color 0.15s;
+    position: relative;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.pms-nav-item:hover {
+    background: var(--pms-bg-sidebar-hover);
+    color: rgba(255,255,255,0.85);
+    text-decoration: none;
+}
+
+.pms-nav-item.active {
+    background: var(--pms-sidebar-active);
+    color: var(--pms-text-sidebar-active);
+    font-weight: 500;
+}
+
+.pms-nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 3px;
+    background: var(--pms-accent);
+    border-radius: 0 3px 3px 0;
+}
+
+.pms-nav-item .bi {
+    font-size: 14px;
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.pms-nav-item.active .bi,
+.pms-nav-item:hover .bi {
+    opacity: 1;
+}
+
+/* Dropdown del sidebar */
+.pms-nav-dropdown .pms-nav-sub {
+    display: none;
+    padding-left: 44px;
+    padding-bottom: 4px;
+}
+
+.pms-nav-dropdown.open .pms-nav-sub {
+    display: block;
+}
+
+.pms-nav-sub .pms-nav-item {
+    padding: 6px 18px 6px 0;
+    font-size: 12px;
+}
+
+/* Footer del sidebar (usuario + logout) */
+.pms-sidebar-footer {
+    padding: 12px 14px;
+    border-top: 1px solid var(--pms-sidebar-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pms-sidebar-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--pms-accent-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--pms-accent-text);
+    flex-shrink: 0;
+    border: 1px solid rgba(94,120,255,0.3);
+}
+
+.pms-sidebar-user-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.75);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pms-sidebar-logout {
+    color: rgba(255,255,255,0.3);
+    font-size: 15px;
+    text-decoration: none;
+    transition: color 0.15s;
+    flex-shrink: 0;
+}
+
+.pms-sidebar-logout:hover {
+    color: var(--pms-danger);
+}
+
+/* ── Área principal (derecha del sidebar) ───────────────────── */
+.pms-main {
+    margin-left: var(--pms-sidebar-w);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ── Topbar ─────────────────────────────────────────────────── */
+.pms-topbar {
+    height: var(--pms-topbar-h);
+    background: var(--pms-surface);
+    border-bottom: 1px solid var(--pms-border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.pms-topbar-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--pms-text-primary);
+    flex: 1;
+    letter-spacing: -0.01em;
+}
+
+.pms-topbar-subtitle {
+    font-size: 12px;
+    color: var(--pms-text-muted);
+}
+
+/* ── Contenido ──────────────────────────────────────────────── */
+.pms-content {
+    flex: 1;
+    padding: 24px 28px;
+}
+
+/* Compatibilidad con el container actual */
+body > .container > .row,
+.pms-main .container > .row {
+    margin: 0;
+}
+
+/* ============================================================
+   OVERRIDE NAVBAR DE BOOTSTRAP (si aún se usa la navbar)
+   Reemplaza el azul genérico por el nuevo estilo
+   ============================================================ */
+
+.navbar.bg-primary {
+    background-color: var(--pms-bg-sidebar) !important;
+    border-bottom: 1px solid var(--pms-sidebar-border);
+    padding: 0 20px;
+    height: var(--pms-topbar-h);
+}
+
+.navbar.bg-primary .navbar-brand {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.navbar.bg-primary .nav-link {
+    font-size: 12.5px;
+    color: var(--pms-text-sidebar) !important;
+    padding: 6px 10px;
+    border-radius: var(--pms-radius-sm);
+    transition: background 0.15s, color 0.15s;
+}
+
+.navbar.bg-primary .nav-link:hover {
+    background: var(--pms-bg-sidebar-hover);
+    color: rgba(255,255,255,0.9) !important;
+}
+
+/* ============================================================
+   TARJETAS KPI — Dashboard
+   ============================================================ */
+
+.kpi-card {
+    background: var(--pms-surface);
+    border: 1px solid var(--pms-border);
+    border-radius: var(--pms-radius-lg);
+    padding: 18px 20px;
+    transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
+    cursor: default;
+}
+
+.kpi-card:hover {
+    box-shadow: var(--pms-shadow-md);
+    border-color: var(--pms-border-strong);
+    transform: translateY(-1px);
+}
+
+.kpi-card-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    margin-bottom: 14px;
+}
+
+.kpi-card-icon.success { background: var(--pms-success-bg); color: var(--pms-success); }
+.kpi-card-icon.info    { background: var(--pms-info-bg);    color: var(--pms-info); }
+.kpi-card-icon.warning { background: var(--pms-warning-bg); color: var(--pms-warning); }
+.kpi-card-icon.danger  { background: var(--pms-danger-bg);  color: var(--pms-danger); }
+.kpi-card-icon.accent  { background: var(--pms-accent-soft); color: var(--pms-accent); }
+
+.kpi-card-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--pms-text-primary);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin-bottom: 5px;
+}
+
+.kpi-card-label {
+    font-size: 12px;
+    color: var(--pms-text-secondary);
+    font-weight: 400;
+}
+
+.kpi-card-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 20px;
+    margin-top: 8px;
+}
+
+.kpi-card-badge.up   { background: var(--pms-success-bg); color: var(--pms-success-text); }
+.kpi-card-badge.down { background: var(--pms-danger-bg);  color: var(--pms-danger-text); }
+.kpi-card-badge.info { background: var(--pms-info-bg);    color: var(--pms-info-text); }
+.kpi-card-badge.warn { background: var(--pms-warning-bg); color: var(--pms-warning-text); }
+
+/* Override Bootstrap: las cards actuales del dashboard con border-start */
+.card.border-start {
+    border-left-width: 0 !important;
+    border: 1px solid var(--pms-border) !important;
+    border-radius: var(--pms-radius-lg) !important;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.card.border-start:hover {
+    box-shadow: var(--pms-shadow-md);
+    transform: translateY(-1px);
+}
+
+/* ============================================================
+   CARDS GENERALES
+   ============================================================ */
+
 .card {
-    border: none !important; /* Quitamos el borde duro por defecto */
-    border-radius: var(--bs-border-radius-lg);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03) !important; /* Sombra grande pero muy difuminada */
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    background-color: #ffffff;
+    border: 1px solid var(--pms-border) !important;
+    border-radius: var(--pms-radius-lg) !important;
+    box-shadow: none;
 }
 
 .card-header {
-    background-color: transparent !important;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
-    padding: 1.25rem 1.5rem;
+    background: var(--pms-surface) !important;
+    border-bottom: 1px solid var(--pms-border);
+    padding: 14px 18px;
 }
 
-.card-header h5 {
-    font-weight: 700;
-    color: #334155;
-    letter-spacing: -0.02em;
+.card-header h5,
+.card-header h6,
+.card-header .fw-bold {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--pms-text-primary);
+    letter-spacing: -0.01em;
 }
 
-/* ==========================================================================
-   FORMULARIOS E INPUTS
-   ========================================================================== */
-.form-control, .form-select {
-    border: 2px solid #e2e8f0;
-    border-radius: var(--bs-border-radius);
-    padding: 0.6rem 1rem;
-    font-size: 0.95rem;
-    color: #334155;
-    background-color: #f8fafc; /* Fondo del input ligerísimamente gris */
-    transition: all 0.2s ease;
+.card-body {
+    padding: 18px;
 }
 
-/* Estado Focus (Al hacer clic en el input) */
-.form-control:focus, .form-select:focus {
-    background-color: #ffffff;
-    border-color: var(--bs-primary);
-    box-shadow: 0 0 0 4px rgba(139, 170, 222, 0.2) !important; /* Anillo pastel */
+.card.shadow,
+.card.shadow-sm {
+    box-shadow: var(--pms-shadow-sm) !important;
+}
+
+/* ============================================================
+   TABLAS
+   ============================================================ */
+
+.table {
+    font-size: 13.5px;
+    color: var(--pms-text-primary);
+}
+
+.table thead th {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--pms-text-secondary);
+    border-bottom: 1px solid var(--pms-border-strong);
+    padding: 10px 14px;
+    background: var(--pms-surface-2);
+    white-space: nowrap;
+}
+
+.table tbody td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--pms-border);
+    vertical-align: middle;
+}
+
+.table-hover tbody tr:hover td {
+    background: var(--pms-surface-2);
+}
+
+.table-light thead {
+    background: var(--pms-surface-2);
+}
+
+/* ============================================================
+   FORMULARIOS
+   ============================================================ */
+
+.form-control,
+.form-select {
+    font-size: 13.5px;
+    font-family: inherit;
+    border: 1px solid var(--pms-border-strong);
+    border-radius: var(--pms-radius-sm);
+    padding: 8px 12px;
+    color: var(--pms-text-primary);
+    background: var(--pms-surface);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    height: auto;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--pms-accent);
+    box-shadow: 0 0 0 3px rgba(94,120,255,0.12);
+    outline: none;
+}
+
+.form-control::placeholder {
+    color: var(--pms-text-muted);
 }
 
 .form-label {
-    color: #64748b;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 0.4rem;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--pms-text-secondary);
+    margin-bottom: 5px;
 }
 
-/* ==========================================================================
+.input-group-text {
+    background: var(--pms-surface-2);
+    border: 1px solid var(--pms-border-strong);
+    color: var(--pms-text-muted);
+    font-size: 13px;
+}
+
+/* ============================================================
    BOTONES
-   ========================================================================== */
+   ============================================================ */
+
 .btn {
-    border-radius: var(--bs-border-radius-sm);
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    padding: 0.5rem 1.25rem;
-    border: none;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--pms-radius-sm);
+    padding: 7px 14px;
+    transition: all 0.15s;
+    letter-spacing: 0;
+    border-width: 1px;
 }
 
-/* Animación al pasar el mouse (Efecto levitación) */
-.btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.08);
+.btn:active {
+    transform: scale(0.98);
 }
 
-.btn:active:not(:disabled) {
-    transform: translateY(0);
+/* Primario */
+.btn-primary,
+.btn-dark {
+    background: var(--pms-accent) !important;
+    border-color: var(--pms-accent) !important;
+    color: #fff !important;
 }
 
-/* Corrección de color de texto para botones pastel (para asegurar contraste) */
-.btn-success, .btn-warning, .btn-info {
-    color: #1e293b !important; /* Texto oscuro sobre fondos muy claros */
+.btn-primary:hover,
+.btn-dark:hover {
+    background: #4a64f0 !important;
+    border-color: #4a64f0 !important;
+    box-shadow: 0 4px 12px rgba(94,120,255,0.35);
 }
 
-.btn-primary, .btn-danger {
-    color: #ffffff !important; /* Texto blanco sobre azul/rojo pastel */
+/* Outline */
+.btn-outline-primary {
+    color: var(--pms-accent) !important;
+    border-color: var(--pms-accent) !important;
 }
 
-/* ==========================================================================
-   UTILIDADES ADICIONALES
-   ========================================================================== */
-/* Badges (Etiquetas de estado) más suaves */
+.btn-outline-primary:hover {
+    background: var(--pms-accent-soft) !important;
+    color: var(--pms-accent) !important;
+}
+
+.btn-outline-secondary {
+    color: var(--pms-text-secondary) !important;
+    border-color: var(--pms-border-strong) !important;
+    background: transparent !important;
+}
+
+.btn-outline-secondary:hover {
+    background: var(--pms-surface-3) !important;
+    color: var(--pms-text-primary) !important;
+}
+
+/* Botones de tamaño pequeño */
+.btn-sm {
+    font-size: 12px;
+    padding: 5px 10px;
+}
+
+/* Botones de estado */
+.btn-success { background: var(--pms-success) !important; border-color: var(--pms-success) !important; }
+.btn-warning { background: var(--pms-warning) !important; border-color: var(--pms-warning) !important; color: #fff !important; }
+.btn-danger  { background: var(--pms-danger)  !important; border-color: var(--pms-danger)  !important; }
+
+/* ============================================================
+   BADGES (estados de reserva y habitación)
+   ============================================================ */
+
 .badge {
-    padding: 0.5em 0.8em;
-    border-radius: 8px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 9px;
+    border-radius: 20px;
+    letter-spacing: 0.01em;
 }
 
-.bg-primary { background-color: var(--bs-primary) !important; color: white !important;}
-.bg-success { background-color: var(--bs-success) !important; color: #1e293b !important;}
-.bg-warning { background-color: var(--bs-warning) !important; color: #1e293b !important;}
+/* Bootstrap utility overrides */
+.badge.bg-success  { background: var(--pms-success-bg)  !important; color: var(--pms-success-text)  !important; }
+.badge.bg-danger   { background: var(--pms-danger-bg)   !important; color: var(--pms-danger-text)   !important; }
+.badge.bg-warning  { background: var(--pms-warning-bg)  !important; color: var(--pms-warning-text)  !important; }
+.badge.bg-info     { background: var(--pms-info-bg)     !important; color: var(--pms-info-text)     !important; }
+.badge.bg-primary  { background: var(--pms-accent-soft) !important; color: var(--pms-accent)        !important; }
+.badge.bg-secondary{ background: var(--pms-surface-3)   !important; color: var(--pms-text-secondary)!important; }
 
-/* Hacemos que la fuente de todo el sistema se vea más moderna */
-body {
-    font-family: 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+/* Badges de estado específicos del PMS */
+.badge-pending     { background: var(--pms-warning-bg); color: var(--pms-warning-text); }
+.badge-confirmed   { background: var(--pms-info-bg);    color: var(--pms-info-text); }
+.badge-checked_in  { background: var(--pms-success-bg); color: var(--pms-success-text); }
+.badge-checked_out { background: var(--pms-surface-3);  color: var(--pms-text-secondary); }
+.badge-cancelled   { background: var(--pms-danger-bg);  color: var(--pms-danger-text); }
+
+/* Badges de estado de habitación */
+.badge-available    { background: var(--pms-success-bg); color: var(--pms-success-text); }
+.badge-occupied     { background: var(--pms-info-bg);    color: var(--pms-info-text); }
+.badge-maintenance  { background: var(--pms-warning-bg); color: var(--pms-warning-text); }
+.badge-blocked      { background: var(--pms-danger-bg);  color: var(--pms-danger-text); }
+
+/* ============================================================
+   ALERTAS FLASH
+   ============================================================ */
+
+.alert {
+    font-size: 13.5px;
+    border-radius: var(--pms-radius);
+    border-width: 1px;
+    padding: 12px 16px;
+}
+
+.alert-success {
+    background: var(--pms-success-bg);
+    border-color: rgba(16,185,129,0.2);
+    color: var(--pms-success-text);
+}
+
+.alert-danger {
+    background: var(--pms-danger-bg);
+    border-color: rgba(239,68,68,0.2);
+    color: var(--pms-danger-text);
+}
+
+.alert-warning {
+    background: var(--pms-warning-bg);
+    border-color: rgba(245,158,11,0.2);
+    color: var(--pms-warning-text);
+}
+
+.alert-info {
+    background: var(--pms-info-bg);
+    border-color: rgba(59,130,246,0.2);
+    color: var(--pms-info-text);
+}
+
+/* ============================================================
+   ENCABEZADOS DE PÁGINA
+   ============================================================ */
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 22px;
+    gap: 16px;
+}
+
+.page-header-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--pms-text-primary);
+    letter-spacing: -0.02em;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.page-header-sub {
+    font-size: 12.5px;
+    color: var(--pms-text-muted);
+    margin: 3px 0 0;
+}
+
+/* Compatibilidad con h2.h3 que usa el dashboard actual */
+h2.h3, .h3 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+/* ============================================================
+   DROPDOWNS
+   ============================================================ */
+
+.dropdown-menu {
+    font-size: 13px;
+    border: 1px solid var(--pms-border-strong);
+    border-radius: var(--pms-radius);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    padding: 6px;
+}
+
+.dropdown-item {
+    border-radius: var(--pms-radius-sm);
+    padding: 7px 12px;
+    color: var(--pms-text-primary);
+    transition: background 0.1s;
+}
+
+.dropdown-item:hover {
+    background: var(--pms-surface-2);
+    color: var(--pms-text-primary);
+}
+
+.dropdown-item .bi {
+    width: 16px;
+    text-align: center;
+    margin-right: 6px;
+    color: var(--pms-text-muted);
+}
+
+.dropdown-divider {
+    border-color: var(--pms-border);
+    margin: 4px 0;
+}
+
+/* ============================================================
+   PAGINACIÓN
+   ============================================================ */
+
+.pagination .page-link {
+    font-size: 13px;
+    color: var(--pms-text-secondary);
+    border: 1px solid var(--pms-border);
+    border-radius: var(--pms-radius-sm) !important;
+    margin: 0 2px;
+    padding: 6px 11px;
+    transition: all 0.15s;
+}
+
+.pagination .page-link:hover {
+    background: var(--pms-surface-2);
+    color: var(--pms-text-primary);
+    border-color: var(--pms-border-strong);
+}
+
+.pagination .page-item.active .page-link {
+    background: var(--pms-accent);
+    border-color: var(--pms-accent);
+    color: #fff;
+}
+
+/* ============================================================
+   MODALES
+   ============================================================ */
+
+.modal-content {
+    border: 1px solid var(--pms-border);
+    border-radius: var(--pms-radius-lg);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--pms-border);
+    padding: 16px 20px;
+}
+
+.modal-title {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    border-top: 1px solid var(--pms-border);
+    padding: 12px 20px;
+}
+
+.modal-footer .btn + .btn {
+    margin-left: 8px;
+}
+
+/* ============================================================
+   CHAT DE WHATSAPP — Mejoras de estilo
+   ============================================================ */
+
+#chatSidebar {
+    border-right: 1px solid var(--pms-border);
+    font-family: inherit;
+    font-size: 13.5px;
+}
+
+.chat-message-in {
+    background: var(--pms-surface-2);
+    border-radius: 4px 12px 12px 12px;
+}
+
+.chat-message-out {
+    background: var(--pms-accent-soft);
+    border-radius: 12px 4px 12px 12px;
+    color: var(--pms-text-primary);
+}
+
+/* ============================================================
+   PROGRESS BARS
+   ============================================================ */
+
+.progress {
+    background: var(--pms-surface-3);
+    border-radius: 20px;
+    height: 6px;
+}
+
+.progress-bar {
+    border-radius: 20px;
+}
+
+.progress-bar.bg-info    { background: var(--pms-info)    !important; }
+.progress-bar.bg-success { background: var(--pms-success) !important; }
+.progress-bar.bg-warning { background: var(--pms-warning) !important; }
+.progress-bar.bg-danger  { background: var(--pms-danger)  !important; }
+
+/* ============================================================
+   TEXTOS UTILITARIOS
+   ============================================================ */
+
+.text-muted     { color: var(--pms-text-muted)     !important; }
+.text-secondary { color: var(--pms-text-secondary) !important; }
+.text-primary   { color: var(--pms-accent)         !important; }
+.text-success   { color: var(--pms-success)        !important; }
+.text-warning   { color: var(--pms-warning)        !important; }
+.text-danger    { color: var(--pms-danger)         !important; }
+.text-info      { color: var(--pms-info)           !important; }
+
+.text-xs { font-size: 11px; }
+.text-sm { font-size: 12.5px; }
+
+/* Subtítulos de sección como los del dashboard */
+.text-gray-800 { color: var(--pms-text-primary) !important; }
+
+/* ============================================================
+   FULLCALENDAR — Override del timeline de reservas
+   ============================================================ */
+
+.fc {
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.fc-toolbar-title {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em;
+}
+
+.fc-button-primary {
+    background: var(--pms-surface) !important;
+    border: 1px solid var(--pms-border-strong) !important;
+    color: var(--pms-text-primary) !important;
+    font-size: 12.5px !important;
+    font-family: inherit !important;
+    border-radius: var(--pms-radius-sm) !important;
+    box-shadow: none !important;
+    padding: 5px 10px !important;
+}
+
+.fc-button-primary:hover {
+    background: var(--pms-surface-2) !important;
+}
+
+.fc-button-primary:not(:disabled).fc-button-active {
+    background: var(--pms-accent) !important;
+    border-color: var(--pms-accent) !important;
+    color: #fff !important;
+}
+
+.fc-resource-area-header,
+.fc-col-header-cell {
+    background: var(--pms-surface-2) !important;
+}
+
+.fc-datagrid-cell-main {
+    font-size: 12.5px;
+    font-weight: 500;
+}
+
+/* ============================================================
+   RESPONSIVO — colapso del sidebar en móvil
+   ============================================================ */
+
+@media (max-width: 991.98px) {
+    .pms-sidebar {
+        left: calc(-1 * var(--pms-sidebar-w));
+        transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .pms-sidebar.open {
+        left: 0;
+        box-shadow: 8px 0 32px rgba(0,0,0,0.3);
+    }
+
+    .pms-main {
+        margin-left: 0;
+    }
+
+    .pms-sidebar-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 199;
+        display: none;
+    }
+
+    .pms-sidebar-backdrop.show {
+        display: block;
+    }
+
+    .pms-topbar-menu-btn {
+        display: flex;
+    }
+}
+
+@media (min-width: 992px) {
+    .pms-topbar-menu-btn {
+        display: none;
+    }
+}
+
+/* ============================================================
+   SCROLLBAR GLOBAL (Chrome/Edge)
+   ============================================================ */
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--pms-border-strong);
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0,0,0,0.25);
 }

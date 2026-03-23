@@ -14,7 +14,9 @@ class DashboardController extends BaseController
             'hotelName'  => session('tenant_name'),
             'userName'   => session('user_name'),
             'role'       => session('user_role'),
-            'metrics' => $metrics
+            'metrics' => $metrics,
+            'income_yesterday' => 20000,   // para el badge %
+            'units_status'     => [],
         ];
 
         return view('dashboard/index', $data);
