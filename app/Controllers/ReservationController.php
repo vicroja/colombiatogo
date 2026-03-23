@@ -109,6 +109,12 @@ class ReservationController extends BaseController
             ->join('accommodation_types', 'accommodation_types.id = accommodation_units.type_id', 'left')
             ->where('accommodation_units.status !=', 'maintenance')
             ->findAll();
+
+
+        $ratePlanModel = new \App\Models\RatePlanModel();
+
+
+
         $plans = $planModel->where('is_active', 1)->findAll();
         $sources = $sourceModel->where('is_active', 1)->findAll(); // NUEVO
         $tenantId = session('active_tenant_id');
@@ -118,7 +124,8 @@ class ReservationController extends BaseController
             'units' => $units,
             'plans' => $plans,
             'agents' => $agents, // NUEVO
-            'sources' => $sources // NUEVO
+            'sources' => $sources,
+            'rate_plans' => $ratePlanModel->findAll(),
         ]);
     }
 
