@@ -101,7 +101,14 @@ class ReservationController extends BaseController
             $sourceModel->createForTenant(['name' => 'Airbnb', 'color' => '#FF5A5F']);
         }
 
-        $units = $unitModel->whereIn('status', ['available', 'occupied'])->findAll();
+        $unitModel = new \App\Models\AccommodationUnitModel();
+
+
+
+        $units = $unitModel->select('accommodation_units.*, accommodation_types.name as type_name')
+            ->join('accommodation_types', 'accommodation_types.id = accommodation_units.type_id', 'left')
+            ->where('accommodation_units.status !=', 'maintenance')
+            ->findAll();
         $plans = $planModel->where('is_active', 1)->findAll();
         $sources = $sourceModel->where('is_active', 1)->findAll(); // NUEVO
         $tenantId = session('active_tenant_id');
