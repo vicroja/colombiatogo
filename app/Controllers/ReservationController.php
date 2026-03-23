@@ -10,83 +10,6 @@ use App\Services\ReservationStateMachineService;
 class ReservationController extends BaseController
 {
 
-    public function calculatePrice()
-    {
-        $unitId = $this->request->getGet('unit_id');
-        $ratePlanId = $this->request->getGet('rate_plan_id');
-        $checkIn = $this->request->getGet('check_in');
-        $checkOut = $this->request->getGet('check_out');
-        $promoCode = $this->request->getGet('promo_code'); // NUEVO: Recibimos el código
-
-        if (!$unitId || !$ratePlanId || !$checkIn || !$checkOut) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Faltan datos']);
-        }
-
-        $datetime1 = new \DateTime($checkIn);
-        $datetime2 = new \DateTime($checkOut);
-        $interval = $datetime1->diff($datetime2);
-        $nights = $interval->days;
-
-        if ($nights <= 0) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Fechas inválidas']);
-        }
-
-        // Lógica base de precio (Simplificada para el MVP)
-// Lógica base de precio (A prueba de balas)
-        $rateModel = new \App\Models\UnitRateModel();
-        $rate = $rateModel->where('unit_id', $unitId)
-            ->where('rate_plan_id', $ratePlanId)
-            ->first();
-
-        // 1. Intentar sacar el precio del plan de tarifas (probando los nombres de columna más comunes)
-        if ($rate) {
-            $basePricePerNight = $rate['rate'] ?? $rate['base_rate'] ?? $rate['price'] ?? 0;
-        } else {
-            // 2. Si no hay plan de tarifas asignado, usamos el precio estándar de la cabaña
-            $unitModel = new \App\Models\AccommodationUnitModel();
-            $unitInfo = $unitModel->find($unitId);
-            $basePricePerNight = $unitInfo['base_price'] ?? 0;
-        }
-        $totalPrice = $basePricePerNight * $nights;
-        $originalPrice = $totalPrice;
-        $discountAmount = 0;
-        $promoId = null;
-
-        // NUEVO: Lógica de Promociones
-        if (!empty($promoCode) && $totalPrice > 0) {
-            $promoModel = new \App\Models\PromotionModel();
-            $promo = $promoModel->where('code', strtoupper($promoCode))
-                ->where('tenant_id', session('active_tenant_id'))
-                ->where('is_active', 1)
-                ->where('valid_from <=', date('Y-m-d'))
-                ->where('valid_until >=', date('Y-m-d'))
-                ->first();
-
-            // Si el cupón existe y tiene usos disponibles
-            if ($promo && ($promo['max_uses'] == 0 || $promo['current_uses'] < $promo['max_uses'])) {
-                if ($promo['discount_type'] == 'percentage') {
-                    $discountAmount = $totalPrice * ($promo['discount_value'] / 100);
-                } else {
-                    $discountAmount = $promo['discount_value'];
-                }
-
-                $totalPrice = max(0, $totalPrice - $discountAmount);
-                $promoId = $promo['id'];
-            } else {
-                return $this->response->setJSON(['success' => false, 'message' => 'Cupón inválido o agotado']);
-            }
-        }
-
-        return $this->response->setJSON([
-            'success'         => true,
-            'nights'          => $nights,
-            'original_price'  => number_format($originalPrice, 2, '.', ''),
-            'discount_amount' => number_format($discountAmount, 2, '.', ''),
-            'total_price'     => number_format($totalPrice, 2, '.', ''),
-            'promo_applied'   => $discountAmount > 0,
-            'promo_id'        => $promoId
-        ]);
-    }
     public function create()
     {
         $unitModel = new AccommodationUnitModel();
@@ -166,6 +89,7 @@ class ReservationController extends BaseController
             'guest_id'              => $guestId,
             'source_id'             => $this->request->getPost('source_id'),
             'accommodation_unit_id' => $this->request->getPost('unit_id'),
+            'num_guests'            => $this->request->getPost('num_guests'),
             'check_in_date'         => $this->request->getPost('check_in'),
             'check_out_date'        => $this->request->getPost('check_out'),
             'total_price'           => $this->request->getPost('total_price'),
@@ -184,24 +108,27 @@ class ReservationController extends BaseController
             $promoModel->where('id', $promoId)->set('current_uses', 'current_uses+1', false)->update();
         }
 
-        // --- PROCESAR ACOMPAÑANTES ---
-        $additionalGuests = $this->request->getPost('additional_guests');
-        if (!empty($additionalGuests) && is_array($additionalGuests)) {
-            $resGuestModel = new \App\Models\ReservationGuestModel();
-            $insertedCount = 0;
+        // 2. Guardar a los acompañantes (si existen)
+        $guestNames = $this->request->getPost('extra_guest_name');
+        $guestLastnames = $this->request->getPost('extra_guest_lastname');
+        $guestDocTypes = $this->request->getPost('extra_guest_doc_type');
+        $guestDocNumbers = $this->request->getPost('extra_guest_doc_number');
 
-            foreach ($additionalGuests as $guest) {
-                if (!empty($guest['first_name'])) {
-                    $resGuestModel->insert([
+        if (is_array($guestNames)) {
+            $reservationGuestModel = new \App\Models\ReservationGuestModel();
+
+            foreach ($guestNames as $index => $name) {
+                // Solo insertamos si al menos escribieron el nombre
+                if (!empty(trim($name))) {
+                    $reservationGuestModel->insert([
                         'reservation_id' => $reservationId,
-                        'first_name'     => $guest['first_name'],
-                        'last_name'      => $guest['last_name'],
-                        'doc_number'     => $guest['doc_number'] ?? null,
+                        'first_name' => trim($name),
+                        'last_name' => isset($guestLastnames[$index]) ? trim($guestLastnames[$index]) : '',
+                        'doc_type' => isset($guestDocTypes[$index]) ? $guestDocTypes[$index] : null,
+                        'doc_number' => isset($guestDocNumbers[$index]) ? trim($guestDocNumbers[$index]) : null,
                     ]);
-                    $insertedCount++;
                 }
             }
-            log_message('info', "Acompañantes registrados: {$insertedCount} para la reserva #{$reservationId}");
         }
 
         // ==========================================
@@ -570,4 +497,155 @@ class ReservationController extends BaseController
         // Evitamos que CodeIgniter intente renderizar algo más
         exit();
     }
+
+    /**
+     * Calcula dinámicamente el precio de la reserva combinando:
+     * - Tarifas base según el plan de tarifas (rate_plan_id)
+     * - Temporadas dinámicas día por día (seasonal_rates)
+     * - Cobro por huéspedes extra si superan la capacidad base
+     * - Cupones de descuento (promotions)
+     */
+    public function calculatePrice()
+    {
+        // Usamos getVar() para que funcione tanto por GET (tu versión anterior) como por POST (AJAX)
+        $request = service('request');
+        $unitId = $request->getVar('accommodation_unit_id') ?? $request->getVar('unit_id');
+        $ratePlanId = $request->getVar('rate_plan_id');
+        $checkIn = $request->getVar('check_in_date') ?? $request->getVar('check_in');
+        $checkOut = $request->getVar('check_out_date') ?? $request->getVar('check_out');
+        $numGuests = (int) ($request->getVar('num_guests') ?? 1);
+        $promoCode = $request->getVar('promo_code');
+        $tenantId = session()->get('tenant_id') ?? session()->get('active_tenant_id');
+
+        if (!$unitId || !$checkIn || !$checkOut) {
+            log_message('warning', 'Cálculo fallido: Faltan datos requeridos (Unidad o Fechas).');
+            return $this->response->setJSON(['success' => false, 'message' => 'Faltan datos para calcular.']);
+        }
+
+        $datetime1 = new \DateTime($checkIn);
+        $datetime2 = new \DateTime($checkOut);
+        $nights = $datetime1->diff($datetime2)->days;
+
+        if ($nights <= 0) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Fechas inválidas']);
+        }
+
+        $db = \Config\Database::connect();
+
+        // 1. Obtener la tarifa base y el precio de persona extra (De unit_rates)
+        $rateQuery = $db->table('unit_rates')
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('is_active', 1);
+
+        if ($ratePlanId) {
+            $rateQuery->where('rate_plan_id', $ratePlanId);
+        }
+
+        $unitRate = $rateQuery->get()->getRowArray();
+
+        if (!$unitRate) {
+            log_message('error', "Cálculo fallido: Unidad {$unitId} sin tarifa activa para el tenant {$tenantId}.");
+            return $this->response->setJSON(['success' => false, 'message' => 'Unidad sin tarifa configurada.']);
+        }
+
+        // 2. Obtener capacidad base del tipo de alojamiento
+        $unit = $db->table('accommodation_units au')
+            ->select('at.base_capacity')
+            ->join('accommodation_types at', 'au.type_id = at.id')
+            ->where('au.id', $unitId)
+            ->get()->getRowArray();
+
+        $baseCapacity = $unit['base_capacity'] ?? 2;
+        $originalPrice = 0; // Precio antes de descuentos
+
+        try {
+            $interval = new \DateInterval('P1D');
+            $period = new \DatePeriod($datetime1, $interval, $datetime2);
+
+            // 3. Iterar por cada noche para aplicar tarifas de temporada y extras
+            foreach ($period as $date) {
+                $currentDateStr = $date->format('Y-m-d');
+                $dailyPrice = (float) $unitRate['price_per_night'];
+
+                // Buscar si esta noche cae en una temporada (alta/baja)
+                $season = $db->table('seasonal_rates')
+                    ->where('tenant_id', $tenantId)
+                    ->groupStart()
+                    ->where('unit_id', $unitId)
+                    ->orWhere('unit_id', null)
+                    ->groupEnd()
+                    ->where('start_date <=', $currentDateStr)
+                    ->where('end_date >=', $currentDateStr)
+                    ->where('is_active', 1)
+                    ->orderBy('priority', 'DESC')
+                    ->get()->getRowArray();
+
+                // Aplicar modificador de la temporada al precio base de la noche
+                if ($season) {
+                    if ($season['modifier_type'] === 'fixed') {
+                        $dailyPrice = (float) $season['modifier_value'];
+                    } elseif ($season['modifier_type'] === 'percent_increase') {
+                        $dailyPrice += ($dailyPrice * ((float) $season['modifier_value'] / 100));
+                    } elseif ($season['modifier_type'] === 'percent_decrease') {
+                        $dailyPrice -= ($dailyPrice * ((float) $season['modifier_value'] / 100));
+                    }
+                }
+
+                // Sumar valor por personas extra si superan la capacidad base en esta noche
+                if ($numGuests > $baseCapacity) {
+                    $extraPersons = $numGuests - $baseCapacity;
+                    $dailyPrice += ($extraPersons * (float) $unitRate['extra_person_price']);
+                }
+
+                $originalPrice += $dailyPrice;
+            }
+
+            // 4. Lógica de Promociones (Tu código integrado)
+            $totalPrice = $originalPrice;
+            $discountAmount = 0;
+            $promoId = null;
+
+            if (!empty($promoCode) && $totalPrice > 0) {
+                $promo = $db->table('promotions')
+                    ->where('code', strtoupper($promoCode))
+                    ->where('tenant_id', $tenantId)
+                    ->where('is_active', 1)
+                    ->where('valid_from <=', date('Y-m-d'))
+                    ->where('valid_until >=', date('Y-m-d'))
+                    ->get()->getRowArray();
+
+                if ($promo && ($promo['max_uses'] == 0 || $promo['current_uses'] < $promo['max_uses'])) {
+                    if ($promo['discount_type'] === 'percentage') {
+                        $discountAmount = $totalPrice * ($promo['discount_value'] / 100);
+                    } else {
+                        $discountAmount = $promo['discount_value'];
+                    }
+
+                    $totalPrice = max(0, $totalPrice - $discountAmount);
+                    $promoId = $promo['id'];
+                    log_message('info', "Cupón aplicado: {$promoCode} | Descuento: {$discountAmount}");
+                } else {
+                    return $this->response->setJSON(['success' => false, 'message' => 'Cupón inválido, expirado o agotado.']);
+                }
+            }
+
+            // 5. Retornar JSON con la estructura que tu front-end ya esperaba
+            return $this->response->setJSON([
+                'success'         => true,
+                'nights'          => $nights,
+                'original_price'  => number_format($originalPrice, 2, '.', ''),
+                'discount_amount' => number_format($discountAmount, 2, '.', ''),
+                'total_price'     => number_format($totalPrice, 2, '.', ''),
+                'promo_applied'   => $discountAmount > 0,
+                'promo_id'        => $promoId
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Error calculando precio de reserva: ' . $e->getMessage());
+            return $this->response->setJSON(['success' => false, 'message' => 'Error interno en el cálculo.']);
+        }
+    }
+
+
 }

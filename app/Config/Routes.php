@@ -139,6 +139,7 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
     $routes->post('reservations/store', 'ReservationController::store');
 // Ruta para cambiar el estado de la reserva (FSM)
     $routes->post('reservations/update-status/(:num)', 'ReservationController::updateStatus/$1');
+    $routes->post('reservations/calculate-price', 'ReservationController::calculatePrice');
 
     $routes->get('inventory/edit-unit/(:num)', 'InventoryController::editUnit/$1');
     $routes->post('inventory/update-unit/(:num)', 'InventoryController::updateUnit/$1');
@@ -157,6 +158,8 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
     // LIQUIDACIÓN DE COMISIONES
     $routes->get('commissions', 'CommissionController::index');
     $routes->get('commissions/pay/(:num)', 'CommissionController::pay/$1');
+
+
 
 });
 
