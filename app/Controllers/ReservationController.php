@@ -170,6 +170,28 @@ class ReservationController extends BaseController
             $promoModel->where('id', $promoId)->set('current_uses', 'current_uses+1', false)->update();
         }
 
+        // --- PROCESAR ACOMPAÑANTES ---
+        $additionalGuests = $this->request->getPost('additional_guests');
+        if (!empty($additionalGuests) && is_array($additionalGuests)) {
+            $resGuestModel = new \App\Models\ReservationGuestModel();
+            $insertedCount = 0;
+
+            foreach ($additionalGuests as $guest) {
+                // Solo insertamos si al menos el nombre está presente
+                if (!empty($guest['first_name'])) {
+                    $resGuestModel->insert([
+                        'reservation_id' => $reservationId,
+                        'first_name'     => $guest['first_name'],
+                        'last_name'      => $guest['last_name'],
+                        'doc_number'     => $guest['doc_number'] ?? null,
+                        'created_at'     => date('Y-m-d H:i:s')
+                    ]);
+                    $insertedCount++;
+                }
+            }
+            log_message('info', "Acompañantes registrados: {$insertedCount} para la reserva #{$reservationId}");
+        }
+
         // ==========================================
         // LÓGICA DE COMISIONISTAS Y AGENCIAS
         // ==========================================

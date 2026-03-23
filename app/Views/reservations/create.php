@@ -102,7 +102,9 @@
                                     <input type="hidden" name="promo_id" id="promo_id">
                                     <button type="button" class="btn btn-outline-secondary" id="btn_apply_promo"><i class="bi bi-check2"></i></button>
                                 </div>
+
                             </div>
+
                             <div class="col-md-3 mb-3">
                                 <label class="form-label small fw-bold text-success">Total a Pagar</label>
                                 <div class="input-group">

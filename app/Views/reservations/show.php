@@ -25,6 +25,25 @@
                     <p class="mb-1"><strong>Check-in:</strong> <?= date('d/m/Y', strtotime($reservation['check_in_date'])) ?></p>
                     <p class="mb-0"><strong>Check-out:</strong> <?= date('d/m/Y', strtotime($reservation['check_out_date'])) ?></p>
                 </div>
+                <hr>
+                <h6 class="fw-bold mb-2">Acompañantes Registrados</h6>
+                <ul class="list-group list-group-flush small">
+                    <?php
+                    $resGuestModel = new \App\\Models\\ReservationGuestModel();
+                        $acompanying = $resGuestModel->where('reservation_id', $reservation['id'])->findAll();
+
+                        if(empty($acompanying)): ?>
+                            <li class="list-group-item text-muted italic">Sin acompañantes registrados.</li>
+                        <?php else: ?>
+                            <?php foreach($acompanying as $ag): ?>
+                                <li class="list-group-item px-0 py-1">
+                                    <i class="bi bi-person-check text-success"></i>
+                                    <?= esc($ag['first_name'] . ' ' . $ag['last_name']) ?>
+                                    <span class="text-muted">(<?= esc($ag['doc_number']) ?>)</span>
+                                </li>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                </ul>
             </div>
 
             <div class="card shadow-sm border-primary">
