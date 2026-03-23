@@ -191,14 +191,12 @@ class ReservationController extends BaseController
             $insertedCount = 0;
 
             foreach ($additionalGuests as $guest) {
-                // Solo insertamos si al menos el nombre está presente
                 if (!empty($guest['first_name'])) {
                     $resGuestModel->insert([
                         'reservation_id' => $reservationId,
                         'first_name'     => $guest['first_name'],
                         'last_name'      => $guest['last_name'],
                         'doc_number'     => $guest['doc_number'] ?? null,
-                        'created_at'     => date('Y-m-d H:i:s')
                     ]);
                     $insertedCount++;
                 }
