@@ -155,10 +155,10 @@ class ReservationController extends BaseController
 
         // 1. Creamos al huésped al vuelo para agilizar el proceso de recepción
         $guestId = $guestModel->createForTenant([
-            'full_name' => $this->request->getPost('guest_name'),
-            'document'  => $this->request->getPost('guest_document'),
-            'phone'     => $this->request->getPost('guest_phone'),
-            'email'     => $this->request->getPost('guest_email'),
+            'full_name' => $this->request->getPost('full_name'),
+            'document'  => $this->request->getPost('document'),
+            'phone'     => $this->request->getPost('phone'),
+            'email'     => $this->request->getPost('email'),
         ]);
 
         // 2. Creamos la reserva inicial (siempre nace 'pending')

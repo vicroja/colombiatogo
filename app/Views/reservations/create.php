@@ -98,6 +98,10 @@
                                     <?php endforeach; ?>
                                 </select>
                             </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Precio Total</label>
+                                <input type="number" step="0.01" name="total_price" class="form-control" required>
+                            </div>
 
                             <hr>
 
