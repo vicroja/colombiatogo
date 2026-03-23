@@ -206,6 +206,10 @@
                 }
             }
 
+
+            // Variable global para mantener vivo el CSRF en múltiples AJAX
+            window.currentCsrfHash = '<?= csrf_hash() ?>';
+
             // 2. FUNCIÓN: Calcular Precio vía AJAX
             async function calculatePrice() {
                 const unitId = document.getElementById('unit_id').value;
@@ -217,6 +221,12 @@
 
                 // Validamos que tengamos lo mínimo indispensable
                 if (!unitId || !checkIn || !checkOut || numGuests < 1) {
+                    return;
+                }
+
+                // NUEVO: Validar coherencia de fechas antes de consultar
+                if (new Date(checkIn) >= new Date(checkOut)) {
+                    priceHelper.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> La fecha de salida debe ser posterior a la de entrada.</span>';
                     return;
                 }
 
@@ -235,8 +245,8 @@
                     formData.append('rate_plan_id', ratePlanId);
                     formData.append('promo_code', promoCode);
 
-                    // Token CSRF de CodeIgniter 4
-                    formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+                    // Token CSRF dinámico (evita Error 403 al cambiar valores varias veces)
+                    formData.append('<?= csrf_token() ?>', window.currentCsrfHash);
 
                     const response = await fetch('<?= base_url('reservations/calculate-price') ?>', {
                         method: 'POST',
@@ -249,14 +259,59 @@
                     if (data.success) {
                         totalPriceInput.value = data.total_price;
 
-                        let helperText = `Noches: ${data.nights} | Precio Base: $${data.original_price}`;
-                        if (data.promo_applied) {
-                            helperText += ` <br><span class="text-success fw-bold"><i class="bi bi-tag-fill"></i> ¡Cupón aplicado! Ahorro: $${data.discount_amount}</span>`;
+                        // ACTUALIZAR TOKEN PARA LA SIGUIENTE PETICIÓN
+                        if (data.csrf_token) {
+                            window.currentCsrfHash = data.csrf_token;
+                            // También actualizamos el input oculto por si hace submit del formulario
+                            const csrfInput = document.querySelector('input[name="<?= csrf_token() ?>"]');
+                            if(csrfInput) csrfInput.value = data.csrf_token;
                         }
-                        priceHelper.innerHTML = helperText;
+
+                        // NUEVO: Construcción de resumen tipo ticket/factura
+                        let formatCurrency = (val) => parseFloat(val).toLocaleString('es-CO'); // Cambia 'es-CO' por tu locale si es necesario
+
+                        let helperHtml = `
+                            <div class="mt-2 p-3 bg-white border rounded shadow-sm small text-dark">
+                                <h6 class="border-bottom pb-1 mb-2 text-secondary"><i class="bi bi-receipt"></i> Desglose de Tarifa</h6>
+
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span><i class="bi bi-moon text-primary"></i> Alojamiento (${data.nights} noches)</span>
+                                    <span>$${formatCurrency(data.room_total)}</span>
+                                </div>`;
+
+                        // Mostrar extras solo si los hay
+                        if (data.extra_persons > 0) {
+                            helperHtml += `
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span><i class="bi bi-person-plus text-warning"></i> Personas Extra (${data.extra_persons})</span>
+                                    <span>$${formatCurrency(data.extra_person_total)}</span>
+                                </div>`;
+                        }
+
+                        // Mostrar descuento si aplica
+                        if (data.promo_applied) {
+                            helperHtml += `
+                                <div class="d-flex justify-content-between mb-1 text-success fw-bold">
+                                    <span><i class="bi bi-tag-fill"></i> Descuento Cupón</span>
+                                    <span>-$${formatCurrency(data.discount_amount)}</span>
+                                </div>`;
+                        }
+
+                        helperHtml += `
+                                <div class="d-flex justify-content-between mt-2 pt-2 border-top fw-bold" style="font-size: 1.05em;">
+                                    <span>Total Estimado</span>
+                                    <span class="text-primary">$${formatCurrency(data.total_price)}</span>
+                                </div>
+                                <div class="text-muted text-end mt-1" style="font-size: 0.8em;">Capacidad base de unidad: ${data.base_capacity} pax</div>
+                            </div>
+                        `;
+
+                        priceHelper.innerHTML = helperHtml;
                         logDebug("Cálculo exitoso: $" + data.total_price);
                     } else {
-                        priceHelper.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> ${data.message}</span>`;
+                        // En caso de error (cupón inválido, sin tarifas, etc.)
+                        if (data.csrf_token) window.currentCsrfHash = data.csrf_token; // Rescatar token
+                        priceHelper.innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle"></i> ${data.message}</span>`;
                         logDebug("Cálculo fallido: " + data.message);
                     }
                 } catch (error) {

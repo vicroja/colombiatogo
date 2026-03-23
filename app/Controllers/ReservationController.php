@@ -557,7 +557,9 @@ class ReservationController extends BaseController
             ->get()->getRowArray();
 
         $baseCapacity = $unit['base_capacity'] ?? 2;
-        $originalPrice = 0; // Precio antes de descuentos
+        $roomTotal = 0;          // Acumulador de precio de la habitación
+        $extraPersonTotal = 0;   // Acumulador de cobros por personas extra
+        $extraPersonsCount = max(0, $numGuests - $baseCapacity); // Cuántos extras hay
 
         try {
             $interval = new \DateInterval('P1D');
@@ -566,7 +568,7 @@ class ReservationController extends BaseController
             // 3. Iterar por cada noche para aplicar tarifas de temporada y extras
             foreach ($period as $date) {
                 $currentDateStr = $date->format('Y-m-d');
-                $dailyPrice = (float) $unitRate['price_per_night'];
+                $dailyRoomPrice = (float) $unitRate['price_per_night'];
 
                 // Buscar si esta noche cae en una temporada (alta/baja)
                 $season = $db->table('seasonal_rates')
@@ -584,24 +586,26 @@ class ReservationController extends BaseController
                 // Aplicar modificador de la temporada al precio base de la noche
                 if ($season) {
                     if ($season['modifier_type'] === 'fixed') {
-                        $dailyPrice = (float) $season['modifier_value'];
+                        $dailyRoomPrice = (float) $season['modifier_value'];
                     } elseif ($season['modifier_type'] === 'percent_increase') {
-                        $dailyPrice += ($dailyPrice * ((float) $season['modifier_value'] / 100));
+                        $dailyRoomPrice += ($dailyRoomPrice * ((float) $season['modifier_value'] / 100));
                     } elseif ($season['modifier_type'] === 'percent_decrease') {
-                        $dailyPrice -= ($dailyPrice * ((float) $season['modifier_value'] / 100));
+                        $dailyRoomPrice -= ($dailyRoomPrice * ((float) $season['modifier_value'] / 100));
                     }
                 }
 
-                // Sumar valor por personas extra si superan la capacidad base en esta noche
-                if ($numGuests > $baseCapacity) {
-                    $extraPersons = $numGuests - $baseCapacity;
-                    $dailyPrice += ($extraPersons * (float) $unitRate['extra_person_price']);
-                }
+                $roomTotal += $dailyRoomPrice;
 
-                $originalPrice += $dailyPrice;
+                // Sumar valor por personas extra (si aplica)
+                if ($extraPersonsCount > 0) {
+                    $extraPersonTotal += ($extraPersonsCount * (float) $unitRate['extra_person_price']);
+                }
             }
 
-            // 4. Lógica de Promociones (Tu código integrado)
+            // El precio original es la suma de la habitación más las personas extra
+            $originalPrice = $roomTotal + $extraPersonTotal;
+
+            // 4. Lógica de Promociones
             $totalPrice = $originalPrice;
             $discountAmount = 0;
             $promoId = null;
@@ -630,15 +634,20 @@ class ReservationController extends BaseController
                 }
             }
 
-            // 5. Retornar JSON con la estructura que tu front-end ya esperaba
+            // 5. Retornar JSON con datos enriquecidos para el front-end
             return $this->response->setJSON([
-                'success'         => true,
-                'nights'          => $nights,
-                'original_price'  => number_format($originalPrice, 2, '.', ''),
-                'discount_amount' => number_format($discountAmount, 2, '.', ''),
-                'total_price'     => number_format($totalPrice, 2, '.', ''),
-                'promo_applied'   => $discountAmount > 0,
-                'promo_id'        => $promoId
+                'success'            => true,
+                'nights'             => $nights,
+                'base_capacity'      => $baseCapacity,
+                'extra_persons'      => $extraPersonsCount,
+                'room_total'         => number_format($roomTotal, 2, '.', ''),
+                'extra_person_total' => number_format($extraPersonTotal, 2, '.', ''),
+                'original_price'     => number_format($originalPrice, 2, '.', ''),
+                'discount_amount'    => number_format($discountAmount, 2, '.', ''),
+                'total_price'        => number_format($totalPrice, 2, '.', ''),
+                'promo_applied'      => $discountAmount > 0,
+                'promo_id'           => $promoId,
+                'csrf_token'         => csrf_hash() // <- CLAVE: Nuevo token CSRF para peticiones seguidas
             ]);
 
         } catch (\Exception $e) {
