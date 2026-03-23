@@ -41,6 +41,7 @@ class WhatsappToolExecutor
             log_message('error', "[ToolExecutor] Excepción en '{$functionName}': " . $e->getMessage());
             $output = json_encode(['error' => 'Excepción en la base de datos: ' . $e->getMessage()]);
         }
+        log_message('info', "[ToolExecutor] Resultado:" . json_encode($output));
 
         return [
             'tool_call_id' => $toolCallId,
