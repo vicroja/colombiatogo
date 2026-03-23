@@ -29,7 +29,7 @@
                 <h6 class="fw-bold mb-2">Acompañantes Registrados</h6>
                 <ul class="list-group list-group-flush small">
                     <?php
-                    $resGuestModel = new \App\\Models\\ReservationGuestModel();
+                    $resGuestModel = new \App\Models\ReservationGuestModel();
                         $acompanying = $resGuestModel->where('reservation_id', $reservation['id'])->findAll();
 
                         if(empty($acompanying)): ?>

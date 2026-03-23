@@ -1,205 +1,201 @@
 <?= $this->extend('layouts/pms') ?>
+
+<?= $this->section('title') ?>Nueva Reserva - <?= session('tenant_name') ?><?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
-
-    <div class="row">
-        <div class="col-md-10 offset-md-1">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white pb-0 border-bottom-0">
-                    <h4 class="mb-0 text-primary mt-2"><i class="bi bi-calendar-plus"></i> Registrar Nueva Reserva</h4>
-                </div>
-                <div class="card-body">
-                    <form action="<?= base_url('/reservations/store') ?>" method="post">
-                        <?= csrf_field() ?>
-
-                        <h5 class="text-secondary mt-2 border-bottom pb-2">Datos del Huésped Principal</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label small text-muted fw-bold">Nombre Completo</label>
-                                <input type="text" name="guest_name" class="form-control" required placeholder="Ej. Juan Pérez">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small text-muted fw-bold">Documento / Pasaporte</label>
-                                <input type="text" name="guest_document" class="form-control" required placeholder="Ej. 1020304050">
-                            </div>
-                        </div>
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <label class="form-label small text-muted fw-bold">Teléfono</label>
-                                <input type="text" name="guest_phone" class="form-control" placeholder="Ej. +57 300 000 0000">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small text-muted fw-bold">Correo Electrónico</label>
-                                <input type="email" name="guest_email" class="form-control" placeholder="Ej. juan@correo.com">
-                            </div>
-                        </div>
-
-                        <h5 class="text-secondary mt-4 border-bottom pb-2">Datos de la Estancia</h5>
-
-                        <div class="row mb-3">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label small text-muted fw-bold">Canal / Fuente</label>
-                                <select name="source_id" id="source_id" class="form-select border-primary" required>
-                                    <option value="">Seleccione origen...</option>
-                                    <?php if(!empty($sources)): ?>
-                                        <?php foreach($sources as $s): ?>
-                                            <option value="<?= $s['id'] ?>"><?= esc($s['name']) ?></option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label small text-muted fw-bold"><i class="bi bi-briefcase"></i> Agencia / Comisionista</label>
-                                <select name="agent_id" class="form-select">
-                                    <option value="">-- Ninguno (Reserva Directa) --</option>
-                                    <?php if(isset($agents)): ?>
-                                        <?php foreach($agents as $agent): ?>
-                                            <?php $comText = $agent['commission_type'] == 'percentage' ? $agent['commission_value'].'%' : session('currency_symbol').$agent['commission_value']; ?>
-                                            <option value="<?= $agent['id'] ?>">
-                                                <?= esc($agent['name']) ?> (Gana <?= $comText ?>)
-                                            </option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </select>
-                                <small class="text-muted d-block mt-1">Opcional. Si eliges uno, se generará la comisión.</small>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label small text-muted fw-bold">Habitación Asignada</label>
-                                <select name="unit_id" id="unit_id" class="form-select border-primary" required>
-                                    <option value="">Seleccione habitación...</option>
-                                    <?php if(!empty($units)): ?>
-                                        <?php foreach($units as $u): ?>
-                                            <option value="<?= $u['id'] ?>"><?= esc($u['name']) ?></option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label small text-muted fw-bold">Plan Tarifario</label>
-                                <select name="rate_plan_id" id="rate_plan_id" class="form-select border-primary" required>
-                                    <option value="">Seleccione plan...</option>
-                                    <?php if(!empty($plans)): ?>
-                                        <?php foreach($plans as $p): ?>
-                                            <option value="<?= $p['id'] ?>"><?= esc($p['name']) ?></option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="row mb-3 align-items-end">
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label small text-muted fw-bold">Check-in</label>
-                                <input type="date" name="check_in" id="check_in" class="form-control bg-light" required>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label small text-muted fw-bold">Check-out</label>
-                                <input type="date" name="check_out" id="check_out" class="form-control bg-light" required>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label small text-muted fw-bold">Cupón (Opcional)</label>
-                                <div class="input-group">
-                                    <input type="text" id="promo_code" class="form-control text-uppercase" placeholder="Ej. VERANO">
-                                    <input type="hidden" name="promo_id" id="promo_id">
-                                    <button type="button" class="btn btn-outline-secondary" id="btn_apply_promo"><i class="bi bi-check2"></i></button>
-                                </div>
-
-                            </div>
-
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label small fw-bold text-success">Total a Pagar</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-success text-white border-success"><?= session('currency_symbol') ?: '$' ?></span>
-                                    <input type="text" name="total_price" id="total_price" class="form-control fw-bold text-success border-success bg-white" required readonly placeholder="0.00">
-                                </div>
-                                <small id="nights_info" class="text-muted d-block mt-1"></small>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between mt-5 pt-3 border-top">
-                            <a href="<?= base_url('/reservations') ?>" class="btn btn-outline-secondary px-4">Cancelar</a>
-                            <button type="submit" class="btn btn-primary px-5 fw-bold text-white shadow-sm">Crear Reserva (Pendiente)</button>
-                        </div>
-                    </form>
-                </div>
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <a href="<?= base_url('/reservations') ?>" class="btn btn-sm btn-outline-secondary me-2">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+                <h2 class="d-inline-block mb-0">Crear Nueva Reserva</h2>
             </div>
         </div>
+
+        <form action="<?= base_url('/reservations/store') ?>" method="post" id="reservation-form" class="needs-validation" novalidate>
+            <?= csrf_field() ?>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-white py-3">
+                            <h5 class="mb-0 text-primary"><i class="bi bi-person-badge"></i> Información del Titular</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold">Nombre Completo del Cliente</label>
+                                    <input type="text" name="full_name" class="form-control" required placeholder="Ej. Juan Pérez">
+                                    <div class="invalid-feedback">El nombre es obligatorio.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Documento de Identidad</label>
+                                    <input type="text" name="document" class="form-control" placeholder="Cédula, Pasaporte, etc.">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Teléfono / WhatsApp</label>
+                                    <input type="text" name="phone" class="form-control" placeholder="Ej. +57 300 000 0000">
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold">Correo Electrónico</label>
+                                    <input type="email" name="email" class="form-control" placeholder="cliente@correo.com">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 text-primary"><i class="bi bi-people"></i> Acompañantes / Manifiesto</h5>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="add-guest-btn">
+                                <i class="bi bi-plus-circle"></i> Agregar Acompañante
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="guests-container">
+                                <div class="text-center py-3 text-muted border border-dashed rounded" id="no-guests-msg">
+                                    <i class="bi bi-info-circle"></i> No se han registrado acompañantes aún.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card shadow-sm border-primary mb-4">
+                        <div class="card-header bg-primary text-white py-3">
+                            <h5 class="mb-0">Detalles de la Estancia</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Habitación / Unidad</label>
+                                <select name="unit_id" class="form-select" required>
+                                    <option value="">Seleccione una unidad...</option>
+                                    <?php foreach ($units as $u): ?>
+                                        <option value="<?= $u['id'] ?>"><?= esc($u['name']) ?> (<?= esc($u['type_name']) ?>)</option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Check-In (Entrada)</label>
+                                <input type="date" name="check_in" id="check_in" class="form-control" required value="<?= date('Y-m-d') ?>">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Check-Out (Salida)</label>
+                                <input type="date" name="check_out" id="check_out" class="form-control" required value="<?= date('Y-m-d', strtotime('+1 day')) ?>">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Plan Tarifario</label>
+                                <select name="rate_plan_id" class="form-select" required>
+                                    <?php foreach ($rate_plans as $rp): ?>
+                                        <option value="<?= $rp['id'] ?>" <?= $rp['is_default'] ? 'selected' : '' ?>>
+                                            <?= esc($rp['name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <hr>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Notas Especiales</label>
+                                <textarea name="notes" class="form-control" rows="3" placeholder="Observaciones, alergias, peticiones..."></textarea>
+                            </div>
+
+                            <div class="d-grid gap-2 mt-4">
+                                <button type="submit" class="btn btn-success btn-lg shadow">
+                                    <i class="bi bi-calendar-check"></i> Confirmar Reserva
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const unitSelect = document.getElementById('unit_id');
-            const planSelect = document.getElementById('rate_plan_id');
-            const checkInInput = document.getElementById('check_in');
-            const checkOutInput = document.getElementById('check_out');
-            const promoInput = document.getElementById('promo_code');
-            const promoBtn = document.getElementById('btn_apply_promo');
-            const promoIdInput = document.getElementById('promo_id');
+            const guestsContainer = document.getElementById('guests-container');
+            const addGuestBtn = document.getElementById('add-guest-btn');
+            const noGuestsMsg = document.getElementById('no-guests-msg');
+            let guestCount = 0;
 
-            const priceInput = document.getElementById('total_price');
-            const nightsInfo = document.getElementById('nights_info');
+            // Función para agregar fila de acompañante
+            addGuestBtn.addEventListener('click', function() {
+                if (noGuestsMsg) noGuestsMsg.style.display = 'none';
 
-            function fetchCalculatedPrice() {
-                const unit_id = unitSelect.value;
-                const rate_plan_id = planSelect.value;
-                const check_in = checkInInput.value;
-                const check_out = checkOutInput.value;
-                const promo_code = promoInput.value.trim();
+                guestCount++;
+                const guestHtml = `
+            <div class="card border-light bg-light mb-3 guest-row shadow-sm animate__animated animate__fadeIn">
+                <div class="card-body p-3">
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="small text-muted fw-bold">Nombre</label>
+                            <input type="text" name="additional_guests[${guestCount}][first_name]" class="form-control form-control-sm" required placeholder="Nombre">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small text-muted fw-bold">Apellido</label>
+                            <input type="text" name="additional_guests[${guestCount}][last_name]" class="form-control form-control-sm" required placeholder="Apellido">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small text-muted fw-bold">Documento</label>
+                            <input type="text" name="additional_guests[${guestCount}][doc_number]" class="form-control form-control-sm" placeholder="ID/Cédula">
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end justify-content-end">
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-guest-btn" title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
 
-                if(unit_id && rate_plan_id && check_in && check_out) {
-                    if (new Date(check_in) >= new Date(check_out)) {
-                        priceInput.value = '0.00';
-                        nightsInfo.innerHTML = "<span class='text-danger fw-bold'>Fechas inválidas</span>";
-                        return;
-                    }
+                guestsContainer.insertAdjacentHTML('beforeend', guestHtml);
+                logDebug("Agregado acompañante #" + guestCount);
+            });
 
-                    priceInput.value = 'Calculando...';
-                    nightsInfo.innerHTML = "<span class='text-info'>Consultando tarifas...</span>";
+            // Delegación de eventos para eliminar acompañantes
+            guestsContainer.addEventListener('click', function(e) {
+                if (e.target.closest('.remove-guest-btn')) {
+                    const row = e.target.closest('.guest-row');
+                    row.classList.remove('animate__fadeIn');
+                    row.classList.add('animate__fadeOut');
 
-                    const url = `<?= base_url('/reservations/calculate-price') ?>?unit_id=${unit_id}&rate_plan_id=${rate_plan_id}&check_in=${check_in}&check_out=${check_out}&promo_code=${promo_code}`;
-
-                    fetch(url)
-                        .then(response => response.json())
-                        .then(data => {
-                            if(data.success) {
-                                priceInput.value = data.total_price;
-                                promoIdInput.value = data.promo_id || '';
-
-                                let infoHtml = `<span class='text-success fw-bold'>Por ${data.nights} noche(s)</span>`;
-
-                                // Si se aplicó el cupón, tachamos el precio original
-                                if(data.promo_applied) {
-                                    infoHtml += `<br><span class='text-danger text-decoration-line-through small'>Original: $${data.original_price}</span> <span class='badge bg-success small'>Cupón Aplicado</span>`;
-                                }
-
-                                nightsInfo.innerHTML = infoHtml;
-                            } else {
-                                priceInput.value = '0.00';
-                                promoIdInput.value = '';
-                                nightsInfo.innerHTML = `<span class='text-danger'>${data.message}</span>`;
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error calculando el precio:', error);
-                            priceInput.value = 'Error';
-                        });
-                }
-            }
-
-            // Disparar cálculos
-            unitSelect.addEventListener('change', fetchCalculatedPrice);
-            planSelect.addEventListener('change', fetchCalculatedPrice);
-            checkInInput.addEventListener('change', fetchCalculatedPrice);
-            checkOutInput.addEventListener('change', fetchCalculatedPrice);
-
-            // Disparar cálculo al presionar el botón del cupón o dar Enter
-            promoBtn.addEventListener('click', fetchCalculatedPrice);
-            promoInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    fetchCalculatedPrice();
+                    setTimeout(() => {
+                        row.remove();
+                        if (guestsContainer.querySelectorAll('.guest-row').length === 0) {
+                            noGuestsMsg.style.display = 'block';
+                        }
+                    }, 300);
                 }
             });
+
+            // Validación de formularios de Bootstrap
+            const forms = document.querySelectorAll('.needs-validation');
+            Array.from(forms).forEach(form => {
+                form.addEventListener('submit', event => {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                }, false);
+            });
+
+            function logDebug(msg) {
+                console.log("[MAVILUSA DEBUG] " + new Date().toLocaleTimeString() + ": " + msg);
+            }
         });
     </script>
+
+    <style>
+        .border-dashed { border-style: dashed !important; border-width: 2px !important; }
+        .animate__animated { animation-duration: 0.4s; }
+    </style>
 
 <?= $this->endSection() ?>
