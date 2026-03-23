@@ -1,0 +1,131 @@
+/* ==========================================================================
+   TEMA MAVILUSA: MODERN PASTEL SAAS
+   ========================================================================== */
+
+:root {
+    /* 1. PALETA DE COLORES PASTEL (Sobrescribiendo variables de Bootstrap) */
+    --bs-body-bg: #f4f7f9;           /* Fondo general del sistema: gris/azul muy sutil */
+    --bs-body-color: #475569;        /* Texto general: Gris pizarra oscuro (más suave que el negro puro) */
+
+    --bs-primary: #8baade;           /* Azul pastel (Botones principales, headers) */
+    --bs-primary-rgb: 139, 170, 222;
+
+    --bs-success: #9ad6b3;           /* Verde menta pastel (Confirmaciones, checks) */
+    --bs-success-rgb: 154, 214, 179;
+
+    --bs-warning: #fce29f;           /* Amarillo/Durazno pastel (Alertas) */
+    --bs-danger: #f5a6a6;            /* Rojo/Rosa pastel (Errores, eliminar) */
+    --bs-info: #a0d2eb;              /* Cyan pastel */
+    --bs-secondary: #94a3b8;         /* Gris azulado (Textos mutados, botones secundarios) */
+
+    --bs-link-color: #6a8ec2;        /* Enlaces un poco más oscuros que el primary para legibilidad */
+    --bs-link-hover-color: #4f73a6;
+
+    /* 2. BORDES MÁS REDONDEADOS (Efecto burbuja/moderno) */
+    --bs-border-radius: 14px;
+    --bs-border-radius-sm: 10px;
+    --bs-border-radius-lg: 18px;
+}
+
+/* ==========================================================================
+   TARJETAS (CARDS) - Estilo limpio tipo Apple/Stripe
+   ========================================================================== */
+.card {
+    border: none !important; /* Quitamos el borde duro por defecto */
+    border-radius: var(--bs-border-radius-lg);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03) !important; /* Sombra grande pero muy difuminada */
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background-color: #ffffff;
+}
+
+.card-header {
+    background-color: transparent !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
+    padding: 1.25rem 1.5rem;
+}
+
+.card-header h5 {
+    font-weight: 700;
+    color: #334155;
+    letter-spacing: -0.02em;
+}
+
+/* ==========================================================================
+   FORMULARIOS E INPUTS
+   ========================================================================== */
+.form-control, .form-select {
+    border: 2px solid #e2e8f0;
+    border-radius: var(--bs-border-radius);
+    padding: 0.6rem 1rem;
+    font-size: 0.95rem;
+    color: #334155;
+    background-color: #f8fafc; /* Fondo del input ligerísimamente gris */
+    transition: all 0.2s ease;
+}
+
+/* Estado Focus (Al hacer clic en el input) */
+.form-control:focus, .form-select:focus {
+    background-color: #ffffff;
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 4px rgba(139, 170, 222, 0.2) !important; /* Anillo pastel */
+}
+
+.form-label {
+    color: #64748b;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.4rem;
+}
+
+/* ==========================================================================
+   BOTONES
+   ========================================================================== */
+.btn {
+    border-radius: var(--bs-border-radius-sm);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    padding: 0.5rem 1.25rem;
+    border: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Animación al pasar el mouse (Efecto levitación) */
+.btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.08);
+}
+
+.btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+/* Corrección de color de texto para botones pastel (para asegurar contraste) */
+.btn-success, .btn-warning, .btn-info {
+    color: #1e293b !important; /* Texto oscuro sobre fondos muy claros */
+}
+
+.btn-primary, .btn-danger {
+    color: #ffffff !important; /* Texto blanco sobre azul/rojo pastel */
+}
+
+/* ==========================================================================
+   UTILIDADES ADICIONALES
+   ========================================================================== */
+/* Badges (Etiquetas de estado) más suaves */
+.badge {
+    padding: 0.5em 0.8em;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.bg-primary { background-color: var(--bs-primary) !important; color: white !important;}
+.bg-success { background-color: var(--bs-success) !important; color: #1e293b !important;}
+.bg-warning { background-color: var(--bs-warning) !important; color: #1e293b !important;}
+
+/* Hacemos que la fuente de todo el sistema se vea más moderna */
+body {
+    font-family: 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
