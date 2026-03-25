@@ -43,6 +43,7 @@ class GeminiModel extends Model
             'contents' => $history,
             'generationConfig' => [
                 'temperature' => 0.4,
+                'responseMimeType' => 'application/json', // <-- ¡EL TRUCO ESTÁ AQUÍ! Ffuerza a la API a responder solo JSON
             ]
         ];
 
@@ -172,22 +173,45 @@ class GeminiModel extends Model
 
         return trim($text);
     }*/
-    public function cleanJsonResponse($responseText)
+
+
+    public function cleanJsonResponse($text)
     {
-        // 1. Quitar los bloques de markdown que a veces Gemini añade
-        $cleanJson = str_replace(['```json', '```'], '', $responseText);
-        $cleanJson = trim($cleanJson);
+        $text = preg_replace('/```\s*$/mi', '', $text);
+        $text = trim($text);
 
-        // 2. Limpiar saltos de línea reales DENTRO de los valores del JSON
-        // Buscamos saltos de línea y tabulaciones y los escapamos
-        $cleanJson = preg_replace('/\r|\n/', '\\n', $cleanJson);
-        $cleanJson = preg_replace('/\t/', '\\t', $cleanJson);
+        // 3. Extraer estrictamente el objeto JSON
+        // Esto ignora cualquier texto introductorio o de despedida ("¡Hola! Aquí está tu JSON:")
+        $start = strpos($text, '{');
+        $end = strrpos($text, '}');
 
-        // Como el regex anterior escapa TODO (incluyendo los saltos que separan las llaves del JSON),
-        // decodificamos. Si sigue fallando por comillas mal escapadas u otro motivo, lo manejas en el catch.
+        if ($start !== false && $end !== false) {
+            // Cortamos la cadena para quedarnos solo con el contenido desde { hasta }
+            $text = substr($text, $start, $end - $start + 1);
+        }
 
-        return $cleanJson;
+        // 4. Verificación rápida: ¿Ya es un JSON válido?
+        // Si usamos responseMimeType en la API, casi siempre llegará perfecto aquí.
+        json_decode($text);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            return $text; // Si es válido, no lo tocamos más.
+        }
+
+        // 5. El Salvavidas (Solo se ejecuta si el JSON llegó roto)
+        // Busca texto entre comillas dobles y escapa los saltos de línea y tabulaciones reales
+        $text = preg_replace_callback('/"(?:\\\\.|[^\\\\"])*"/s', function($matches) {
+            // Usamos comillas dobles con doble barra invertida para asegurar que PHP
+            // escriba literalmente los caracteres \ y n en el string final.
+            return str_replace(
+                ["\r\n", "\r", "\n", "\t"],
+                ["\\n", "\\n", "\\n", "\\t"],
+                $matches[0]
+            );
+        }, $text);
+
+        return $text;
     }
+
 
     /**
      * 5. MOTOR DE EJECUCIÓN CON RESILIENCIA Y FALLBACKS
