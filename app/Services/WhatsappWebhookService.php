@@ -477,8 +477,9 @@ class WhatsappWebhookService
         $apiResponse = $this->whatsappModel->sendTextApi($toPhone, $text, $isSaas, $tenantId);
 
         // 2. Registra el mensaje de salida en la BD
-        if ($apiResponse['success'] ?? false) {
-            $wamid = $apiResponse['messages'][0]['id'] ?? null;
+        // Meta no devuelve un campo 'success'. El éxito se confirma si viene el ID del mensaje ('wamid').
+        if (isset($apiResponse['messages'][0]['id'])) {
+            $wamid = $apiResponse['messages'][0]['id'];
 
             $this->whatsappModel->saveMessage([
                 'whatsapp_message_id' => $wamid,
@@ -491,6 +492,7 @@ class WhatsappWebhookService
                 'created_at'        => date('Y-m-d H:i:s')
             ]);
         } else {
+            // Si realmente falla, Meta devuelve un objeto 'error'
             log_message('error', "[WebhookService] Error enviando mensaje a {$toPhone}: " . json_encode($apiResponse));
         }
     }
