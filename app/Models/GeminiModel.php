@@ -152,7 +152,8 @@ class GeminiModel extends Model
     /**
      * 4. LIMPIEZA DE JSON (Usado intensivamente en tu Cli.php para las predicciones)
      */
-    public function cleanJsonResponse(string $text): string
+
+    /*public function cleanJsonResponse(string $text): string
     {
         $text = trim($text);
 
@@ -170,6 +171,22 @@ class GeminiModel extends Model
         }
 
         return trim($text);
+    }*/
+    public function cleanJsonResponse($responseText)
+    {
+        // 1. Quitar los bloques de markdown que a veces Gemini añade
+        $cleanJson = str_replace(['```json', '```'], '', $responseText);
+        $cleanJson = trim($cleanJson);
+
+        // 2. Limpiar saltos de línea reales DENTRO de los valores del JSON
+        // Buscamos saltos de línea y tabulaciones y los escapamos
+        $cleanJson = preg_replace('/\r|\n/', '\\n', $cleanJson);
+        $cleanJson = preg_replace('/\t/', '\\t', $cleanJson);
+
+        // Como el regex anterior escapa TODO (incluyendo los saltos que separan las llaves del JSON),
+        // decodificamos. Si sigue fallando por comillas mal escapadas u otro motivo, lo manejas en el catch.
+
+        return $cleanJson;
     }
 
     /**
