@@ -31,24 +31,26 @@ class WhatsappWebhookService
     /**
      * Herramienta para buscar qué cabañas están libres en ciertas fechas.
      */
+
     public function toolConsultarDisponibilidad(array $args)
     {
         $fechaIn = $args['check_in_date'] ?? null;
         $fechaOut = $args['check_out_date'] ?? null;
-        $huespedes = $args['numero_personas'] ?? 1;
+        $huespedes = (int) ($args['numero_personas'] ?? 2);
 
         if (!$fechaIn || !$fechaOut) {
             return json_encode(['error' => 'Faltan fechas de check-in o check-out para buscar disponibilidad.']);
         }
 
-        // Buscamos unidades que NO tengan reservas superpuestas en esas fechas
+        // 1. Buscamos unidades libres y su capacidad base (haciendo JOIN con accommodation_types)
         $sql = "
-            SELECT id, name, max_occupancy, beds_info, description 
-            FROM accommodation_units 
-            WHERE tenant_id = ? 
-            AND status = 'available'
-            AND max_occupancy >= ?
-            AND id NOT IN (
+            SELECT au.id, au.name, au.max_occupancy, au.beds_info, au.description, at.base_capacity
+            FROM accommodation_units au
+            JOIN accommodation_types at ON au.type_id = at.id
+            WHERE au.tenant_id = ? 
+            AND au.status = 'available'
+            AND au.max_occupancy >= ?
+            AND au.id NOT IN (
                 SELECT accommodation_unit_id 
                 FROM reservations 
                 WHERE tenant_id = ? 
@@ -61,20 +63,61 @@ class WhatsappWebhookService
             $this->currentTenantId,
             $huespedes,
             $this->currentTenantId,
-            $fechaOut, // Lógica de cruce de fechas
+            $fechaOut,
             $fechaIn
         ])->getResult();
 
         if (empty($unidades)) {
             return json_encode([
-                'mensaje' => 'No hay cabañas ni habitaciones disponibles para esas fechas y esa cantidad de personas.',
-                'sugerencia' => 'Dile al cliente que no tienes disponibilidad exacta, pero pregúntale si tiene flexibilidad de fechas.'
+                'mensaje' => 'No hay cabañas disponibles para esas fechas y esa cantidad de personas.',
+                'sugerencia' => 'Pregúntale si tiene flexibilidad de fechas o si pueden dividirse en dos cabañas.'
             ]);
         }
 
+        // 2. Calcular el precio EXACTO para cada unidad libre
+        $priceService = new \App\Services\PriceCalculatorService();
+
+        // Obtenemos el plan de tarifas por defecto del tenant
+        $defaultPlan = $this->db->table('rate_plans')
+            ->where('tenant_id', $this->currentTenantId)
+            ->where('is_default', 1)
+            ->get()->getRow();
+        $ratePlanId = $defaultPlan ? $defaultPlan->id : 1; // Fallback al plan 1
+
+        $resultadosIA = [];
+
+        foreach ($unidades as $u) {
+            // Calcular precio base por noches y temporadas
+            $stayCalc = $priceService->calculateStay($u->id, $ratePlanId, $fechaIn, $fechaOut);
+            $totalHabitacion = $stayCalc['total_price'];
+            $noches = $stayCalc['nights'];
+
+            // Calcular cobro por personas extra
+            $unitRate = $this->db->table('unit_rates')
+                ->where('unit_id', $u->id)
+                ->where('rate_plan_id', $ratePlanId)
+                ->get()->getRow();
+
+            $extraPrice = $unitRate ? $unitRate->extra_person_price : 0;
+            $paxExtra = max(0, $huespedes - $u->base_capacity);
+            $totalExtras = $paxExtra * $extraPrice * $noches;
+
+            $precioTotal = $totalHabitacion + $totalExtras;
+
+            $resultadosIA[] = [
+                'id_unidad' => $u->id,
+                'nombre' => $u->name,
+                'noches' => $noches,
+                'personas_cotizadas' => $huespedes,
+                'precio_total_definitivo' => $precioTotal,
+                'desglose' => "Base de habitacion: $totalHabitacion, Cobro por personas extra: $totalExtras",
+                'camas' => $u->beds_info
+            ];
+        }
+
         return json_encode([
-            'mensaje' => 'Sí hay disponibilidad.',
-            'unidades_libres' => $unidades
+            'mensaje' => 'Sí hay disponibilidad. Aquí están las opciones con el PRECIO TOTAL YA CALCULADO para toda la estancia.',
+            'unidades_libres' => $resultadosIA
         ]);
     }
 

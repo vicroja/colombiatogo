@@ -38,6 +38,31 @@ if (!function_exists('build_guest_context_data')) {
         $contexto .= "- Horarios Oficiales -> Check-in: {$tenant->checkin_time} | Check-out: {$tenant->checkout_time}\n";
         $contexto .= "- Moneda Local: {$tenant->currency_code} ({$tenant->currency_symbol})\n\n";
 
+
+// --- NUEVO: CATÁLOGO DE ALOJAMIENTOS ---
+        $contexto .= "[CATÁLOGO DE ALOJAMIENTOS DISPONIBLES EN EL SISTEMA]\n";
+        $contexto .= "Nota para la IA: Puedes ofrecer estas opciones al cliente libremente. Los precios aquí son 'Desde', el precio final depende de la temporada y cantidad de personas.\n";
+
+        $unidadesQuery = $db->query("
+            SELECT au.id, au.name, au.description, au.max_occupancy, au.beds_info, at.base_capacity,
+                   (SELECT price_per_night FROM unit_rates WHERE unit_id = au.id AND is_active = 1 ORDER BY id ASC LIMIT 1) as base_price,
+                   (SELECT extra_person_price FROM unit_rates WHERE unit_id = au.id AND is_active = 1 ORDER BY id ASC LIMIT 1) as extra_price
+            FROM accommodation_units au
+            JOIN accommodation_types at ON au.type_id = at.id
+            WHERE au.tenant_id = ? AND au.status != 'maintenance'
+        ", [$tenantId])->getResult();
+
+        foreach ($unidadesQuery as $u) {
+            $basePriceF = number_format((float)$u->base_price, 0, ',', '.');
+            $extraPriceF = number_format((float)$u->extra_price, 0, ',', '.');
+            $contexto .= "🏠 *{$u->name}* (Capacidad Base: {$u->base_capacity} | Max: {$u->max_occupancy} personas).\n";
+            $contexto .= "  - Descripción: {$u->description}\n";
+            $contexto .= "  - Camas: {$u->beds_info}\n";
+            $contexto .= "  - Precio Base: {$tenant->currency_symbol}{$basePriceF}/noche. (Persona extra: {$tenant->currency_symbol}{$extraPriceF}/noche).\n";
+        }
+        $contexto .= "\n";
+
+
         // 2. DATOS DEL HUÉSPED
         if ($guest) {
             $contexto .= "[PERFIL DEL HUÉSPED]\n";
@@ -136,7 +161,7 @@ if (!function_exists('build_guest_context_data')) {
                 $contexto .= "({$msg->created_at}) {$rol}: {$texto}\n";
             }
         }
-
+log_message('info', "Contexto Final: {$contexto}");
         return $contexto;
     }
 }
