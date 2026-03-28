@@ -82,4 +82,45 @@ class AccommodationUnitModel extends BaseMultiTenantModel
         return true;
     }
 
+    /**
+     * Obtiene una unidad completa con toda su jerarquía:
+     * Amenidades propias, Habitaciones hijas, Camas de las hijas y Amenidades de las hijas.
+     *
+     * @param int $unitId
+     * @return array|null
+     */
+    public function getUnitWithHierarchy(int $unitId): ?array
+    {
+        $unit = $this->find($unitId);
+        if (!$unit) return null;
+
+        $db = \Config\Database::connect();
+
+        // 1. Obtener amenidades del padre
+        $parentAmenities = $db->table('unit_amenities')
+            ->where('unit_id', $unitId)
+            ->get()->getResultArray();
+        $unit['amenities_list'] = array_column($parentAmenities, 'amenity_id');
+
+        // 2. Obtener habitaciones hijas
+        $rooms = $this->where('parent_id', $unitId)->findAll();
+
+        foreach ($rooms as &$room) {
+            // Camas de la habitación
+            $room['beds'] = $db->table('unit_beds')
+                ->where('unit_id', $room['id'])
+                ->get()->getResultArray();
+
+            // Amenidades de la habitación
+            $roomAmenities = $db->table('unit_amenities')
+                ->where('unit_id', $room['id'])
+                ->get()->getResultArray();
+            $room['amenities_list'] = array_column($roomAmenities, 'amenity_id');
+        }
+
+        $unit['rooms'] = $rooms;
+
+        return $unit;
+    }
+
 }

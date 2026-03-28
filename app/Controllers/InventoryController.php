@@ -15,124 +15,198 @@ use App\Models\UnitBedModel;
 class InventoryController extends BaseController
 {
 
+
     /**
-     * Muestra el formulario de edición de una unidad específica
+     * Muestra el formulario de edición cargando toda la jerarquía de la unidad
      */
     public function editUnit($id)
     {
+        $tenantId = session('active_tenant_id');
+
         $unitModel = new \App\Models\AccommodationUnitModel();
         $mediaModel = new \App\Models\TenantMediaModel();
         $typeModel = new \App\Models\AccommodationTypeModel();
+        $amenityModel = new \App\Models\AmenityModel();
+        $bedTypeModel = new \App\Models\BedTypeModel();
 
-        // 1. Buscamos directamente por ID.
-        // Tu BaseMultiTenantModel automáticamente asegurará que pertenezca al 'active_tenant_id'
-        $unit = $unitModel->find($id);
+        // 1. Buscamos usando la jerarquía completa (Padre e Hijos)
+        $unit = $unitModel->getUnitWithHierarchy($id);
 
-        if (!$unit) {
-            $tenantId = session('active_tenant_id');
+        if (!$unit || $unit['tenant_id'] != $tenantId) {
             log_message('warning', "Intento de acceso a unidad no autorizada o inexistente. Tenant: {$tenantId}, Unidad: {$id}");
             return redirect()->to('/inventory')->with('error', 'Unidad no encontrada.');
         }
 
         $data = [
-            'title' => 'Editar Unidad: ' . $unit['name'],
-            'unit' => $unit,
-            // 2. findAll() también es filtrado automáticamente por tu modelo base
-            'types' => $typeModel->findAll(),
-            'media' => $mediaModel->where('entity_type', 'unit')
+            'title'     => 'Editar Unidad: ' . $unit['name'],
+            'unit'      => $unit,
+            'types'     => $typeModel->findAll(),
+            'amenities' => $amenityModel->where('tenant_id', $tenantId)->findAll(),
+            'bedTypes'  => $bedTypeModel->where('tenant_id', $tenantId)->findAll(),
+            'media'     => $mediaModel->where('entity_type', 'unit')
                 ->where('entity_id', $id)
                 ->orderBy('sort_order', 'ASC')
                 ->findAll(),
-            'features' => json_decode($unit['features_json'] ?? '{}', true) ?? []
         ];
 
+        // Se confirma que la vista a usar es unit_edit.php
         return view('inventory/unit_edit', $data);
     }
 
     /**
-     * Procesa la actualización de datos, características y subida de archivos
+     * Procesa la actualización de datos, jerarquía (habitaciones) y multimedia
      */
     public function updateUnit($id)
     {
+        $tenantId = session('active_tenant_id');
+
         $unitModel = new \App\Models\AccommodationUnitModel();
+        $unitBedModel = new \App\Models\UnitBedModel();
+        $unitAmenityModel = new \App\Models\UnitAmenityModel();
 
         $unit = $unitModel->find($id);
-        if (!$unit) {
+        if (!$unit || $unit['tenant_id'] != $tenantId) {
             return redirect()->to('/inventory')->with('error', 'Operación no permitida.');
         }
 
-        $features = [
-            'bathrooms'    => $this->request->getPost('bathrooms') ?? 1,
-            'beds'         => $this->request->getPost('beds') ?? 1,
-            'has_ac'       => $this->request->getPost('has_ac') ? true : false,
-            'has_wifi'     => $this->request->getPost('has_wifi') ? true : false,
-            'has_tv'       => $this->request->getPost('has_tv') ? true : false,
-            'has_kitchen'  => $this->request->getPost('has_kitchen') ? true : false,
-            'is_private'   => $this->request->getPost('is_private') ? true : false,
-            'pet_friendly' => $this->request->getPost('pet_friendly') ? true : false,
-        ];
+        // Iniciamos la transacción global para Base de Datos
+        $unitModel->db->transStart();
 
-        $updateData = [
-            'name'          => $this->request->getPost('name'),
-            'type_id'       => $this->request->getPost('type_id'),
-            'status'        => $this->request->getPost('status'),
-            'description'   => $this->request->getPost('description'),
-            'features_json' => json_encode($features)
-        ];
+        try {
+            log_message('info', "[InventoryController] Sincronizando edición jerárquica para Unidad ID: {$id}");
 
-        $unitModel->update($id, $updateData);
-        $tenantId = session('active_tenant_id'); // Usamos la variable correcta para la carpeta
-        log_message('info', "Unidad {$id} actualizada por Tenant {$tenantId}");
+            // 1. Actualizar datos del Padre
+            // Soportamos los names viejos y nuevos por compatibilidad con el front
+            $updateData = [
+                'name'          => $this->request->getPost('parent_name') ?? $this->request->getPost('name'),
+                'type_id'       => $this->request->getPost('type_id'),
+                'status'        => $this->request->getPost('status') ?? $unit['status'],
+                'description'   => $this->request->getPost('parent_description') ?? $this->request->getPost('description'),
+            ];
+            $unitModel->update($id, $updateData);
 
-// INSERCIÓN: 1. Actualizar descripciones de la multimedia existente
-        $existingDescriptions = $this->request->getPost('existing_media_descriptions');
-        if ($existingDescriptions && is_array($existingDescriptions)) {
-            $mediaModel = new \App\Models\TenantMediaModel();
-            foreach ($existingDescriptions as $mediaId => $desc) {
-                // Actualizamos la descripción de los archivos que ya están en la BD
-                $mediaModel->update($mediaId, ['description' => $desc]);
-            }
-            log_message('info', "Descripciones de multimedia actualizadas para la unidad {$id}");
-        }
-
-        // INSERCIÓN: 2. Procesamiento de archivos multimedia nuevos con sus descripciones
-        $files = $this->request->getFileMultiple('media');
-        $newDescriptions = $this->request->getPost('new_media_descriptions') ?? [];
-
-        if ($files && isset($files[0]) && $files[0]->isValid()) {
-            $mediaModel = new \App\Models\TenantMediaModel();
-            $uploadPath = FCPATH . "uploads/tenants/{$tenantId}/units/";
-
-            if (!is_dir($uploadPath)) {
-                mkdir($uploadPath, 0777, true);
-            }
-
-            foreach ($files as $index => $file) {
-                if ($file->isValid() && !$file->hasMoved()) {
-                    $newName = $file->getRandomName();
-                    $file->move($uploadPath, $newName);
-
-                    $mime = $file->getClientMimeType();
-                    $fileType = strpos($mime, 'video') !== false ? 'video' : 'image';
-
-                    // Emparejamos el archivo con su descripción por el índice del arreglo
-                    $description = isset($newDescriptions[$index]) ? trim($newDescriptions[$index]) : null;
-
-                    $mediaModel->createForTenant([
-                        'entity_type' => 'unit',
-                        'entity_id'   => $id,
-                        'file_path'   => "uploads/tenants/{$tenantId}/units/{$newName}",
-                        'file_type'   => $fileType,
-                        'description' => $description, // Guardamos la descripción
-                        'is_main'     => 0,
-                        'sort_order'  => 0
-                    ]);
-                    log_message('info', "Nuevo archivo {$fileType} subido para unidad {$id} con descripción: {$description}");
+            // 2. Sincronizar Amenidades del Padre (Borrar todas y recrear es más eficiente)
+            $unitAmenityModel->where('unit_id', $id)->delete();
+            $parentAmenities = $this->request->getPost('parent_amenities');
+            if (!empty($parentAmenities) && is_array($parentAmenities)) {
+                foreach ($parentAmenities as $amenityId) {
+                    $unitAmenityModel->insert(['unit_id' => $id, 'amenity_id' => $amenityId]);
                 }
             }
-        }
 
-        return redirect()->to("/inventory/unit/edit/{$id}")->with('success', 'Unidad actualizada correctamente.');
+            // 3. Procesar Habitaciones Hijas
+            $roomsPayload = $this->request->getPost('rooms') ?? [];
+            $submittedRoomIds = []; // Rastrea habitaciones que se mantienen/crean
+
+            foreach ($roomsPayload as $room) {
+                $roomId = $room['id'] ?? null;
+
+                $roomData = [
+                    'tenant_id' => $tenantId,
+                    'parent_id' => $id,
+                    'type_id'   => $room['type_id'],
+                    'name'      => $room['name'],
+                    'bathrooms' => $room['bathrooms'] ?? 1,
+                ];
+
+                if (!empty($roomId)) {
+                    // Si trae ID, la actualizamos
+                    $unitModel->update($roomId, $roomData);
+                    $submittedRoomIds[] = $roomId;
+                } else {
+                    // Si no trae ID, fue agregada por JS. La insertamos.
+                    $roomData['status'] = 'available';
+                    $roomId = $unitModel->insert($roomData, true);
+                    $submittedRoomIds[] = $roomId;
+                }
+
+                // Sincronizar Camas de esta habitación
+                $unitBedModel->where('unit_id', $roomId)->delete();
+                if (!empty($room['beds']) && is_array($room['beds'])) {
+                    foreach ($room['beds'] as $bed) {
+                        if (!empty($bed['bed_type_id']) && !empty($bed['quantity'])) {
+                            $unitBedModel->insert([
+                                'unit_id'     => $roomId,
+                                'bed_type_id' => $bed['bed_type_id'],
+                                'quantity'    => $bed['quantity']
+                            ]);
+                        }
+                    }
+                }
+
+                // Sincronizar Amenidades de esta habitación
+                $unitAmenityModel->where('unit_id', $roomId)->delete();
+                if (!empty($room['amenities']) && is_array($room['amenities'])) {
+                    foreach ($room['amenities'] as $amenityId) {
+                        $unitAmenityModel->insert(['unit_id' => $roomId, 'amenity_id' => $amenityId]);
+                    }
+                }
+            }
+
+            // 4. Limpieza: Eliminar habitaciones que fueron quitadas en la vista
+            $existingRooms = $unitModel->where('parent_id', $id)->findAll();
+            foreach ($existingRooms as $existingRoom) {
+                if (!in_array($existingRoom['id'], $submittedRoomIds)) {
+                    $unitModel->delete($existingRoom['id']);
+                }
+            }
+
+            // 5. PROCESAMIENTO DE MULTIMEDIA (Se mantiene tu lógica original intacta)
+            $existingDescriptions = $this->request->getPost('existing_media_descriptions');
+            if ($existingDescriptions && is_array($existingDescriptions)) {
+                $mediaModel = new \App\Models\TenantMediaModel();
+                foreach ($existingDescriptions as $mediaId => $desc) {
+                    $mediaModel->update($mediaId, ['description' => $desc]);
+                }
+            }
+
+            $files = $this->request->getFileMultiple('media');
+            $newDescriptions = $this->request->getPost('new_media_descriptions') ?? [];
+
+            if ($files && isset($files[0]) && $files[0]->isValid()) {
+                $mediaModel = new \App\Models\TenantMediaModel();
+                $uploadPath = FCPATH . "uploads/tenants/{$tenantId}/units/";
+
+                if (!is_dir($uploadPath)) {
+                    mkdir($uploadPath, 0777, true);
+                }
+
+                foreach ($files as $index => $file) {
+                    if ($file->isValid() && !$file->hasMoved()) {
+                        $newName = $file->getRandomName();
+                        $file->move($uploadPath, $newName);
+
+                        $mime = $file->getClientMimeType();
+                        $fileType = strpos($mime, 'video') !== false ? 'video' : 'image';
+                        $description = isset($newDescriptions[$index]) ? trim($newDescriptions[$index]) : null;
+
+                        // Se utiliza insert directo inyectando el tenant_id
+                        $mediaModel->insert([
+                            'tenant_id'   => $tenantId,
+                            'entity_type' => 'unit',
+                            'entity_id'   => $id,
+                            'file_path'   => "uploads/tenants/{$tenantId}/units/{$newName}",
+                            'file_type'   => $fileType,
+                            'description' => $description,
+                            'is_main'     => 0,
+                            'sort_order'  => 0
+                        ]);
+                    }
+                }
+            }
+
+            $unitModel->db->transComplete();
+
+            if ($unitModel->db->transStatus() === false) {
+                throw new \Exception('Fallo en la transacción SQL general.');
+            }
+
+            return redirect()->to("/inventory/unit/edit/{$id}")->with('success', 'Unidad actualizada correctamente.');
+
+        } catch (\Exception $e) {
+            log_message('critical', "[InventoryController] Error en updateUnit(): " . $e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'Error al actualizar: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -156,9 +230,7 @@ class InventoryController extends BaseController
         return redirect()->back()->with('success', 'Archivo eliminado.');
     }
 
-    /**
-     * Lista el inventario ordenando jerárquicamente (Padres primero, luego sus hijos)
-     */
+
 
 
     /**
