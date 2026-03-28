@@ -159,32 +159,39 @@ class InventoryController extends BaseController
     /**
      * Lista el inventario ordenando jerárquicamente (Padres primero, luego sus hijos)
      */
+
+
+    /**
+     * Lista el inventario ordenando jerárquicamente (Padres primero, luego sus hijos)
+     */
     public function index()
     {
-        $tenantId = session('active_tenant_id');
-        $db = \Config\Database::connect();
-
-        // Usamos Query Builder para traer el nombre del tipo y ordenar la jerarquía.
-        // COALESCE agrupa a los hijos con su padre.
-        $builder = $db->table('accommodation_units au');
-        $builder->select('au.*, t.name as type_name');
-        $builder->join('accommodation_types t', 't.id = au.type_id', 'left');
-        $builder->where('au.tenant_id', $tenantId);
-        // Se pasa '' como dirección y 'false' para desactivar el auto-escape del Query Builder en funciones nativas de SQL
-        $builder->orderBy('COALESCE(au.parent_id, au.id) ASC', '', false);
-        $builder->orderBy('au.parent_id', 'ASC');
-
-        $units = $builder->get()->getResultArray();
-
+        $unitModel = new AccommodationUnitModel();
         $limitService = new PlanLimitService();
-        $limitInfo = $limitService->getLimitInfo($tenantId, 'units');
 
-        log_message('info', "[InventoryController] Index cargado. Unidades encontradas: " . count($units));
+        $tenantId = session('active_tenant_id');
 
-        return view('inventory/index', [
+        // 1. Join manual con FILTRO MULTI-TENANT OBLIGATORIO y ordenamiento Padre/Hijo
+        $units = $unitModel->select('accommodation_units.*, accommodation_types.name as type_name')
+            ->join('accommodation_types', 'accommodation_types.id = accommodation_units.type_id', 'left')
+            ->where('accommodation_units.tenant_id', $tenantId)
+            // false evita que CodeIgniter rompa la sintaxis de la función COALESCE
+            ->orderBy('COALESCE(accommodation_units.parent_id, accommodation_units.id) ASC', '', false)
+            // Asegura que el Padre salga primero, y luego sus hijos
+            ->orderBy('accommodation_units.parent_id', 'ASC')
+            // Orden secundario alfabético como lo tenías originalmente
+            ->orderBy('accommodation_units.name', 'ASC')
+            ->findAll();
+
+        log_message('info', "[InventoryController] Index cargado. Unidades encontradas: " . count($units) . " para el tenant: " . $tenantId);
+
+        // 2. Traer información de los límites usando tu método original
+        $data = [
             'units'     => $units,
-            'limitInfo' => $limitInfo
-        ]);
+            'limitInfo' => $limitService->getUnitUsageInfo()
+        ];
+
+        return view('inventory/index', $data);
     }
 
     /**
