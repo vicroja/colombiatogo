@@ -6,6 +6,11 @@ use App\Models\AccommodationTypeModel;
 use App\Models\AccommodationUnitModel;
 use App\Services\PlanLimitService;
 use App\Models\TenantMediaModel; // Asegúrate de tener e importar este modelo
+// Nuevos modelos para la jerarquía y características
+use App\Models\AmenityModel;
+use App\Models\BedTypeModel;
+use App\Models\UnitAmenityModel;
+use App\Models\UnitBedModel;
 
 class InventoryController extends BaseController
 {
@@ -150,74 +155,163 @@ class InventoryController extends BaseController
 
         return redirect()->back()->with('success', 'Archivo eliminado.');
     }
+
+    /**
+     * Lista el inventario ordenando jerárquicamente (Padres primero, luego sus hijos)
+     */
     public function index()
     {
-
-        $unitModel = new AccommodationUnitModel();
-        $limitService = new PlanLimitService();
-
         $tenantId = session('active_tenant_id');
+        $db = \Config\Database::connect();
 
-        // 1. Join manual con FILTRO MULTI-TENANT OBLIGATORIO
-        $units = $unitModel->select('accommodation_units.*, accommodation_types.name as type_name')
-            ->join('accommodation_types', 'accommodation_types.id = accommodation_units.type_id', 'left')
-            ->where('accommodation_units.tenant_id', $tenantId)
-            ->orderBy('accommodation_units.name', 'ASC')
-            ->findAll();
+        // Usamos Query Builder para traer el nombre del tipo y ordenar la jerarquía.
+        // COALESCE agrupa a los hijos con su padre.
+        $builder = $db->table('accommodation_units au');
+        $builder->select('au.*, t.name as type_name');
+        $builder->join('accommodation_types t', 't.id = au.type_id', 'left');
+        $builder->where('au.tenant_id', $tenantId);
+        $builder->orderBy('COALESCE(au.parent_id, au.id)', 'ASC'); // Agrupa la familia
+        $builder->orderBy('au.parent_id', 'ASC'); // Asegura que el Padre salga antes que los hijos
 
-        // 2. Traer información de los límites
-        $data = [
+        $units = $builder->get()->getResultArray();
+
+        $limitService = new PlanLimitService();
+        $limitInfo = $limitService->getLimitInfo($tenantId, 'units');
+
+        log_message('info', "[InventoryController] Index cargado. Unidades encontradas: " . count($units));
+
+        return view('inventory/index', [
             'units'     => $units,
-            'limitInfo' => $limitService->getUnitUsageInfo()
-        ];
-
-        return view('inventory/index', $data);
+            'limitInfo' => $limitInfo
+        ]);
     }
 
+    /**
+     * Carga la vista para crear una nueva cabaña/unidad con sus catálogos
+     */
     public function create()
     {
-        $limitService = new PlanLimitService();
+        $tenantId = session('active_tenant_id');
 
-        // Bloqueo de UI si ya no puede agregar más
-        if (!$limitService->canAddUnit()) {
-            return redirect()->to('/inventory')->with('error', 'Has alcanzado el límite de unidades de tu plan. Contacta a soporte para mejorar tu suscripción.');
-        }
-
+        $amenityModel = new AmenityModel();
+        $bedTypeModel = new BedTypeModel();
         $typeModel = new AccommodationTypeModel();
-        // Si no hay tipos, creamos uno genérico automáticamente para facilitar la prueba
-        if ($typeModel->countAllResults() == 0) {
-            $typeModel->createForTenant([
-                'name' => 'Habitación Estándar',
-                'base_capacity' => 2,
-                'max_capacity' => 2
-            ]);
-        }
 
         $data = [
-            'types' => $typeModel->findAll()
+            'title'     => 'Crear Nueva Unidad/Cabaña',
+            'types'     => $typeModel->findAll(),
+            'amenities' => $amenityModel->where('tenant_id', $tenantId)->findAll(),
+            'bedTypes'  => $bedTypeModel->where('tenant_id', $tenantId)->findAll(),
         ];
 
         return view('inventory/create', $data);
     }
 
+    /**
+     * Procesa la creación de la cabaña, sus habitaciones, camas y amenidades
+     * usando una transacción estricta para evitar inconsistencias.
+     */
     public function store()
     {
-        $limitService = new PlanLimitService();
-
-        // El guardián de backend: Validación estricta por si intentan saltarse la UI
-        if (!$limitService->canAddUnit()) {
-            return redirect()->to('/inventory')->with('error', 'Límite de unidades excedido según su plan actual.');
-        }
+        $tenantId = session('active_tenant_id');
 
         $unitModel = new AccommodationUnitModel();
+        $unitBedModel = new UnitBedModel();
+        $unitAmenityModel = new UnitAmenityModel();
 
-        $unitModel->createForTenant([
-            'type_id' => $this->request->getPost('type_id'),
-            'name'    => $this->request->getPost('name'),
-            'status'  => 'available'
-        ]);
+        // INICIO DE TRANSACCIÓN: Todo se guarda o nada se guarda
+        $unitModel->db->transStart();
 
-        return redirect()->to('/inventory')->with('success', 'Habitación añadida al inventario con éxito.');
+        try {
+            log_message('info', "[InventoryController] Iniciando guardado de unidad jerárquica para Tenant ID: {$tenantId}");
+
+            // 1. Crear la Unidad Padre (Ej. La Cabaña Completa)
+            $parentData = [
+                'tenant_id'     => $tenantId,
+                'type_id'       => $this->request->getPost('type_id'),
+                'name'          => $this->request->getPost('parent_name'),
+                'description'   => $this->request->getPost('parent_description'),
+                'status'        => 'available'
+            ];
+
+            // Insertamos y capturamos el ID
+            $parentId = $unitModel->insert($parentData, true);
+
+            if (!$parentId) {
+                throw new \Exception('Fallo al insertar la entidad Padre en la base de datos.');
+            }
+
+            // 2. Asociar amenidades globales al Padre (Ej. Piscina)
+            $parentAmenities = $this->request->getPost('parent_amenities');
+            if (!empty($parentAmenities) && is_array($parentAmenities)) {
+                foreach ($parentAmenities as $amenityId) {
+                    $unitAmenityModel->insert([
+                        'unit_id'    => $parentId,
+                        'amenity_id' => $amenityId
+                    ]);
+                }
+            }
+
+            // 3. Iterar y guardar las Habitaciones Hijas
+            $rooms = $this->request->getPost('rooms');
+
+            if (!empty($rooms) && is_array($rooms)) {
+                foreach ($rooms as $room) {
+                    $roomData = [
+                        'tenant_id'   => $tenantId,
+                        'parent_id'   => $parentId, // Clave: Relación con la cabaña
+                        'type_id'     => $room['type_id'],
+                        'name'        => $room['name'],
+                        'bathrooms'   => $room['bathrooms'] ?? 1,
+                        'status'      => 'available'
+                    ];
+
+                    $roomId = $unitModel->insert($roomData, true);
+
+                    if (!$roomId) {
+                        throw new \Exception("Fallo al insertar la habitación hija: {$room['name']}");
+                    }
+
+                    // 4. Asignar tipos de cama a esta habitación
+                    if (!empty($room['beds']) && is_array($room['beds'])) {
+                        foreach ($room['beds'] as $bed) {
+                            if (!empty($bed['bed_type_id']) && !empty($bed['quantity'])) {
+                                $unitBedModel->insert([
+                                    'unit_id'     => $roomId,
+                                    'bed_type_id' => $bed['bed_type_id'],
+                                    'quantity'    => $bed['quantity']
+                                ]);
+                            }
+                        }
+                    }
+
+                    // 5. Asignar amenidades específicas a esta habitación (Ej. Aire Acondicionado)
+                    if (!empty($room['amenities']) && is_array($room['amenities'])) {
+                        foreach ($room['amenities'] as $amenityId) {
+                            $unitAmenityModel->insert([
+                                'unit_id'    => $roomId,
+                                'amenity_id' => $amenityId
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            // CIERRE DE TRANSACCIÓN
+            $unitModel->db->transComplete();
+
+            if ($unitModel->db->transStatus() === false) {
+                throw new \Exception('La transacción SQL devolvió un estado fallido tras intentar confirmar.');
+            }
+
+            log_message('info', "[InventoryController] Cabaña ID {$parentId} y sub-unidades creadas con éxito.");
+            return redirect()->to('/inventory')->with('success', 'Alojamiento creado exitosamente con toda su distribución.');
+
+        } catch (\Exception $e) {
+            // Rollback automático por transStart() de CodeIgniter
+            log_message('critical', "[InventoryController] Error en store(): " . $e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'Error al guardar la configuración: ' . $e->getMessage());
+        }
     }
 
 

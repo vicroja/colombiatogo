@@ -38,10 +38,11 @@ class ReservationStateMachineService
         // 3. Actualizar estado físico de la habitación si es necesario
         $unitModel = new AccommodationUnitModel();
         if ($newStatus === 'checked_in') {
-            $unitModel->update($reservation['accommodation_unit_id'], ['status' => 'occupied']);
+            // Usamos el nuevo método que maneja la propagación
+            $unitModel->updateStatusWithHierarchy($reservation['accommodation_unit_id'], 'occupied');
         } elseif ($newStatus === 'checked_out' || $newStatus === 'cancelled') {
-            // Liberamos la habitación
-            $unitModel->update($reservation['accommodation_unit_id'], ['status' => 'available']);
+            // Liberamos la habitación y el método verifica si puede liberar la cabaña completa
+            $unitModel->updateStatusWithHierarchy($reservation['accommodation_unit_id'], 'available');
         }
 
         $resModel->db->transComplete();
