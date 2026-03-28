@@ -170,8 +170,9 @@ class InventoryController extends BaseController
         $builder->select('au.*, t.name as type_name');
         $builder->join('accommodation_types t', 't.id = au.type_id', 'left');
         $builder->where('au.tenant_id', $tenantId);
-        $builder->orderBy('COALESCE(au.parent_id, au.id)', 'ASC'); // Agrupa la familia
-        $builder->orderBy('au.parent_id', 'ASC'); // Asegura que el Padre salga antes que los hijos
+        // Se pasa '' como dirección y 'false' para desactivar el auto-escape del Query Builder en funciones nativas de SQL
+        $builder->orderBy('COALESCE(au.parent_id, au.id) ASC', '', false);
+        $builder->orderBy('au.parent_id', 'ASC');
 
         $units = $builder->get()->getResultArray();
 
