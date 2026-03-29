@@ -5,7 +5,7 @@ class AccommodationUnitModel extends BaseMultiTenantModel
 {
     protected $table            = 'accommodation_units';
     protected $primaryKey       = 'id';
-    protected $allowedFields    = ['tenant_id', 'type_id', 'parent_id', 'name', 'description', 'features_json', 'status', 'max_occupancy', 'bathrooms', 'beds_info', 'amenities'];
+    protected $allowedFields    = ['tenant_id', 'type_id', 'parent_id', 'name', 'description', 'features_json', 'status', 'max_occupancy', 'base_occupancy', 'bathrooms', 'beds_info', 'amenities'];
     protected $useTimestamps    = true;
 
     /**

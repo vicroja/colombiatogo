@@ -16,7 +16,8 @@ class ReservationModel extends BaseMultiTenantModel
         'guest_id',
         'source_id',
         'accommodation_unit_id',
-        'num_guests', // <- NUEVO CAMPO AÑADIDO
+        'num_adults',   // Reemplaza a num_guests
+        'num_children', // Nuevo campo para control tarifario
         'check_in_date',
         'check_out_date',
         'status',

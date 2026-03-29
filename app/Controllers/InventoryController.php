@@ -78,10 +78,12 @@ class InventoryController extends BaseController
             // 1. Actualizar datos del Padre
             // Soportamos los names viejos y nuevos por compatibilidad con el front
             $updateData = [
-                'name'          => $this->request->getPost('parent_name') ?? $this->request->getPost('name'),
-                'type_id'       => $this->request->getPost('type_id'),
-                'status'        => $this->request->getPost('status') ?? $unit['status'],
-                'description'   => $this->request->getPost('parent_description') ?? $this->request->getPost('description'),
+                'name'           => $this->request->getPost('parent_name') ?? $this->request->getPost('name'),
+                'type_id'        => $this->request->getPost('type_id'),
+                'status'         => $this->request->getPost('status') ?? $unit['status'],
+                'description'    => $this->request->getPost('parent_description') ?? $this->request->getPost('description'),
+                // Guardamos la capacidad base enviada desde el formulario, o 2 por defecto si viene vacío
+                'base_occupancy' => $this->request->getPost('parent_base_occupancy') ?? 2,
             ];
             $unitModel->update($id, $updateData);
 
@@ -307,11 +309,13 @@ class InventoryController extends BaseController
 
             // 1. Crear la Unidad Padre (Ej. La Cabaña Completa)
             $parentData = [
-                'tenant_id'     => $tenantId,
-                'type_id'       => $this->request->getPost('type_id'),
-                'name'          => $this->request->getPost('parent_name'),
-                'description'   => $this->request->getPost('parent_description'),
-                'status'        => 'available'
+                'tenant_id'      => $tenantId,
+                'type_id'        => $this->request->getPost('type_id'),
+                'name'           => $this->request->getPost('parent_name'),
+                'description'    => $this->request->getPost('parent_description'),
+                'status'         => 'available',
+                // Guardamos la capacidad base desde la creación
+                'base_occupancy' => $this->request->getPost('parent_base_occupancy') ?? 2
             ];
 
             // Insertamos y capturamos el ID

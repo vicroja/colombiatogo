@@ -33,6 +33,10 @@
                             <label class="form-label fw-bold">Nombre de la Cabaña/Unidad</label>
                             <input type="text" name="parent_name" class="form-control" required placeholder="Ej. Cabaña Los Pinos, Villa 1">
                         </div>
+                        <div class="col-md-4 mt-3">
+                            <label class="form-label fw-bold" title="¿Cuántos huéspedes están incluidos en el precio base?">Pax. Base (Incluidos)</label>
+                            <input type="number" name="parent_base_occupancy" class="form-control" value="2" min="1" required>
+                        </div>
                     </div>
 
                     <div class="row mb-3">
