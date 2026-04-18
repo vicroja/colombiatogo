@@ -109,6 +109,8 @@ class PriceCalculatorService
                 'season' => $appliedSeason ?: 'Tarifa Base'
             ];
 
+
+
             // Avanzar al día siguiente
             $currentDate = strtotime('+1 day', $currentDate);
         }
