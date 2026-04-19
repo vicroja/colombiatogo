@@ -1,9 +1,12 @@
-en la creacion de la reserva /reservations/create ayudame a que haya un campo de cuantas personas son y al salir del campo o cambiarlo se crean los campos para llenar sus datos (aunque no es obligatorio ingresarlos) pero que en la tabla de reservas quede el dato (implica modificar la tabla en mysql) y el campo de valor de la reserva se calcula automaticamente (aunque el que esta llenando podría cambiarlo) pero se llena dinamicamente teniendo en cuenta las reglas de precios (segun valor de la unidad, numero de guests y valor extra del guest, teniendo en cuenta las fechas, seasons, etc)
-- para todo lo que hagamos, estas son las reglas:
-- Escribe tus propuestas nueva completas, revisadas, sin omisiones
-- Cuando hagas una nueva función en un archivo o inserciones/correcciones solo escribe la corrección y me explicas donde va mostrando un par de lineas antes y después del código
-- NUNCA uses ‘cite’ porque rompen el código
-- Se cauteloso y revisa tus propias respuestas
-- Dame las consultas sql necesarias en caso de haber modificaciones a las tablas o inserciones, los comandos make y touch o spray para los archivos que realizaremos.
-- Comenta el codigo de forma que sea entendible
-- Incluye logs en partes cruciales por si tenemos que hacer debug, no pongas muchos pero si los claves.
+el ejemplo que te puse de conectarse a whatsapp es parte de otro sistema diferente, en ci 3.11 (el home y sistema de mavilusa, el tech provider y dueño de la app en el que soy socio) , debemos adaptar la parte de grabar el config en este sistema que estamos haciendo del pms
+Qué hace este paso
+
+Reutiliza exactamente el flujo de settings.php que ya funciona — misma config_id, mismo app_id, mismo endpoint /whatsapp/save_config
+Estado adaptativo — si el tenant ya tiene WhatsApp configurado ($waConfigured), muestra la pantalla de éxito directamente sin mostrar el botón de conexión
+3 estados visuales — conectando (spinner), éxito (verde), error (rojo) con mensaje específico
+Avance automático — tras conectar exitosamente, espera 2 segundos y avanza al paso 8 solo
+No bloquea — botón "Omitir" siempre visible, el paso es opcional
+
+
+Una corrección necesaria en WizardController
+El getStepData del paso 7 lee whatsapp_phone_number_id de settings_json. Asegúrate de que /whatsapp/save_config guarde ese valor ahí. Si tu controlador Whatsapp guarda la config en otro campo, comparte ese método y lo ajustamos.

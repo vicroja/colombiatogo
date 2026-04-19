@@ -61,6 +61,9 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
 //Configuración del Hotel
     $routes->get('settings', 'SettingsController::index');
     $routes->post('settings/update', 'SettingsController::update');
+    $routes->post('whatsapp/save_config', 'Whatsapp::saveConfig');
+
+
 
     $routes->get('reservations/calculate-price', 'ReservationController::calculatePrice');
 
@@ -186,6 +189,19 @@ $routes->cli('worker/processOutgoingQueue', 'Worker::processOutgoingQueue');
 
 // Por si alguna vez usas el Cli.php (Plan B)
 $routes->cli('cli/processIncomingQueue', 'Cli::processIncomingQueue');
+
+$routes->post('webhooks/matias', 'MatiasWebhookController::handle');
+
+// ── Onboarding Wizard ─────────────────────────────────────────
+$$routes->group('onboarding', ['filter' => 'tenant_auth', 'namespace' => 'App\Controllers\Onboarding'], function($routes) {
+    $routes->get('/',                'WizardController::index');
+    $routes->get('step/(:num)',      'WizardController::step/$1');
+    $routes->post('step/(:num)',     'WizardController::saveStep/$1');
+    $routes->post('ai/generate',     'WizardController::aiGenerate');      // Gemini calls
+    $routes->post('whatsapp/connect','WizardController::whatsappConnect'); // Meta signup
+    $routes->get('complete',         'WizardController::complete');
+
+});
 
 
 

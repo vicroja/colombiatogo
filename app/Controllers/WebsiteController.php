@@ -89,21 +89,32 @@ class WebsiteController extends BaseController
         return redirect()->to('/website')->with('error', 'Error al subir el archivo.');
     }
 
+// Reemplaza el método deleteMedia completo en WebsiteController.php
     public function deleteMedia($id)
     {
         $mediaModel = new TenantMediaModel();
-        $media = $mediaModel->find($id);
+        $media      = $mediaModel->find($id);
+        $isAjax     = $this->request->isAJAX() ||
+            $this->request->getMethod() === 'delete';
 
         if ($media && $media['tenant_id'] == session('active_tenant_id')) {
-            // Borrar el archivo físico del servidor
+            // Borrar archivo físico
             if (file_exists(FCPATH . $media['file_path'])) {
                 unlink(FCPATH . $media['file_path']);
             }
-            // Borrar de la base de datos
             $mediaModel->delete($id);
+
+            log_message('info', "[Media] Archivo #{$id} eliminado por tenant " . session('active_tenant_id'));
+
+            if ($isAjax) {
+                return $this->response->setJSON(['success' => true]);
+            }
             return redirect()->to('/website')->with('success', 'Archivo eliminado.');
         }
 
+        if ($isAjax) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No autorizado']);
+        }
         return redirect()->to('/website');
     }
 }
