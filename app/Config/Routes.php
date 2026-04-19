@@ -193,7 +193,7 @@ $routes->cli('cli/processIncomingQueue', 'Cli::processIncomingQueue');
 $routes->post('webhooks/matias', 'MatiasWebhookController::handle');
 
 // ── Onboarding Wizard ─────────────────────────────────────────
-$$routes->group('onboarding', ['filter' => 'tenant_auth', 'namespace' => 'App\Controllers\Onboarding'], function($routes) {
+$routes->group('onboarding', ['filter' => 'tenant_auth', 'namespace' => 'App\Controllers\Onboarding'], function($routes) {
     $routes->get('/',                'WizardController::index');
     $routes->get('step/(:num)',      'WizardController::step/$1');
     $routes->post('step/(:num)',     'WizardController::saveStep/$1');
