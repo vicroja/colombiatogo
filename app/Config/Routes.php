@@ -203,6 +203,12 @@ $routes->group('onboarding', ['filter' => 'tenant_auth', 'namespace' => 'App\Con
 
 });
 
+// Rutas públicas de registro
+$routes->get('/register',  'AuthController::register');
+$routes->post('/register', 'AuthController::processRegister');
+
+
+
 
 
 
