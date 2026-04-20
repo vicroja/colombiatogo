@@ -55,12 +55,16 @@ class WizardController extends BaseController
     private \App\Models\UnitAmenityModel       $unitAmenityModel;
     private \App\Models\UnitBedModel           $unitBedModel;
 
+    private \App\Models\GeminiModel $geminiModel;
+
+
     // ─────────────────────────────────────────────────────────────────────
 
     public function initController(
         \CodeIgniter\HTTP\RequestInterface  $request,
         \CodeIgniter\HTTP\ResponseInterface $response,
-        \Psr\Log\LoggerInterface            $logger
+        \Psr\Log\LoggerInterface            $logger,
+
     ): void {
         parent::initController($request, $response, $logger);
 
@@ -81,6 +85,8 @@ class WizardController extends BaseController
         $this->amenityModel     = model('AmenityModel');
         $this->unitAmenityModel = model('UnitAmenityModel');
         $this->unitBedModel     = model('UnitBedModel');
+        $this->geminiModel = new \App\Models\GeminiModel();
+
 
         $this->tenant   = $this->tenantModel->find($this->tenantId) ?? [];
         $this->settings = json_decode($this->tenant['settings_json'] ?? '{}', true) ?? [];
@@ -637,60 +643,19 @@ class WizardController extends BaseController
     /**
      * Llamada genérica a la API de Gemini
      */
+
+    // Reemplaza callGemini() completo en WizardController
+
     private function callGemini(string $prompt, int $maxTokens = 800): array
     {
-        $apiKey = env('GEMINI_API_KEY');
+        $result = $this->geminiModel->generateText($prompt, $maxTokens, 0.7);
 
-        if (empty($apiKey)) {
-            log_message('error', '[Onboarding/AI] GEMINI_API_KEY no configurada en .env');
-            return ['success' => false, 'message' => 'Servicio de IA no configurado.'];
+        if ($result['success'] ?? false) {
+            return ['success' => true, 'text' => trim($result['text'])];
         }
 
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}";
-
-        $payload = json_encode([
-            'contents'         => [
-                ['role' => 'user', 'parts' => [['text' => $prompt]]]
-            ],
-            'generationConfig' => [
-                'maxOutputTokens' => $maxTokens,
-                'temperature'     => 0.7,
-            ],
-        ]);
-
-        $curl = curl_init($url);
-        curl_setopt_array($curl, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $payload,
-            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-            CURLOPT_TIMEOUT        => 30,
-        ]);
-
-        $response = curl_exec($curl);
-        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        $error    = curl_error($curl);
-        curl_close($curl);
-
-        if ($error) {
-            log_message('error', "[Onboarding/AI] cURL error: {$error}");
-            return ['success' => false, 'message' => 'Error de conexión con IA.'];
-        }
-
-        if ($httpCode !== 200) {
-            log_message('error', "[Onboarding/AI] HTTP {$httpCode}: {$response}");
-            return ['success' => false, 'message' => 'Error en servicio de IA.'];
-        }
-
-        $decoded = json_decode($response, true);
-        $text    = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? null;
-
-        if (!$text) {
-            log_message('error', '[Onboarding/AI] Respuesta vacía de Gemini');
-            return ['success' => false, 'message' => 'No se obtuvo respuesta de IA.'];
-        }
-
-        return ['success' => true, 'text' => trim($text)];
+        log_message('error', '[Onboarding/AI] Error: ' . ($result['message'] ?? 'desconocido'));
+        return ['success' => false, 'message' => $result['message'] ?? 'Error en el servicio de IA.'];
     }
 
     // =========================================================================

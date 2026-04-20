@@ -274,4 +274,30 @@ class GeminiModel extends Model
 
         return ['status' => 'error', 'message' => 'Todos los modelos de fallback fallaron o no se pudo establecer conexión.'];
     }
+
+    /**
+     * Generación de texto libre (sin forzar JSON)
+     * Usado por el wizard de onboarding para descripciones y prompts
+     */
+    public function generateText(string $prompt, int $maxTokens = 1000, float $temperature = 0.7): array
+    {
+        $payload = [
+            'contents' => [
+                ['role' => 'user', 'parts' => [['text' => $prompt]]]
+            ],
+            'generationConfig' => [
+                'temperature'     => $temperature,
+                'maxOutputTokens' => $maxTokens,
+                // Sin responseMimeType — retorna texto libre
+            ]
+        ];
+
+        $response = $this->executeRequest($payload, $this->defaultModel);
+
+        if ($response['status'] === 'success') {
+            return ['success' => true, 'text' => trim($response['message'])];
+        }
+
+        return ['success' => false, 'message' => $response['message']];
+    }
 }
