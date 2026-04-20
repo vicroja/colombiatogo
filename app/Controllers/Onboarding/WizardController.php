@@ -675,8 +675,8 @@ class WizardController extends BaseController
                     ->findAll(),
             ],
             3 => [
-                'bed_types' => $this->bedTypeModel->findAll(),
-                'amenities' => $this->amenityModel->findAll(),
+                'bed_types' => $this->bedTypeModel->getForTenant($this->tenantId),
+                'amenities' => $this->amenityModel->getForTenant($this->tenantId),
             ],
             4 => [
                 'unit_name' => $this->unitModel

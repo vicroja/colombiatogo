@@ -20,4 +20,16 @@ class AmenityModel extends Model
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';
+
+    /**
+     * Retorna amenidades globales + las del tenant activo.
+     */
+    public function getForTenant(int $tenantId): array
+    {
+        return $this->where('tenant_id', 0)
+            ->orWhere('tenant_id', $tenantId)
+            ->orderBy('category', 'ASC')
+            ->orderBy('name', 'ASC')
+            ->findAll();
+    }
 }
