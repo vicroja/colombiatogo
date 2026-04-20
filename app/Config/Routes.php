@@ -162,6 +162,11 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
     $routes->get('commissions', 'CommissionController::index');
     $routes->get('commissions/pay/(:num)', 'CommissionController::pay/$1');
 
+    // Sitio web — agregar junto a las rutas existentes de website
+    $routes->post('website/set-main-photo/(:num)', 'WebsiteController::setMainPhoto/$1');
+    $routes->post('website/reorder-photos',        'WebsiteController::reorderPhotos');
+    $routes->post('website/ai-generate',           'WebsiteController::aiGenerate');
+    $routes->get('website/preview',                'WebsiteController::preview');
 
 
 });
@@ -200,6 +205,8 @@ $routes->group('onboarding', ['filter' => 'tenant_auth', 'namespace' => 'App\Con
     $routes->post('ai/generate',     'WizardController::aiGenerate');      // Gemini calls
     $routes->post('whatsapp/connect','WizardController::whatsappConnect'); // Meta signup
     $routes->get('complete',         'WizardController::complete');
+
+
 
 });
 

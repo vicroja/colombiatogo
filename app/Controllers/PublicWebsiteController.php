@@ -90,8 +90,35 @@ class PublicWebsiteController extends BaseController
 
         // Calcular un precio estimado (usando la tarifa base de la habitación como ejemplo)
         $unitModel = new AccommodationUnitModel();
-        $unit = $unitModel->find($unitId);
-        $estimatedTotal = ($unit['base_price'] ?? 0) * $nights;
+
+
+        $unit        = $unitModel->find($unitId);
+        $unitRateModel = new \App\Models\UnitRateModel();
+
+// Buscar tarifa por defecto o la primera activa
+        $ratePlanModel = new \App\Models\RatePlanModel();
+        $defaultPlan   = $ratePlanModel
+            ->where('tenant_id', $tenant['id'])
+            ->where('is_default', 1)
+            ->first();
+
+        $rate = null;
+        if ($defaultPlan) {
+            $rate = $unitRateModel
+                ->where('unit_id', $unitId)
+                ->where('rate_plan_id', $defaultPlan['id'])
+                ->first();
+        }
+        if (!$rate) {
+            $rate = $unitRateModel
+                ->where('unit_id', $unitId)
+                ->where('is_active', 1)
+                ->first();
+        }
+
+        $pricePerNight  = $rate['price_per_night'] ?? 0;
+        $estimatedTotal = $pricePerNight * $nights;
+
 
         $reservationId = $resModel->insert([
             'tenant_id'             => $tenant['id'],

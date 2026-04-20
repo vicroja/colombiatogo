@@ -80,6 +80,8 @@ class Filters extends BaseFilters
                     'webhooks/matias',
                     'whatsapp/webhook',
                     'onboarding/ai/generate',
+                    'website/preview',
+                    'website/ai-generate',
                 ]
             ],
             // 'invalidchars',
