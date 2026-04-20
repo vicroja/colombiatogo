@@ -613,11 +613,23 @@ $isLocked    = function(int $s) use ($steps, $completed): bool {
      * @returns {Promise<object>}
      */
     async function wizardAI(action, payload = {}) {
+        // Leer el token CSRF desde la cookie (CI4 con csrfProtection='cookie')
+        const csrfToken = document.cookie
+            .split('; ')
+            .find(r => r.startsWith('csrf_cookie_name='))
+            ?.split('=')[1] ?? '';
+
         const res = await fetch('/onboarding/ai/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method      : 'POST',
+            credentials : 'same-origin',
+            headers     : {
+                'Content-Type'     : 'application/json',
+                'X-Requested-With' : 'XMLHttpRequest',
+                'X-CSRF-TOKEN'     : csrfToken,
+            },
             body: JSON.stringify({ action, ...payload })
         });
+
         return await res.json();
     }
 

@@ -77,7 +77,9 @@ class Filters extends BaseFilters
             // 'honeypot',
             'csrf' => [
                 'except' => [
-                    'webhooks/matias', // <--- AGREGAR ESTA LÍNEA
+                    'webhooks/matias',
+                    'whatsapp/webhook',
+                    'onboarding/ai/generate',
                 ]
             ],
             // 'invalidchars',
