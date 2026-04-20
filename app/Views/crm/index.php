@@ -18,7 +18,7 @@ $segmentDefs = [
 $segDef  = $segmentDefs[$rfm['segment'] ?? 'regular'] ?? $segmentDefs['regular'];
 $initials = implode('', array_map(
     fn($w) => strtoupper($w[0]),
-    array_slice(explode(' ', $guest['full_name']), 0, 2)
+    array_slice(explode(' ', $guests['full_name']), 0, 2)
 ));
 
 $goalOptions = [
@@ -300,7 +300,7 @@ $goalOptions = [
         </a>
         <span style="color:#cbd5e1">/</span>
         <span style="font-size:.82rem;color:#0f172a;font-weight:600">
-        <?= esc($guest['full_name']) ?>
+        <?= esc($guests['full_name']) ?>
     </span>
     </div>
 
@@ -319,11 +319,11 @@ $goalOptions = [
                         <?= $initials ?>
                     </div>
                     <h5 class="fw-bold mb-1" style="font-size:1rem">
-                        <?= esc($guest['full_name']) ?>
+                        <?= esc($guests['full_name']) ?>
                     </h5>
-                    <?php if (!empty($guest['document'])): ?>
+                    <?php if (!empty($guests['document'])): ?>
                         <p style="font-size:.75rem;color:#94a3b8;margin-bottom:.5rem">
-                            Doc: <?= esc($guest['document']) ?>
+                            Doc: <?= esc($guests['document']) ?>
                         </p>
                     <?php endif; ?>
 
@@ -378,30 +378,30 @@ $goalOptions = [
             <div class="profile-card">
                 <div class="profile-card-header">Contacto</div>
                 <div class="profile-card-body" style="padding:.75rem 1.25rem">
-                    <?php if (!empty($guest['phone'])): ?>
+                    <?php if (!empty($guests['phone'])): ?>
                         <div class="pref-item">
                             <div class="pref-icon">
                                 <i class="bi bi-telephone"></i>
                             </div>
                             <div>
                                 <div class="pref-label">Teléfono</div>
-                                <div class="pref-val"><?= esc($guest['phone']) ?></div>
+                                <div class="pref-val"><?= esc($guests['phone']) ?></div>
                             </div>
-                            <a href="https://wa.me/<?= preg_replace('/\D/', '', $guest['phone']) ?>"
+                            <a href="https://wa.me/<?= preg_replace('/\D/', '', $guests['phone']) ?>"
                                target="_blank"
                                style="color:#16a34a;margin-left:auto;font-size:1.1rem">
                                 <i class="bi bi-whatsapp"></i>
                             </a>
                         </div>
                     <?php endif; ?>
-                    <?php if (!empty($guest['email'])): ?>
+                    <?php if (!empty($guests['email'])): ?>
                         <div class="pref-item">
                             <div class="pref-icon">
                                 <i class="bi bi-envelope"></i>
                             </div>
                             <div>
                                 <div class="pref-label">Email</div>
-                                <div class="pref-val"><?= esc($guest['email']) ?></div>
+                                <div class="pref-val"><?= esc($guests['email']) ?></div>
                             </div>
                         </div>
                     <?php endif; ?>
@@ -509,7 +509,7 @@ $goalOptions = [
                     <div class="ai-generator">
                         <div class="ai-gen-title">
                             <i class="bi bi-stars"></i>
-                            Mensaje personalizado para <?= esc(explode(' ', $guest['full_name'])[0]) ?>
+                            Mensaje personalizado para <?= esc(explode(' ', $guests['full_name'])[0]) ?>
                         </div>
 
                         <div class="row g-2 mb-3">
@@ -556,7 +556,7 @@ $goalOptions = [
                                 Generado por IA · Editable
                             </span>
                                 <div class="d-flex gap-2">
-                                    <?php if (!empty($guest['phone'])): ?>
+                                    <?php if (!empty($guests['phone'])): ?>
                                         <a id="waLink"
                                            href="#"
                                            target="_blank"
@@ -663,7 +663,7 @@ $goalOptions = [
                 </div>
                 <div class="section-card-body">
                     <!-- Form agregar nota -->
-                    <form action="/crm/guest/<?= $guest['id'] ?>/note"
+                    <form action="/crm/guest/<?= $guests['id'] ?>/note"
                           method="POST" class="mb-3">
                         <?= csrf_field() ?>
                         <div class="d-flex gap-2">
@@ -740,7 +740,7 @@ $goalOptions = [
 
     <!-- Form oculto para guardar mensaje -->
     <form id="formSaveMsg"
-          action="/crm/guest/<?= $guest['id'] ?>/message"
+          action="/crm/guest/<?= $guests['id'] ?>/message"
           method="POST" style="display:none">
         <?= csrf_field() ?>
         <input type="hidden" name="message_body"  id="hiddenMsgBody">
@@ -749,8 +749,8 @@ $goalOptions = [
     </form>
 
     <script>
-        const guestId   = <?= $guest['id'] ?>;
-        const guestPhone= '<?= preg_replace('/\D/', '', $guest['phone'] ?? '') ?>';
+        const guestId   = <?= $guests['id'] ?>;
+        const guestPhone= '<?= preg_replace('/\D/', '', $guests['phone'] ?? '') ?>';
 
         /**
          * Llama al endpoint de IA para generar un mensaje personalizado
