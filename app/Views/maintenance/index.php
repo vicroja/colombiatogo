@@ -706,18 +706,18 @@
          * @param {number} taskId
          * @param {string} newStatus
          */
+
         async function changeStatus(taskId, newStatus) {
-            // Leer token CSRF desde cookie
-            const csrfToken = document.cookie
-                .split('; ')
-                .find(r => r.startsWith('csrf_cookie_name='))
-                ?.split('=')[1] ?? '';
+            // Leer token CSRF desde input hidden del DOM
+            const csrfInput = document.querySelector('input[name="csrf_test_name"]');
+            const csrfToken = csrfInput ? csrfInput.value : '';
 
             const formData = new FormData();
-            formData.append('status', newStatus);
+            formData.append('status',          newStatus);
+            formData.append('csrf_test_name',  csrfToken);
 
             try {
-                const res  = await fetch(`/maintenance/update-status/${taskId}`, {
+                const res = await fetch(`/maintenance/update-status/${taskId}`, {
                     method      : 'POST',
                     body        : formData,
                     credentials : 'same-origin',
@@ -730,16 +730,14 @@
                 const data = await res.json();
 
                 if (data.success) {
-                    // Mover la tarjeta visualmente o recargar
                     showToast(statusLabel(newStatus));
-                    // Recarga suave tras 600ms para actualizar los contadores
                     setTimeout(() => location.reload(), 600);
                 } else {
                     showToast('Error al actualizar', true);
                 }
             } catch (err) {
                 console.error('[Maintenance] Error:', err);
-                showToast('Error de conexión', true);
+                showToast('Error de conexion', true);
             }
         }
 
@@ -748,9 +746,9 @@
          */
         function statusLabel(status) {
             const labels = {
-                pending     : '🔄 Tarea marcada como pendiente',
-                in_progress : '▶️ Tarea iniciada',
-                completed   : '✅ Tarea completada',
+                pending     : 'Tarea marcada como pendiente',
+                in_progress : 'Tarea iniciada',
+                completed   : 'Tarea completada',
             };
             return labels[status] ?? 'Estado actualizado';
         }
