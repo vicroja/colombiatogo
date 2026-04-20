@@ -101,7 +101,7 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
     $routes->get('maintenance', 'MaintenanceController::index');
     $routes->post('maintenance/store', 'MaintenanceController::store');
     $routes->post('maintenance/update-status/(:num)', 'MaintenanceController::updateStatus/$1');
-    $routes->get('maintenance/delete/(:num)', 'MaintenanceController::delete/$1');
+    $routes->post('maintenance/delete/(:num)', 'MaintenanceController::delete/$1');
 
     //Proveedores
         $routes->get('suppliers', 'SupplierController::index');

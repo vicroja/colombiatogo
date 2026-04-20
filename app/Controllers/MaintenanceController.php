@@ -5,99 +5,217 @@ namespace App\Controllers;
 use App\Models\MaintenanceTaskModel;
 use App\Models\AccommodationUnitModel;
 
+/**
+ * MaintenanceController
+ *
+ * Gestiona el tablero Kanban de mantenimiento.
+ * Fixes: delete por POST, view_cell reemplazado, scheduled_date en formulario.
+ * Mejoras: filtros, stats, AJAX para cambio de estado.
+ */
 class MaintenanceController extends BaseController
 {
-    public function index()
+    private MaintenanceTaskModel   $taskModel;
+    private AccommodationUnitModel $unitModel;
+
+    public function initController(
+        \CodeIgniter\HTTP\RequestInterface  $request,
+        \CodeIgniter\HTTP\ResponseInterface $response,
+        \Psr\Log\LoggerInterface            $logger
+    ): void {
+        parent::initController($request, $response, $logger);
+        $this->taskModel = new MaintenanceTaskModel();
+        $this->unitModel = new AccommodationUnitModel();
+    }
+
+    // =========================================================================
+    // INDEX — Tablero Kanban
+    // =========================================================================
+    public function index(): string
     {
-        $taskModel = new MaintenanceTaskModel();
-        $unitModel = new AccommodationUnitModel();
+        // Filtros opcionales por GET
+        $filterUnit     = $this->request->getGet('unit_id')  ?? '';
+        $filterPriority = $this->request->getGet('priority') ?? '';
 
-        // Traemos todas las tareas con el nombre de su habitación
-        $allTasks = $taskModel->select('maintenance_tasks.*, accommodation_units.name as unit_name')
-            ->join('accommodation_units', 'accommodation_units.id = maintenance_tasks.unit_id', 'left')
-            ->orderBy('maintenance_tasks.created_at', 'DESC')
-            ->findAll();
+        // Query base con join a unidades
+        $query = $this->taskModel
+            ->select('maintenance_tasks.*, accommodation_units.name as unit_name')
+            ->join('accommodation_units',
+                'accommodation_units.id = maintenance_tasks.unit_id', 'left')
+            ->orderBy('maintenance_tasks.priority',
+                'FIELD(maintenance_tasks.priority,"alta","media","baja")')
+            ->orderBy('maintenance_tasks.scheduled_date', 'ASC');
 
-        // Las organizamos por estado para el Tablero Kanban
+        if ($filterUnit !== '') {
+            $query->where('maintenance_tasks.unit_id', $filterUnit);
+        }
+        if ($filterPriority !== '') {
+            $query->where('maintenance_tasks.priority', $filterPriority);
+        }
+
+        $allTasks = $query->findAll();
+
+        // Organizar por estado para el Kanban
         $kanban = [
             'pending'     => [],
             'in_progress' => [],
-            'completed'   => []
+            'completed'   => [],
         ];
-
         foreach ($allTasks as $task) {
             $kanban[$task['status']][] = $task;
         }
 
-        $units = $unitModel->findAll();
+        // Stats del dashboard
+        $stats = [
+            'total'       => count($allTasks),
+            'pending'     => count($kanban['pending']),
+            'in_progress' => count($kanban['in_progress']),
+            'completed'   => count($kanban['completed']),
+            'blocking'    => count(array_filter($allTasks,
+                fn($t) => $t['blocks_unit'] && $t['status'] !== 'completed')),
+            'overdue'     => count(array_filter($allTasks,
+                fn($t) => !empty($t['scheduled_date'])
+                    && $t['scheduled_date'] < date('Y-m-d')
+                    && $t['status'] !== 'completed')),
+        ];
+
+        $units = $this->unitModel->findAll();
 
         return view('maintenance/index', [
-            'kanban' => $kanban,
-            'units'  => $units
+            'kanban'         => $kanban,
+            'units'          => $units,
+            'stats'          => $stats,
+            'filterUnit'     => $filterUnit,
+            'filterPriority' => $filterPriority,
         ]);
     }
 
-    public function store()
+    // =========================================================================
+    // STORE — Crear nueva tarea
+    // =========================================================================
+    public function store(): \CodeIgniter\HTTP\RedirectResponse
     {
-        $taskModel = new MaintenanceTaskModel();
-        $unitModel = new AccommodationUnitModel();
+        $rules = [
+            'title'    => 'required|max_length[150]',
+            'priority' => 'required|in_list[baja,media,alta]',
+        ];
+
+        if (!$this->validate($rules)) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', implode(' ', $this->validator->getErrors()));
+        }
 
         $blocksUnit = $this->request->getPost('blocks_unit') ? 1 : 0;
-        $unitId = $this->request->getPost('unit_id');
+        $unitId     = $this->request->getPost('unit_id') ?: null;
 
-        $taskModel->db->transStart();
+        $this->taskModel->db->transStart();
 
-        // 1. Crear la tarea
-        $taskModel->createForTenant([
-            'unit_id'        => $unitId ?: null,
+        $this->taskModel->createForTenant([
+            'unit_id'        => $unitId,
             'title'          => $this->request->getPost('title'),
             'description'    => $this->request->getPost('description'),
             'priority'       => $this->request->getPost('priority'),
-            'scheduled_date' => $this->request->getPost('scheduled_date') ?: date('Y-m-d'),
+            'scheduled_date' => $this->request->getPost('scheduled_date') ?: null,
             'blocks_unit'    => $blocksUnit,
-            'status'         => 'pending'
+            'status'         => 'pending',
         ]);
 
-        // 2. Si bloquea la unidad, la pasamos a estado 'maintenance'
+        // Bloquear unidad si aplica
         if ($blocksUnit && $unitId) {
-            $unitModel->update($unitId, ['status' => 'maintenance']);
+            $this->unitModel->update($unitId, ['status' => 'maintenance']);
+            log_message('info', "[Maintenance] Unidad #{$unitId} bloqueada por nueva tarea.");
         }
 
-        $taskModel->db->transComplete();
+        $this->taskModel->db->transComplete();
 
-        return redirect()->to('/maintenance')->with('success', 'Tarea de mantenimiento registrada.');
+        return redirect()->to('/maintenance')
+            ->with('success', 'Tarea registrada correctamente.');
     }
 
-    public function updateStatus($id)
+    // =========================================================================
+    // UPDATE STATUS — Cambiar estado (POST + AJAX)
+    // =========================================================================
+    public function updateStatus(int $id): \CodeIgniter\HTTP\ResponseInterface|\CodeIgniter\HTTP\RedirectResponse
     {
-        $taskModel = new MaintenanceTaskModel();
-        $unitModel = new AccommodationUnitModel();
+        $task = $this->taskModel->find($id);
 
-        $task = $taskModel->find($id);
-        if (!$task) return redirect()->back();
+        if (!$task) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Tarea no encontrada']);
+            }
+            return redirect()->back()->with('error', 'Tarea no encontrada.');
+        }
 
         $newStatus = $this->request->getPost('status');
 
-        $taskModel->db->transStart();
-
-        // Actualizamos la tarea
-        $taskModel->update($id, ['status' => $newStatus]);
-
-        // Si la tarea se completó y bloqueaba la unidad, la liberamos
-        if ($newStatus == 'completed' && $task['blocks_unit'] && $task['unit_id']) {
-            // (En un sistema complejo verificaríamos si hay OTRAS tareas bloqueándola, para el MVP la liberamos)
-            $unitModel->update($task['unit_id'], ['status' => 'available']);
+        if (!in_array($newStatus, ['pending', 'in_progress', 'completed'])) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Estado inválido']);
+            }
+            return redirect()->back()->with('error', 'Estado inválido.');
         }
 
-        $taskModel->db->transComplete();
+        $this->taskModel->db->transStart();
 
-        return redirect()->to('/maintenance')->with('success', 'Estado de la tarea actualizado.');
+        $this->taskModel->update($id, ['status' => $newStatus]);
+
+        // Liberar unidad al completar
+        if ($newStatus === 'completed' && $task['blocks_unit'] && $task['unit_id']) {
+            // Verificar que no haya otras tareas bloqueando la misma unidad
+            $otherBlocking = $this->taskModel
+                ->where('unit_id', $task['unit_id'])
+                ->where('blocks_unit', 1)
+                ->where('status !=', 'completed')
+                ->where('id !=', $id)
+                ->countAllResults();
+
+            if ($otherBlocking === 0) {
+                $this->unitModel->update($task['unit_id'], ['status' => 'available']);
+                log_message('info', "[Maintenance] Unidad #{$task['unit_id']} liberada al completar tarea #{$id}.");
+            }
+        }
+
+        $this->taskModel->db->transComplete();
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'success'    => true,
+                'new_status' => $newStatus,
+                'task_id'    => $id,
+            ]);
+        }
+
+        return redirect()->to('/maintenance')
+            ->with('success', 'Estado actualizado.');
     }
 
-    public function delete($id)
+    // =========================================================================
+    // DELETE — Eliminar tarea (POST — FIX seguridad)
+    // =========================================================================
+    public function delete(int $id): \CodeIgniter\HTTP\RedirectResponse
     {
-        $taskModel = new MaintenanceTaskModel();
-        $taskModel->delete($id);
-        return redirect()->to('/maintenance')->with('success', 'Tarea eliminada.');
+        $task = $this->taskModel->find($id);
+
+        if ($task) {
+            // Liberar unidad si la tarea la bloqueaba
+            if ($task['blocks_unit'] && $task['unit_id'] && $task['status'] !== 'completed') {
+                $otherBlocking = $this->taskModel
+                    ->where('unit_id', $task['unit_id'])
+                    ->where('blocks_unit', 1)
+                    ->where('status !=', 'completed')
+                    ->where('id !=', $id)
+                    ->countAllResults();
+
+                if ($otherBlocking === 0) {
+                    $this->unitModel->update($task['unit_id'], ['status' => 'available']);
+                }
+            }
+
+            $this->taskModel->delete($id);
+            log_message('info', "[Maintenance] Tarea #{$id} eliminada.");
+        }
+
+        return redirect()->to('/maintenance')
+            ->with('success', 'Tarea eliminada.');
     }
 }
