@@ -41,6 +41,13 @@ $routes->get('/logout', 'AuthController::logout');
 
 // Rutas protegidas (Requieren sesión de empleado y tenant activo)
 $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
+
+    $routes->get('crm',                          'CrmController::index');
+    $routes->get('crm/guest/(:num)',             'CrmController::show/$1');
+    $routes->post('crm/guest/(:num)/note',       'CrmController::addNote/$1');
+    $routes->post('crm/guest/(:num)/message',    'CrmController::sendMessage/$1');
+    $routes->post('crm/ai/message',              'CrmController::aiMessage');
+
     $routes->get('dashboard', 'DashboardController::index');
     //Rutas de Inventario
     $routes->get('inventory', 'InventoryController::index');

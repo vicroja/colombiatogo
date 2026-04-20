@@ -82,7 +82,9 @@ class Filters extends BaseFilters
                     'onboarding/ai/generate',
                     'website/preview',
                     'website/ai-generate',
-                    'maintenance/update-status/.*'
+                    'maintenance/update-status/.*',
+                    'crm/ai/message',
+
                 ]
             ],
             // 'invalidchars',

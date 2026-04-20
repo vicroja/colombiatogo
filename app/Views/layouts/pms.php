@@ -43,6 +43,11 @@
                 <li class="nav-item"><a class="nav-link" href="<?= base_url('/commissions') ?>"><i class="bi bi-cash-coin"></i> Liquidar</a></li>
                 <li class="nav-item"><a class="nav-link text-warning" href="<?= base_url('/website') ?>"><i class="bi bi-globe"></i> Mi Web</a></li>
                 <li class="nav-item"><a class="nav-link ms-2" href="<?= base_url('/settings') ?>"><i class="bi bi-gear"></i></a></li>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('/crm') ?>">
+                        <i class="bi bi-people"></i> CRM
+                    </a>
+                </li>
             </ul>
 
             <div class="d-flex text-white align-items-center">
