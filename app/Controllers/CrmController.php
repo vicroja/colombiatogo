@@ -265,32 +265,16 @@ class CrmController extends BaseController
     /**
      * Construye la lista de huéspedes con score RFM calculado
      */
+
     private function buildGuestList(
         string $segment,
         string $search,
         string $sort
     ): array {
-        // Traer todos los huéspedes con sus stats de reservaciones
+        // Query simplificada — solo datos del huésped
         $query = $this->db->table('guests g')
-            ->select('
-                g.*,
-                COUNT(CASE WHEN r.status = "checked_out" THEN 1 END) as completed_reservations,
- COUNT(r.id) as total_reservations,
-                SUM(CASE WHEN r.status = "checked_out"
-                    THEN r.total_price ELSE 0 END)       as total_spent,
-                MAX(r.check_in_date)                     as last_visit,
-                MIN(r.check_in_date)                     as first_visit,
-                SUM(CASE WHEN r.status = "cancelled"
-                    THEN 1 ELSE 0 END)                   as cancellations,
-            
-            ')
-            ->join('reservations r',
-                'r.guest_id = g.id AND r.tenant_id = ' . $this->tenantId,
-                'left')
-            ->join('accommodation_units au',
-                'au.id = r.accommodation_unit_id', 'left')
-            ->where('g.tenant_id', $this->tenantId)
-            ->groupBy('g.id');
+            ->select('g.*')
+            ->where('g.tenant_id', $this->tenantId);
 
         if (!empty($search)) {
             $query->groupStart()
@@ -302,15 +286,31 @@ class CrmController extends BaseController
 
         $guests = $query->get()->getResultArray();
 
-        // Calcular RFM para cada huésped
+        // Para cada huésped calcular stats y RFM por separado
         foreach ($guests as &$guest) {
-            $reservations = $this->db->table('reservations')
-                ->where('guest_id',  $guest['id'])
-                ->where('tenant_id', $this->tenantId)
-                ->where('status',    'checked_out')
+            // Traer reservaciones completadas
+            $reservations = $this->db->table('reservations r')
+                ->select('r.*, DATEDIFF(r.check_out_date, r.check_in_date) as nights')
+                ->where('r.guest_id',  $guest['id'])
+                ->where('r.tenant_id', $this->tenantId)
+                ->orderBy('r.check_in_date', 'DESC')
                 ->get()->getResultArray();
 
-            $rfm            = $this->calculateRfm($guest, $reservations);
+            // Stats básicas
+            $completed = array_filter($reservations,
+                fn($r) => $r['status'] === 'checked_out');
+
+            $guest['total_reservations']   = count($reservations);
+            $guest['completed_reservations']= count($completed);
+            $guest['total_spent']          = array_sum(
+                array_column(array_values($completed), 'total_price')
+            );
+            $guest['last_visit'] = !empty($completed)
+                ? array_values($completed)[0]['check_in_date']
+                : null;
+
+            // RFM
+            $rfm            = $this->calculateRfm($guest, array_values($completed));
             $guest['rfm']   = $rfm;
             $guest['score'] = $rfm['score'];
             $guest['segment']       = $rfm['segment'];
@@ -321,8 +321,8 @@ class CrmController extends BaseController
 
         // Filtrar por segmento
         if (!empty($segment)) {
-            $guests = array_filter($guests,
-                fn($g) => $g['segment'] === $segment);
+            $guests = array_values(array_filter($guests,
+                fn($g) => $g['segment'] === $segment));
         }
 
         // Ordenar
@@ -330,7 +330,7 @@ class CrmController extends BaseController
             return match($sort) {
                 'name'       => strcmp($a['full_name'], $b['full_name']),
                 'spent'      => $b['total_spent'] <=> $a['total_spent'],
-                'visits'     => $b['total_reservations'] <=> $a['total_reservations'],
+                'visits'     => $b['completed_reservations'] <=> $a['completed_reservations'],
                 'last_visit' => strcmp($b['last_visit'] ?? '', $a['last_visit'] ?? ''),
                 default      => $b['score'] <=> $a['score'],
             };
@@ -473,23 +473,27 @@ class CrmController extends BaseController
     /**
      * Stats globales del CRM
      */
+
+    // Reemplaza buildCrmStats completo
     private function buildCrmStats(array $guests): array
     {
         $segments = array_count_values(array_column($guests, 'segment'));
 
         return [
-            'total'      => count($guests),
-            'champions'  => $segments['champion']  ?? 0,
-            'at_risk'    => $segments['at_risk']    ?? 0,
-            'loyal'      => $segments['loyal']      ?? 0,
-            'new'        => $segments['new']        ?? 0,
-            'lost'       => $segments['lost']       ?? 0,
-            'repeat_pct' => count($guests) > 0
+            'total'     => count($guests),
+            'champions' => $segments['champion']  ?? 0,
+            'loyal'     => $segments['loyal']     ?? 0,
+            'at_risk'   => $segments['at_risk']   ?? 0,
+            'potential' => $segments['potential'] ?? 0,
+            'new'       => $segments['new']       ?? 0,
+            'lost'      => $segments['lost']      ?? 0,
+            'regular'   => $segments['regular']   ?? 0,
+            'repeat_pct'=> count($guests) > 0
                 ? round(count(array_filter($guests,
-                        fn($g) => ($g['total_reservations'] ?? 0) > 1))
+                        fn($g) => ($g['completed_reservations'] ?? 0) > 1))
                     / count($guests) * 100)
                 : 0,
-            'avg_score'  => count($guests) > 0
+            'avg_score' => count($guests) > 0
                 ? round(array_sum(array_column($guests, 'score'))
                     / count($guests), 1)
                 : 0,
