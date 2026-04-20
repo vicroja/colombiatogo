@@ -317,9 +317,7 @@ class WizardController extends BaseController
         return ['success' => true];
     }
 
-    /**
-     * Paso 3: Primera unidad de alojamiento
-     */
+
     private function saveStep3(): array
     {
         $rules = [
@@ -330,10 +328,13 @@ class WizardController extends BaseController
         ];
 
         if (!$this->validate($rules)) {
-            return ['success' => false, 'message' => implode(' ', $this->validator->getErrors())];
+            return ['success' => false,
+                'message' => implode(' ', $this->validator->getErrors())];
         }
 
-        // Crear o reutilizar tipo — BaseMultiTenantModel filtra por tenant automáticamente
+        $mode = $this->request->getPost('unit_mode') ?? 'simple';
+
+        // Crear o reutilizar el tipo de alojamiento
         $typeName = $this->request->getPost('type_name');
         $type     = $this->typeModel->where('name', $typeName)->first();
 
@@ -347,7 +348,7 @@ class WizardController extends BaseController
             $typeId = $type['id'];
         }
 
-        // Crear la unidad
+        // Crear la unidad padre
         $unitId = $this->unitModel->createForTenant([
             'type_id'        => $typeId,
             'name'           => $this->request->getPost('unit_name'),
@@ -356,46 +357,73 @@ class WizardController extends BaseController
             'max_occupancy'  => $this->request->getPost('max_occupancy'),
             'bathrooms'      => $this->request->getPost('bathrooms') ?? 1.0,
             'status'         => 'available',
+            'parent_id'      => null,
         ]);
 
         if (!$unitId) {
             log_message('error', "[Onboarding/Paso3] Error creando unidad para tenant {$this->tenantId}");
-            return ['success' => false, 'message' => 'Error creando la habitación.'];
+            return ['success' => false, 'message' => 'Error creando la unidad.'];
         }
 
-        // Guardar camas
-        $bedTypes = $this->request->getPost('bed_type_id') ?? [];
-        $bedQtys  = $this->request->getPost('bed_quantity') ?? [];
+        if ($mode === 'simple') {
+            // ── Modo simple: camas directas en la unidad ──────────────────
+            $this->saveBeds($unitId, $this->request->getPost('beds') ?? []);
 
-        foreach ($bedTypes as $i => $bedTypeId) {
-            if (!empty($bedTypeId) && !empty($bedQtys[$i])) {
-                // UnitBedModel no tiene tenant_id — insert directo
-                $this->unitBedModel->insert([
-                    'unit_id'     => $unitId,
-                    'bed_type_id' => (int) $bedTypeId,
-                    'quantity'    => (int) $bedQtys[$i],
+        } else {
+            // ── Modo compound: crear cuartos hijos con sus camas ──────────
+            $rooms = $this->request->getPost('rooms') ?? [];
+
+            // Tipo genérico para las habitaciones hijas
+            $roomType = $this->typeModel->where('name', 'Habitación')->first();
+            if (!$roomType) {
+                $roomTypeId = $this->typeModel->createForTenant([
+                    'name'          => 'Habitación',
+                    'base_capacity' => 2,
+                    'max_capacity'  => 4,
                 ]);
+            } else {
+                $roomTypeId = $roomType['id'];
+            }
+
+            foreach ($rooms as $idx => $room) {
+                $roomName = !empty($room['name'])
+                    ? trim($room['name'])
+                    : 'Cuarto ' . ($idx + 1);
+
+                $capacity = (int) ($room['capacity'] ?? 2);
+
+                // Unidad hija vinculada al padre via parent_id
+                $childId = $this->unitModel->createForTenant([
+                    'type_id'        => $roomTypeId,
+                    'parent_id'      => $unitId,
+                    'name'           => $roomName,
+                    'base_occupancy' => $capacity,
+                    'max_occupancy'  => $capacity,
+                    'bathrooms'      => 1.0,
+                    'status'         => 'available',
+                ]);
+
+                if ($childId) {
+                    $this->saveBeds($childId, $room['beds'] ?? []);
+                    log_message('info', "[Onboarding/Paso3] Cuarto hijo #{$childId} '{$roomName}' bajo unidad #{$unitId}");
+                }
             }
         }
 
-        // Guardar amenidades
+        // Amenidades sobre la unidad padre
         $amenityIds = $this->request->getPost('amenity_ids') ?? [];
         foreach ($amenityIds as $amenityId) {
-            // UnitAmenityModel no tiene tenant_id — insert directo
             $this->unitAmenityModel->insert([
                 'unit_id'    => $unitId,
                 'amenity_id' => (int) $amenityId,
             ]);
         }
 
-        // Subir foto de la unidad
+        // Foto principal de la unidad padre
         $photo = $this->request->getFile('unit_photo');
         if ($photo && $photo->isValid() && !$photo->hasMoved()) {
             $newName = $photo->getRandomName();
-
-            // FIX #6: FCPATH para archivos públicos
             $photo->move(FCPATH . 'uploads/units/' . $unitId, $newName);
-
             $this->mediaModel->createForTenant([
                 'entity_type' => 'unit',
                 'entity_id'   => $unitId,
@@ -408,8 +436,31 @@ class WizardController extends BaseController
 
         $this->updateSettings(['onboarding_unit_id' => $unitId]);
 
-        log_message('info', "[Onboarding/Paso3] Unidad #{$unitId} creada para tenant {$this->tenantId}");
+        log_message('info', "[Onboarding/Paso3] Unidad #{$unitId} modo '{$mode}' creada para tenant {$this->tenantId}");
         return ['success' => true];
+    }
+
+    /**
+     * Helper: guarda las camas para una unidad dada.
+     * Usado tanto por el modo simple como por cada cuarto del modo compound.
+     *
+     * @param int   $unitId
+     * @param array $beds   array de ['type_id' => x, 'qty' => y]
+     */
+    private function saveBeds(int $unitId, array $beds): void
+    {
+        foreach ($beds as $bed) {
+            $typeId = (int) ($bed['type_id'] ?? 0);
+            $qty    = (int) ($bed['qty']     ?? 1);
+
+            if ($typeId > 0 && $qty > 0) {
+                $this->unitBedModel->insert([
+                    'unit_id'     => $unitId,
+                    'bed_type_id' => $typeId,
+                    'quantity'    => $qty,
+                ]);
+            }
+        }
     }
 
     /**
