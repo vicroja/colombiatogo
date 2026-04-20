@@ -23,49 +23,375 @@ $photos    = $photos ?? [];
           enctype="multipart/form-data" id="formStep2">
         <?= csrf_field() ?>
 
-        <!-- ── Zona de logo ─────────────────────────────────────────────── -->
-        <div class="d-flex align-items-center gap-4 mb-5">
 
-            <!-- Preview actual / placeholder -->
+        <!-- ── Zona de logo ─────────────────────────────────────────────── -->
+        <div class="d-flex align-items-start gap-4 mb-5 flex-wrap">
+
+            <!-- Preview actual -->
             <div id="logoPreviewWrap"
-                 style="width:100px;height:100px;border-radius:14px;
-                        border:2px dashed #c7d2fe;background:#f0f4ff;
-                        display:flex;align-items:center;justify-content:center;
-                        overflow:hidden;flex-shrink:0;cursor:pointer;"
+                 style="width:110px;height:110px;border-radius:14px;
+                border:2px dashed #c7d2fe;background:#f0f4ff;
+                display:flex;align-items:center;justify-content:center;
+                overflow:hidden;flex-shrink:0;cursor:pointer;"
                  onclick="document.getElementById('logoInput').click()">
                 <?php if ($logoPath): ?>
                     <img id="logoPreview"
                          src="<?= base_url($logoPath) ?>"
                          style="width:100%;height:100%;object-fit:cover">
                 <?php else: ?>
-                    <div id="logoPlaceholder" style="text-align:center;color:#6366f1">
-                        <i class="bi bi-building" style="font-size:1.8rem"></i>
-                        <div style="font-size:.7rem;margin-top:.25rem">Subir logo</div>
+                    <div id="logoPlaceholder"
+                         style="text-align:center;color:#6366f1">
+                        <i class="bi bi-building"
+                           style="font-size:1.8rem"></i>
+                        <div style="font-size:.7rem;margin-top:.25rem">
+                            Tu logo
+                        </div>
                     </div>
-                    <img id="logoPreview" src="" style="width:100%;height:100%;
-                         object-fit:cover;display:none">
+                    <img id="logoPreview" src=""
+                         style="width:100%;height:100%;object-fit:cover;display:none">
                 <?php endif; ?>
             </div>
 
-            <div>
-                <input type="file" id="logoInput" name="logo"
-                       accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                       class="d-none">
-                <button type="button" class="btn btn-outline-primary btn-sm mb-2"
-                        onclick="document.getElementById('logoInput').click()">
-                    <i class="bi bi-upload me-1"></i>
-                    <?= $logoPath ? 'Cambiar logo' : 'Seleccionar logo' ?>
-                </button>
+            <!-- Acciones -->
+            <div class="flex-grow-1">
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm"
+                            onclick="document.getElementById('logoInput').click()">
+                        <i class="bi bi-upload me-1"></i>
+                        Subir mi logo
+                    </button>
+                    <button type="button"
+                            class="btn-ai btn-sm"
+                            id="btnAiLogo"
+                            onclick="openLogoGenerator()">
+                        <i class="bi bi-stars me-1"></i>
+                        Crear logo con IA
+                    </button>
+                </div>
                 <p class="text-muted mb-0" style="font-size:.78rem">
-                    PNG, JPG, WEBP o SVG · Máx. 2MB
+                    PNG, JPG o WEBP · Máx. 2MB · Fondo transparente recomendado
                 </p>
                 <?php if ($logoPath): ?>
                     <p class="mb-0 mt-1" style="font-size:.78rem;color:#22c55e">
-                        <i class="bi bi-check-circle-fill me-1"></i>Logo actual cargado
+                        <i class="bi bi-check-circle-fill me-1"></i>
+                        Logo actual cargado
                     </p>
                 <?php endif; ?>
             </div>
         </div>
+
+        <input type="file" id="logoInput" name="logo"
+               accept="image/png,image/jpeg,image/webp,image/svg+xml"
+               class="d-none">
+
+        <!-- ── Modal generador de logos ─────────────────────────────────── -->
+        <div id="logoGenModal"
+             style="display:none;position:fixed;inset:0;z-index:9999;
+            background:rgba(15,23,42,.6);
+            align-items:center;justify-content:center;padding:1rem">
+            <div style="background:#fff;border-radius:20px;width:100%;
+                max-width:640px;max-height:90vh;overflow-y:auto;
+                padding:2rem;position:relative">
+
+                <!-- Cerrar -->
+                <button onclick="closeLogoGenerator()"
+                        style="position:absolute;top:1rem;right:1rem;
+                       background:none;border:none;font-size:1.3rem;
+                       color:#94a3b8;cursor:pointer">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <h5 class="mb-0">Crear logo con IA</h5>
+                    <span class="ai-badge">
+                <i class="bi bi-stars"></i> Gemini
+            </span>
+                </div>
+                <p style="font-size:.83rem;color:#64748b;margin-bottom:1.5rem">
+                    La IA generará 3 opciones de logo para
+                    <strong><?= esc($tenant['name'] ?? 'tu hotel') ?></strong>.
+                    Elige la que más te guste.
+                </p>
+
+                <!-- Selector de estilo -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">
+                        Estilo de logo
+                    </label>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <label class="style-pill active" data-style="both">
+                            <input type="radio" name="logo_style"
+                                   value="both" checked class="d-none">
+                            Ícono + Texto
+                        </label>
+                        <label class="style-pill" data-style="wordmark">
+                            <input type="radio" name="logo_style"
+                                   value="wordmark" class="d-none">
+                            Solo texto
+                        </label>
+                        <label class="style-pill" data-style="icon">
+                            <input type="radio" name="logo_style"
+                                   value="icon" class="d-none">
+                            Solo ícono
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Botón generar -->
+                <button type="button" class="btn-ai w-100 mb-3"
+                        id="btnGenLogos" onclick="generateLogos()">
+                    <i class="bi bi-stars me-1"></i>
+                    Generar 3 opciones
+                </button>
+
+                <!-- Loading state -->
+                <div id="logoGenLoading"
+                     style="display:none;text-align:center;padding:2rem">
+                    <div class="spinner-border"
+                         style="color:#6366f1;width:2.5rem;height:2.5rem">
+                    </div>
+                    <p style="margin-top:1rem;font-size:.85rem;color:#6366f1">
+                        Generando opciones de logo...<br>
+                        <span style="font-size:.75rem;color:#94a3b8">
+                    Esto puede tomar 20-40 segundos
+                </span>
+                    </p>
+                </div>
+
+                <!-- Grid de opciones -->
+                <div id="logoOptionsGrid"
+                     style="display:none;
+                    grid-template-columns:repeat(3,1fr);gap:1rem">
+                </div>
+
+                <!-- Botón usar seleccionado -->
+                <div id="logoSelectActions"
+                     style="display:none;margin-top:1.25rem">
+                    <button type="button"
+                            class="btn-wiz-primary w-100"
+                            id="btnUseLogo"
+                            onclick="useSelectedLogo()">
+                        <i class="bi bi-check-lg me-1"></i>
+                        Usar este logo
+                    </button>
+                    <button type="button"
+                            class="btn-wiz-skip w-100 mt-2"
+                            onclick="generateLogos()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>
+                        Regenerar opciones
+                    </button>
+                </div>
+
+                <!-- Error state -->
+                <div id="logoGenError"
+                     style="display:none"
+                     class="alert alert-danger mt-2">
+                </div>
+            </div>
+        </div>
+
+        <style>
+            .style-pill {
+                display      : inline-flex;
+                align-items  : center;
+                padding      : .35rem .9rem;
+                border-radius: 99px;
+                border       : 1.5px solid #e2e8f0;
+                font-size    : .8rem;
+                cursor       : pointer;
+                font-weight  : 500;
+                color        : #64748b;
+                transition   : all .15s;
+                user-select  : none;
+            }
+            .style-pill.active {
+                border-color : #6366f1;
+                background   : #f0f4ff;
+                color        : #4338ca;
+            }
+            .logo-option {
+                border        : 2px solid #e2e8f0;
+                border-radius : 12px;
+                padding       : .75rem;
+                cursor        : pointer;
+                text-align    : center;
+                transition    : all .2s;
+                background    : #fafafa;
+                position      : relative;
+            }
+            .logo-option:hover  { border-color: #a5b4fc }
+            .logo-option.selected {
+                border-color : #6366f1;
+                background   : #f0f4ff;
+            }
+            .logo-option img {
+                width        : 100%;
+                height       : 100px;
+                object-fit   : contain;
+                border-radius: 6px;
+            }
+            .logo-option .opt-label {
+                font-size    : .72rem;
+                color        : #64748b;
+                margin-top   : .4rem;
+            }
+            .logo-option .opt-check {
+                position     : absolute;
+                top          : 8px;
+                right        : 8px;
+                width        : 20px;
+                height       : 20px;
+                border-radius: 50%;
+                background   : #6366f1;
+                color        : #fff;
+                font-size    : .7rem;
+                display      : none;
+                align-items  : center;
+                justify-content: center;
+            }
+            .logo-option.selected .opt-check { display: flex }
+        </style>
+
+        <script>
+            // ── Estado del generador de logos ─────────────────────────────────
+            let selectedLogoBase64   = null;
+            let selectedLogoMimeType = 'image/png';
+
+            // ── Abrir / cerrar modal ──────────────────────────────────────────
+            function openLogoGenerator() {
+                const modal = document.getElementById('logoGenModal');
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeLogoGenerator() {
+                const modal = document.getElementById('logoGenModal');
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+
+            // Cerrar al hacer clic fuera del panel
+            document.getElementById('logoGenModal')
+                .addEventListener('click', function (e) {
+                    if (e.target === this) closeLogoGenerator();
+                });
+
+            // Selector de estilo — pills
+            document.querySelectorAll('.style-pill').forEach(pill => {
+                pill.addEventListener('click', function () {
+                    document.querySelectorAll('.style-pill')
+                        .forEach(p => p.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // ── Generar logos ─────────────────────────────────────────────────
+            async function generateLogos() {
+                const style = document.querySelector(
+                    'input[name="logo_style"]:checked')?.value ?? 'both';
+
+                // Reset UI
+                document.getElementById('logoOptionsGrid').style.display  = 'none';
+                document.getElementById('logoSelectActions').style.display= 'none';
+                document.getElementById('logoGenError').style.display     = 'none';
+                document.getElementById('logoGenLoading').style.display   = 'block';
+                document.getElementById('btnGenLogos').disabled           = true;
+
+                selectedLogoBase64 = null;
+
+                try {
+                    const result = await wizardAI('generate_logo', { style });
+
+                    document.getElementById('logoGenLoading').style.display = 'none';
+                    document.getElementById('btnGenLogos').disabled         = false;
+
+                    if (result.success && result.logos?.length > 0) {
+                        renderLogoOptions(result.logos);
+                    } else {
+                        showLogoError(result.message ||
+                            'No se pudieron generar logos. Intenta de nuevo.');
+                    }
+                } catch (err) {
+                    console.error('[AI/Logo]', err);
+                    document.getElementById('logoGenLoading').style.display = 'none';
+                    document.getElementById('btnGenLogos').disabled         = false;
+                    showLogoError('Error de conexión. Intenta de nuevo.');
+                }
+            }
+
+            // ── Renderizar las 3 opciones ─────────────────────────────────────
+            function renderLogoOptions(logos) {
+                const grid = document.getElementById('logoOptionsGrid');
+                grid.innerHTML = '';
+
+                logos.forEach((logo, i) => {
+                    const div       = document.createElement('div');
+                    div.className   = 'logo-option';
+                    div.dataset.idx = i;
+                    div.innerHTML   = `
+            <div class="opt-check"><i class="bi bi-check-lg"></i></div>
+            <img src="data:${logo.mimeType};base64,${logo.base64}"
+                 alt="Opción ${i + 1}">
+            <div class="opt-label">Opción ${i + 1}</div>`;
+
+                    div.addEventListener('click', () => selectLogoOption(div, logo));
+                    grid.appendChild(div);
+                });
+
+                grid.style.display = 'grid';
+                document.getElementById('logoSelectActions').style.display = 'block';
+            }
+
+            // ── Seleccionar una opción ────────────────────────────────────────
+            function selectLogoOption(el, logo) {
+                document.querySelectorAll('.logo-option')
+                    .forEach(o => o.classList.remove('selected'));
+                el.classList.add('selected');
+                selectedLogoBase64   = logo.base64;
+                selectedLogoMimeType = logo.mimeType;
+            }
+
+            // ── Usar el logo seleccionado ─────────────────────────────────────
+            function useSelectedLogo() {
+                if (!selectedLogoBase64) {
+                    showFlash('warning', 'Selecciona una de las opciones primero.');
+                    return;
+                }
+
+                // Mostrar en el preview
+                const img         = document.getElementById('logoPreview');
+                const placeholder = document.getElementById('logoPlaceholder');
+                const dataUrl     = `data:${selectedLogoMimeType};base64,${selectedLogoBase64}`;
+
+                img.src           = dataUrl;
+                img.style.display = 'block';
+                if (placeholder) placeholder.style.display = 'none';
+
+                // Convertir base64 a File y asignarlo al input[file]
+                // para que se suba al guardar el formulario
+                fetch(dataUrl)
+                    .then(r  => r.blob())
+                    .then(blob => {
+                        const ext  = selectedLogoMimeType.split('/')[1] || 'png';
+                        const file = new File([blob], `ai_logo.${ext}`,
+                            { type: selectedLogoMimeType });
+                        const dt   = new DataTransfer();
+                        dt.items.add(file);
+                        document.getElementById('logoInput').files = dt.files;
+                    });
+
+                closeLogoGenerator();
+                showFlash('success', 'Logo seleccionado. Guarda el paso para aplicarlo.');
+            }
+
+            // ── Error ─────────────────────────────────────────────────────────
+            function showLogoError(msg) {
+                const el      = document.getElementById('logoGenError');
+                el.textContent= msg;
+                el.style.display = 'block';
+            }
+        </script>
 
         <hr style="border-color:#f1f5f9">
 

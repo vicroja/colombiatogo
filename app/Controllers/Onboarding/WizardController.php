@@ -194,6 +194,8 @@ class WizardController extends BaseController
             'generate_description' => $this->aiGenerateDescription(),
             'generate_prompt'      => $this->aiGeneratePrompt(),
             'generate_hero'        => $this->aiGenerateHero(),
+            'generate_logo'        => $this->aiGenerateLogo(),   // ← nuevo
+
             default                => ['success' => false, 'message' => 'Acción no reconocida']
         };
 
@@ -661,6 +663,33 @@ class WizardController extends BaseController
 
         log_message('info', "[Onboarding/AI] Generando prompt para tenant {$this->tenantId}");
         return $this->callGemini($prompt, 1500);
+    }
+
+    /**
+     * Genera 3 opciones de logo con Gemini Image
+     * usando el contexto del hotel recopilado hasta el paso 2.
+     */
+    private function aiGenerateLogo(): array
+    {
+        $input = $this->request->getJSON(true);
+        $style = $input['style'] ?? 'both'; // 'wordmark' | 'icon' | 'both'
+
+        // Leer el nombre de unidad si ya se configuró en paso 3
+        // (en paso 2 aún no existe, usamos solo datos del tenant)
+        $result = $this->geminiModel->generateLogoOptions(
+            hotelName  : $this->tenant['name']    ?? '',
+            city       : $this->tenant['city']    ?? '',
+            type       : $this->settings['onboarding_unit_type'] ?? '',
+            description: $this->tenant['address'] ?? '',
+            style      : $style,
+            count      : 3
+        );
+
+        if ($result['success']) {
+            log_message('info', "[Onboarding/AI] {$this->tenantId} logos generados: " . count($result['logos']));
+        }
+
+        return $result;
     }
 
     private function aiGenerateHero(): array

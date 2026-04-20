@@ -300,4 +300,109 @@ class GeminiModel extends Model
 
         return ['success' => false, 'message' => $response['message']];
     }
+
+    /**
+     * Genera opciones de logo usando gemini-2.5-flash-image.
+     * Retorna array de imágenes en base64 listas para mostrar.
+     *
+     * @param  string $hotelName
+     * @param  string $city
+     * @param  string $type        tipo de alojamiento (cabaña, hotel boutique...)
+     * @param  string $description descripción corta del lugar
+     * @param  string $style       'wordmark' | 'icon' | 'both'
+     * @param  int    $count       cuántas variantes generar (default 3)
+     * @return array
+     */
+    public function generateLogoOptions(
+        string $hotelName,
+        string $city        = '',
+        string $type        = '',
+        string $description = '',
+        string $style       = 'both',
+        int    $count       = 3
+    ): array {
+        $model   = 'gemini-2.5-flash-preview-05-20';
+        $apiUrl  = $this->baseUrl . $model . ':generateContent?key=' . $this->apiKey;
+        $client  = \Config\Services::curlrequest();
+        $results = [];
+
+        // Construir prompts variados para las 3 opciones
+        $stylePrompts = [
+            'wordmark' => "a modern hotel wordmark logo with the text '{$hotelName}', elegant typography, hospitality industry style",
+            'icon'     => "a minimalist icon/symbol logo for '{$hotelName}' hotel, no text, simple geometric shapes, modern",
+            'both'     => [
+                "a modern boutique hotel logo with text '{$hotelName}', elegant serif typography with a small decorative icon, clean white background, hospitality branding",
+                "a minimalist logo for '{$hotelName}' hotel, geometric icon symbol above the name in clean sans-serif font, white background, luxury feel",
+                "a nature-inspired logo for '{$hotelName}', combining organic shapes with the hotel name, warm earthy tones, white background, professional",
+            ],
+        ];
+
+        // Contexto del hotel para enriquecer cada prompt
+        $context = array_filter([$type, $city, $description]);
+        $contextStr = !empty($context)
+            ? ' The property is a ' . implode(', ', $context) . '.'
+            : '';
+
+        // Seleccionar los prompts según estilo
+        if ($style === 'both') {
+            $prompts = $stylePrompts['both'];
+        } else {
+            $base    = $stylePrompts[$style] ?? $stylePrompts['both'][0];
+            $prompts = array_fill(0, $count, $base);
+        }
+
+        foreach (array_slice($prompts, 0, $count) as $idx => $promptText) {
+            $fullPrompt = "Create a professional logo image: " . $promptText . $contextStr .
+                " The image should have a clean white or transparent background. " .
+                "High quality, vector-style, suitable for hotel branding.";
+
+            $payload = [
+                'contents' => [[
+                    'role'  => 'user',
+                    'parts' => [['text' => $fullPrompt]],
+                ]],
+                'generationConfig' => [
+                    'temperature' => 1.0,
+                ],
+            ];
+
+            try {
+                $response = $client->post($apiUrl, [
+                    'headers'     => ['Content-Type' => 'application/json'],
+                    'json'        => $payload,
+                    'http_errors' => false,
+                    'timeout'     => 60,
+                ]);
+
+                $httpCode = $response->getStatusCode();
+                $decoded  = json_decode($response->getBody(), true);
+
+                if ($httpCode === 200 && isset($decoded['candidates'][0]['content']['parts'])) {
+                    foreach ($decoded['candidates'][0]['content']['parts'] as $part) {
+                        if (isset($part['inlineData']['data'])) {
+                            $results[] = [
+                                'index'    => $idx,
+                                'base64'   => $part['inlineData']['data'],
+                                'mimeType' => $part['inlineData']['mimeType'] ?? 'image/png',
+                            ];
+                            break;
+                        }
+                    }
+                } else {
+                    // El modelo respondió texto en vez de imagen
+                    $textResp = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                    log_message('warning', "[GeminiModel/Logo] Opción {$idx} devolvió texto: {$textResp}");
+                }
+
+            } catch (\Exception $e) {
+                log_message('error', "[GeminiModel/Logo] Excepción opción {$idx}: " . $e->getMessage());
+            }
+        }
+
+        if (empty($results)) {
+            return ['success' => false, 'message' => 'No se pudieron generar opciones de logo.'];
+        }
+
+        return ['success' => true, 'logos' => $results];
+    }
 }
