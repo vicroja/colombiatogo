@@ -417,7 +417,7 @@ $photos    = $photos ?? [];
                 Arrastra tus fotos aquí o haz clic para seleccionar
             </p>
             <p class="mb-0 text-muted" style="font-size:.78rem">
-                JPG, PNG, WEBP · Máx. 5MB por foto · Hasta 8 fotos
+                JPG, PNG, WEBP · Máx. 50MB por foto · Hasta 50 fotos
             </p>
         </div>
 
@@ -507,7 +507,7 @@ $photos    = $photos ?? [];
      * Array de objetos { file, url } pendientes de subir con el form
      */
     let newPhotos      = [];
-    const MAX_PHOTOS   = 8;
+    const MAX_PHOTOS   = 50;
 
     // Fotos ya guardadas en BD (contamos las que hay en el grid al cargar)
     let savedCount     = document.querySelectorAll('.photo-thumb[data-id]').length;
@@ -529,8 +529,8 @@ $photos    = $photos ?? [];
     function previewLogo(file) {
         if (!file) return;
 
-        if (file.size > 2 * 1024 * 1024) {
-            showFlash('danger', 'El logo no debe superar 2MB.');
+        if (file.size > 50 * 1024 * 1024) {
+            showFlash('danger', 'El logo no debe superar 50MB.');
             return;
         }
 
@@ -587,7 +587,7 @@ $photos    = $photos ?? [];
         }
 
         toAdd.forEach((file, i) => {
-            if (file.size > 5 * 1024 * 1024) {
+            if (file.size > 50 * 1024 * 1024) {
                 showFlash('danger', `"${file.name}" supera 5MB y fue omitida.`);
                 return;
             }
