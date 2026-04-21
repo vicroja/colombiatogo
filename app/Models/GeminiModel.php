@@ -321,7 +321,7 @@ class GeminiModel extends Model
         string $style       = 'both',
         int    $count       = 3
     ): array {
-        $model   = 'gemini-2.5-flash-preview-05-20';
+        $model   = 'gemini-2.5-flash-image';
         $apiUrl  = $this->baseUrl . $model . ':generateContent?key=' . $this->apiKey;
         $client  = \Config\Services::curlrequest();
         $results = [];
@@ -362,7 +362,8 @@ class GeminiModel extends Model
                     'parts' => [['text' => $fullPrompt]],
                 ]],
                 'generationConfig' => [
-                    'temperature' => 1.0,
+                    'temperature'        => 1.0,
+                    'responseModalities' => ['Text', 'Image'],
                 ],
             ];
 
@@ -390,8 +391,10 @@ class GeminiModel extends Model
                     }
                 } else {
                     // El modelo respondió texto en vez de imagen
+
                     $textResp = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? '';
                     log_message('warning', "[GeminiModel/Logo] Opción {$idx} devolvió texto: {$textResp}");
+                    log_message('warning', "[GeminiModel/Logo] HTTP {$httpCode} — Raw: " . substr($response->getBody(), 0, 500));
                 }
 
             } catch (\Exception $e) {
