@@ -123,11 +123,12 @@ class SimulatorController extends BaseController
     {
         $input = $this->request->getJSON(true);
 
-        $role       = $input['role']     ?? 'hotel';    // 'hotel' | 'client'
-        $history    = $input['history']  ?? [];         // historial acumulado
+        $role       = $input['role']     ?? 'hotel';
+        $history    = $input['history']  ?? [];
         $clientRole = $input['client_role'] ?? 'cliente curioso que quiere reservar';
+        $phone      = trim($input['phone'] ?? '');
 
-        // Cargar el prompt del hotel
+        // Cargar prompt del hotel
         $promptRecord = $this->promptModel
             ->where('profile_role', 'assistant')
             ->first();
@@ -140,6 +141,14 @@ class SimulatorController extends BaseController
         }
 
         $hotelInstruction = $promptRecord['system_instruction'];
+
+        // Si hay teléfono, cargar el contexto real de conversaciones previas
+        if (!empty($phone) && empty($history)) {
+            $priorHistory = $this->loadPhoneContext($phone);
+            if (!empty($priorHistory)) {
+                $history = $priorHistory;
+            }
+        }
 
         if ($role === 'hotel') {
             return $this->simulateHotelTurn($history, $hotelInstruction);
@@ -411,5 +420,47 @@ class SimulatorController extends BaseController
         }
         $prompt .= "\nTu siguiente mensaje como cliente:";
         return $prompt;
+    }
+
+    /**
+     * Carga el historial real de conversación de un número de teléfono.
+     * Permite que el asistente "recuerde" conversaciones previas con ese contacto.
+     */
+    private function loadPhoneContext(string $phone): array
+    {
+        // Normalizar: quitar +, espacios, guiones
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        if (empty($phone)) return [];
+
+        // Buscar últimos mensajes de ese teléfono (últimas 20 interacciones)
+        $messages = $this->db->table('whatsapp_messages')
+            ->where('tenant_id', $this->tenantId)
+            ->groupStart()
+            ->where('sender_phone', $phone)
+            ->orWhere('recipient_phone', $phone)
+            ->groupEnd()
+            ->whereIn('message_type', ['text', 'audio'])
+            ->whereNotNull('message_body')
+            ->orderBy('whatsapp_timestamp', 'ASC')
+            ->limit(20)
+            ->get()->getResultArray();
+
+        if (empty($messages)) return [];
+
+        $history = [];
+        foreach ($messages as $msg) {
+            $role = $msg['direction'] === 'incoming' ? 'user' : 'model';
+            $text = $msg['message_body'] ?? '';
+            if (empty(trim($text))) continue;
+
+            $history[] = [
+                'role'  => $role,
+                'parts' => [['text' => $text]],
+            ];
+        }
+
+        log_message('info', "[Simulator] Contexto cargado para {$phone}: " . count($history) . " mensajes");
+
+        return $history;
     }
 }

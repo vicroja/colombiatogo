@@ -479,11 +479,11 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                     <?= csrf_field() ?>
 
                     <textarea
-                        class="prompt-textarea"
-                        name="system_instruction"
-                        id="promptTextarea"
-                        placeholder="Define aquí cómo se comportará tu asistente de WhatsApp..."
-                        oninput="updateCharCount()"
+                            class="prompt-textarea"
+                            name="system_instruction"
+                            id="promptTextarea"
+                            placeholder="Define aquí cómo se comportará tu asistente de WhatsApp..."
+                            oninput="updateCharCount()"
                     ><?= esc($existingPrompt) ?></textarea>
 
                     <div class="char-count" id="charCount">
@@ -627,6 +627,16 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                            placeholder="Describe el rol del cliente...">
                 </div>
 
+                <!-- Teléfono para contexto -->
+                <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
+                    <i class="bi bi-whatsapp" style="color:#25D366;font-size:.9rem"></i>
+                    <input type="text" id="simPhone"
+                           class="sim-select"
+                           style="min-width:140px;max-width:160px"
+                           placeholder="57300..."
+                           title="Teléfono real del cliente para cargar su contexto">
+                </div>
+
                 <!-- Controles -->
                 <button class="btn-sim-control btn-start"
                         id="btnStart"
@@ -662,11 +672,24 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
 
             <!-- Controles inferiores -->
             <div class="sim-controls">
-                <input type="text"
-                       class="manual-input"
-                       id="manualInput"
-                       placeholder="Escribe como cliente (Enter para enviar)..."
-                       disabled>
+                <div style="position:relative;flex:1">
+                    <input type="text"
+                           class="manual-input"
+                           id="manualInput"
+                           placeholder="Escribe como cliente (Enter para enviar)..."
+                           disabled>
+                    <!-- Barra de countdown auto-avance -->
+                    <div id="autoCountdown"
+                         style="display:none;position:absolute;bottom:0;left:0;
+                            height:3px;background:#25D366;border-radius:0 0 22px 22px;
+                            transition:width linear;width:100%">
+                    </div>
+                    <div id="autoCountdownLabel"
+                         style="display:none;position:absolute;top:-22px;right:8px;
+                            font-size:.65rem;color:#94a3b8;white-space:nowrap">
+                        Continuando en <span id="autoSecs">5</span>s...
+                    </div>
+                </div>
                 <button class="btn-sim btn-send-manual"
                         id="btnSendManual"
                         onclick="sendManual()"
@@ -689,12 +712,14 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
     <script>
         // ── Estado de la simulación ───────────────────────────────────────────────
         const STATE = {
-            running    : false,
-            history    : [],          // [{role:'user'|'model', parts:[{text:'...'}]}]
-            turnCount  : 0,
-            maxTurns   : 20,          // límite de seguridad por simulación
-            autoMode   : false,       // bot vs bot automático
-            autoTimer  : null,        // timer del modo automático
+            running         : false,
+            history         : [],       // [{role:'user'|'model', parts:[{text:'...'}]}]
+            turnCount       : 0,
+            maxTurns        : 20,
+            autoTimer       : null,     // timer entre turnos
+            countdownTimer  : null,     // intervalo del countdown visual
+            countdownSecs   : 5,        // segundos de espera antes de auto-avance
+            waitingForInput : false,    // true cuando está esperando input manual
         };
 
         const CSRF_NAME = '<?= csrf_token() ?>';
@@ -711,6 +736,10 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             return sel;
         }
 
+        function getSimPhone() {
+            return document.getElementById('simPhone').value.trim();
+        }
+
         function setSimStatus(text, badgeClass, badgeIcon, badgeText) {
             document.getElementById('simStatus').textContent = text;
             const badge = document.getElementById('simBadge');
@@ -719,7 +748,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         }
 
         function setControlsEnabled(running) {
-            document.getElementById('btnStart').style.display    = running ? 'none'  : 'inline-flex';
+            document.getElementById('btnStart').style.display    = running ? 'none'        : 'inline-flex';
             document.getElementById('btnStop').style.display     = running ? 'inline-flex' : 'none';
             document.getElementById('manualInput').disabled      = !running;
             document.getElementById('btnSendManual').disabled    = !running;
@@ -757,14 +786,13 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
 
         function addMessage(role, text, toolCalls = []) {
             removeTyping();
+            stopCountdown();
 
             const container = document.getElementById('simMessages');
-
-            // Ocultar empty state
             const empty = document.getElementById('simEmpty');
             if (empty) empty.style.display = 'none';
 
-            const now = new Date();
+            const now  = new Date();
             const time = now.getHours().toString().padStart(2,'0')
                 + ':' + now.getMinutes().toString().padStart(2,'0');
 
@@ -772,7 +800,6 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             const senderName = isHotel ? '🤖 Alfonso (Asistente)' : '👤 Cliente simulado';
             const rowClass   = isHotel ? 'hotel' : 'client';
 
-            // Tool call badges
             let toolHtml = '';
             if (toolCalls && toolCalls.length > 0) {
                 toolCalls.forEach(tc => {
@@ -828,10 +855,60 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             setTimeout(() => el.remove(), 3500);
         }
 
+        // ── Countdown visual de auto-avance ───────────────────────────────────────
+
+        /**
+         * Muestra la barra de countdown y lanza el auto-avance tras N segundos.
+         * Si el usuario escribe algo, el countdown se cancela.
+         */
+        function startCountdown(onComplete) {
+            if (!STATE.running) return;
+
+            STATE.waitingForInput = true;
+            let secsLeft = STATE.countdownSecs;
+
+            const bar   = document.getElementById('autoCountdown');
+            const label = document.getElementById('autoCountdownLabel');
+            const secs  = document.getElementById('autoSecs');
+
+            bar.style.display   = 'block';
+            label.style.display = 'block';
+            bar.style.transition = `width ${STATE.countdownSecs}s linear`;
+            secs.textContent    = secsLeft;
+
+            // Trigger reflow para que la transición arranque desde 100%
+            bar.getBoundingClientRect();
+            bar.style.width = '0%';
+
+            // Actualizar el número cada segundo
+            STATE.countdownTimer = setInterval(() => {
+                secsLeft--;
+                secs.textContent = secsLeft;
+                if (secsLeft <= 0) {
+                    stopCountdown();
+                    if (STATE.running && STATE.waitingForInput) {
+                        STATE.waitingForInput = false;
+                        onComplete();
+                    }
+                }
+            }, 1000);
+        }
+
+        function stopCountdown() {
+            STATE.waitingForInput = false;
+            if (STATE.countdownTimer) {
+                clearInterval(STATE.countdownTimer);
+                STATE.countdownTimer = null;
+            }
+            const bar   = document.getElementById('autoCountdown');
+            const label = document.getElementById('autoCountdownLabel');
+            if (bar)   { bar.style.transition = ''; bar.style.width = '100%'; bar.style.display = 'none' }
+            if (label)   label.style.display = 'none';
+        }
+
         // ── Fetch helper ──────────────────────────────────────────────────────────
 
         async function simFetch(body) {
-            // Obtener token CSRF fresco del DOM
             const csrfInput = document.querySelector('input[name="csrf_test_name"]');
             const csrfToken = csrfInput ? csrfInput.value : '';
 
@@ -853,25 +930,28 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         function startSimulation() {
             if (STATE.running) return;
 
-            STATE.running   = true;
-            STATE.history   = [];
-            STATE.turnCount = 0;
+            STATE.running         = true;
+            STATE.history         = [];
+            STATE.turnCount       = 0;
+            STATE.waitingForInput = false;
 
-            // Limpiar mensajes anteriores
             const container = document.getElementById('simMessages');
             container.innerHTML = '';
 
             setControlsEnabled(true);
             setSimStatus('Simulación activa', 'state-running', 'circle-fill', 'Activo');
-            addSystemMessage('Simulación iniciada — el cliente enviará el primer mensaje');
 
-            // El cliente empieza la conversación
+            const phone = getSimPhone();
+            const phoneNote = phone ? ` · Contexto: ${phone}` : ' · Sin teléfono (sin contexto previo)';
+            addSystemMessage('Simulación iniciada' + phoneNote);
+
             triggerClientBot();
         }
 
         function stopSimulation() {
-            STATE.running  = false;
-            STATE.autoMode = false;
+            STATE.running         = false;
+            STATE.waitingForInput = false;
+            stopCountdown();
             if (STATE.autoTimer) {
                 clearTimeout(STATE.autoTimer);
                 STATE.autoTimer = null;
@@ -888,7 +968,6 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             STATE.turnCount = 0;
             document.getElementById('simMessages').innerHTML = '';
 
-            // Mostrar empty state de nuevo
             const empty = document.createElement('div');
             empty.id        = 'simEmpty';
             empty.className = 'sim-empty';
@@ -922,6 +1001,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                     role        : 'client',
                     history     : STATE.history,
                     client_role : getClientRole(),
+                    phone       : getSimPhone(),
                 });
 
                 removeTyping();
@@ -932,18 +1012,16 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                     return;
                 }
 
-                const text = data.text;
-                addMessage('client', text);
+                addMessage('client', data.text);
 
-                // Agregar al historial como mensaje del usuario
                 STATE.history.push({
                     role  : 'user',
-                    parts : [{ text }]
+                    parts : [{ text: data.text }]
                 });
 
                 STATE.turnCount++;
 
-                // Después del cliente, el hotel responde automáticamente
+                // Hotel responde automáticamente al cliente
                 STATE.autoTimer = setTimeout(() => triggerHotelBot(), 1200);
 
             } catch (err) {
@@ -965,6 +1043,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                 const data = await simFetch({
                     role    : 'hotel',
                     history : STATE.history,
+                    phone   : getSimPhone(),
                 });
 
                 removeTyping();
@@ -977,13 +1056,10 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
 
                 addMessage('hotel', data.text, data.tool_calls || []);
 
-                // Actualizar historial con la respuesta del hotel
-                // Usar new_history si viene (incluye los turnos de tool calls)
+                // Actualizar historial
                 if (data.new_history && data.new_history.length > STATE.history.length) {
                     STATE.history = data.new_history;
                 }
-
-                // Agregar la respuesta final del modelo
                 STATE.history.push({
                     role  : 'model',
                     parts : [{ text: data.raw || data.text }]
@@ -991,21 +1067,27 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
 
                 STATE.turnCount++;
 
-                // Habilitar botón para próximo turno del cliente
-                if (STATE.running) {
+                if (!STATE.running) return;
+
+                // Detectar fin natural
+                const finalWords = ['reserva creada', 'folio', 'hasta pronto', 'gracias por',
+                    'nos vemos', 'confirmad', 'sim-'];
+                const isEnd = finalWords.some(w => data.text.toLowerCase().includes(w));
+
+                if (isEnd) {
+                    addSystemMessage('Conversación llegó a su fin natural');
                     document.getElementById('btnNextBot').disabled = false;
-
-                    // Detectar si la conversación llegó a un final natural
-                    const finalWords = ['reserva creada', 'folio', 'hasta pronto', 'gracias por',
-                        'nos vemos', 'confirmad', 'sim-'];
-                    const textLower  = data.text.toLowerCase();
-                    const isEnd      = finalWords.some(w => textLower.includes(w));
-
-                    if (isEnd) {
-                        addSystemMessage('La conversación parece haber llegado a su fin natural');
-                        document.getElementById('btnNextBot').disabled = false;
-                    }
+                    return;
                 }
+
+                // ── Auto-avance: esperar 5s input manual, si no → bot cliente ──
+                document.getElementById('btnNextBot').disabled = false;
+                setSimStatus('Esperando tu respuesta o auto-continúa...', 'state-waiting', 'hourglass-split', 'Esperando');
+
+                startCountdown(() => {
+                    setSimStatus('Simulación activa', 'state-running', 'circle-fill', 'Activo');
+                    triggerClientBot();
+                });
 
             } catch (err) {
                 console.error('[Sim/Hotel]', err);
@@ -1023,6 +1105,8 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             const text  = input.value.trim();
             if (!text) return;
 
+            // Cancelar countdown — el usuario decidió escribir
+            stopCountdown();
             input.value = '';
 
             addMessage('client', text);
@@ -1033,8 +1117,8 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             });
 
             STATE.turnCount++;
+            setSimStatus('Simulación activa', 'state-running', 'circle-fill', 'Activo');
 
-            // El hotel responde automáticamente al mensaje manual
             setTimeout(() => triggerHotelBot(), 800);
         }
 
@@ -1044,7 +1128,19 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendManual();
+                return;
             }
+            // Cualquier tecla cancela el countdown (el usuario está escribiendo)
+            if (STATE.waitingForInput && e.key.length === 1) {
+                stopCountdown();
+                setSimStatus('Simulación activa', 'state-running', 'circle-fill', 'Activo');
+            }
+        });
+
+        // Botón manual para forzar el siguiente turno del cliente
+        document.getElementById('btnNextBot').addEventListener('click', function () {
+            stopCountdown();
+            triggerClientBot();
         });
 
         document.getElementById('clientRole').addEventListener('change', function () {
@@ -1070,7 +1166,6 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             updateCharCount();
         }
 
-        // Confirmar antes de salir si hay cambios sin guardar
         let promptSaved = true;
         document.getElementById('promptTextarea').addEventListener('input', () => {
             promptSaved = false;
@@ -1085,7 +1180,6 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             }
         });
 
-        // Auto-save al guardar con Ctrl+S
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                 e.preventDefault();
