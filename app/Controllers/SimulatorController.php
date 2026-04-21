@@ -26,6 +26,7 @@ class SimulatorController extends BaseController
     private RatePlanModel        $ratePlanModel;
     private int                  $tenantId;
     private array                $tenant;
+    private \CodeIgniter\Database\BaseConnection $db;
 
     public function initController(
         \CodeIgniter\HTTP\RequestInterface  $request,
@@ -41,6 +42,7 @@ class SimulatorController extends BaseController
         $this->unitRateModel = new UnitRateModel();
         $this->ratePlanModel = new RatePlanModel();
         $this->tenant        = $this->tenantModel->find($this->tenantId) ?? [];
+        $this->db            = \Config\Database::connect();
     }
 
     // =========================================================================
@@ -426,12 +428,7 @@ class SimulatorController extends BaseController
      * Carga el historial real de conversación de un número de teléfono.
      * Permite que el asistente "recuerde" conversaciones previas con ese contacto.
      */
-    /**
-     * Carga el contexto completo real del huésped usando el helper de producción.
-     * Idéntico al flujo del webhook — el simulador ve exactamente lo que ve Alfonso en producción:
-     * datos del tenant, catálogo de unidades con precios, perfil del huésped,
-     * reservas activas con saldos, consumos y historial reciente de chat.
-     */
+
     private function loadPhoneContext(string $phone): array
     {
         $phone = preg_replace('/[^0-9]/', '', $phone);
