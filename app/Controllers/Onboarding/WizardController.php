@@ -511,8 +511,15 @@ class WizardController extends BaseController
         return ['success' => true];
     }
 
+
     /**
      * Paso 5: Prompt del asistente IA
+     *
+     * Guarda system_instruction (personalizable) + tools_schema_json (estándar PMS).
+     * El tools_schema_json define las 3 herramientas que el asistente puede invocar:
+     *   1. consultar_disponibilidad — busca cabañas libres y devuelve precio exacto
+     *   2. crear_reserva            — bloquea la cabaña y crea el registro
+     *   3. notificar_administrador  — escala la conversación a un humano
      */
     private function saveStep5(): array
     {
@@ -522,25 +529,113 @@ class WizardController extends BaseController
             return ['success' => false, 'message' => 'El prompt del asistente no puede estar vacío.'];
         }
 
-        // BaseMultiTenantModel filtra por tenant automáticamente
+        // ── Tools schema estándar del PMS ─────────────────────────────────────
+        // Estas herramientas son las mismas que usa WhatsappWebhookService / WhatsappToolExecutor.
+        // Son obligatorias para que la IA pueda operar con el PMS.
+        $toolsSchema = [
+            [
+                'name'        => 'consultar_disponibilidad',
+                'description' => 'Busca disponibilidad y devuelve el precio exacto calculado con temporadas.',
+                'parameters'  => [
+                    'type'       => 'object',
+                    'required'   => ['check_in_date', 'check_out_date', 'numero_personas'],
+                    'properties' => [
+                        'check_in_date'   => [
+                            'type'        => 'string',
+                            'description' => 'Fecha de llegada en formato YYYY-MM-DD',
+                        ],
+                        'check_out_date'  => [
+                            'type'        => 'string',
+                            'description' => 'Fecha de salida en formato YYYY-MM-DD',
+                        ],
+                        'numero_personas' => [
+                            'type'        => 'integer',
+                            'description' => 'Cantidad total de huéspedes (adultos + niños)',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'name'        => 'crear_reserva',
+                'description' => 'Crea una reserva bloqueando la cabaña.',
+                'parameters'  => [
+                    'type'       => 'object',
+                    'required'   => [
+                        'accommodation_unit_id',
+                        'check_in_date',
+                        'check_out_date',
+                        'precio_total_acordado',
+                        'nombre_cliente',
+                    ],
+                    'properties' => [
+                        'accommodation_unit_id' => [
+                            'type'        => 'integer',
+                            'description' => 'ID numérico de la unidad.',
+                        ],
+                        'check_in_date'         => [
+                            'type'        => 'string',
+                            'description' => 'Fecha de llegada en formato YYYY-MM-DD.',
+                        ],
+                        'check_out_date'        => [
+                            'type'        => 'string',
+                            'description' => 'Fecha de salida en formato YYYY-MM-DD.',
+                        ],
+                        'precio_total_acordado' => [
+                            'type'        => 'number',
+                            'description' => 'Precio total exacto devuelto por la herramienta de disponibilidad.',
+                        ],
+                        'nombre_cliente'        => [
+                            'type'        => 'string',
+                            'description' => 'Nombre y apellido del cliente para el registro.',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'name'        => 'notificar_administrador',
+                'description' => 'Llama a esta función para escalar a un humano.',
+                'parameters'  => [
+                    'type'       => 'object',
+                    'required'   => ['mensaje'],
+                    'properties' => [
+                        'mensaje' => [
+                            'type'        => 'string',
+                            'description' => 'Breve resumen del problema.',
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $toolsSchemaJson = json_encode($toolsSchema, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+        // ── Buscar si ya existe un prompt para este tenant ────────────────────
+        // BaseMultiTenantModel filtra por tenant_id automáticamente
         $existing = $this->aiPromptModel
             ->where('profile_role', 'assistant')
             ->first();
 
         if ($existing) {
+            // Actualizar — siempre refrescar tools_schema_json al guardar
             $this->aiPromptModel->update($existing['id'], [
                 'system_instruction' => $systemInstruction,
                 'model_version'      => 'gemini-2.5-flash',
+                'tools_schema_json'  => $toolsSchemaJson,   // ← NUEVO
             ]);
+
+            log_message('info', "[Onboarding/Paso5] Prompt IA actualizado (ID: {$existing['id']}) para tenant {$this->tenantId}. tools_schema_json guardado.");
         } else {
-            $this->aiPromptModel->createForTenant([
+            // Crear nuevo registro completo
+            $newId = $this->aiPromptModel->createForTenant([
                 'profile_role'       => 'assistant',
                 'model_version'      => 'gemini-2.5-flash',
                 'system_instruction' => $systemInstruction,
+                'tools_schema_json'  => $toolsSchemaJson,   // ← NUEVO
             ]);
+
+            log_message('info', "[Onboarding/Paso5] Prompt IA creado (ID: {$newId}) para tenant {$this->tenantId}. tools_schema_json guardado.");
         }
 
-        log_message('info', "[Onboarding/Paso5] Prompt IA guardado para tenant {$this->tenantId}");
         return ['success' => true];
     }
 

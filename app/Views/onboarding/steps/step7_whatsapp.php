@@ -7,7 +7,10 @@
  * Paso opcional — no bloquea el avance.
  */
 
-$waConfigured = $whatsapp_configured ?? false;
+$waConfigured    = $whatsapp_configured ?? false;
+$settings        = $settings ?? [];
+$savedAdminPhone = $settings['admin_whatsapp_phone'] ?? ($tenant['phone'] ?? '');
+
 ?>
 
 <!-- ── Card principal ────────────────────────────────────────────────────── -->
@@ -107,6 +110,31 @@ $waConfigured = $whatsapp_configured ?? false;
                         </span>
                     </div>
                 <?php endforeach; ?>
+            </div>
+        </div>
+
+        <!-- ── Teléfono del administrador ───────────────────────────────────────── -->
+        <div class="mb-4 p-3 rounded-3" style="background:#fafafa;border:1px solid #e2e8f0">
+            <label class="form-label fw-semibold mb-1" for="adminPhoneInput"
+                   style="font-size:.88rem">
+                <i class="bi bi-person-fill-gear me-1" style="color:#6366f1"></i>
+                Tu número de WhatsApp (administrador)
+            </label>
+            <p class="text-muted mb-2" style="font-size:.78rem">
+                Cuando un huésped solicite hablar con una persona o haya algún problema,
+                la IA te notificará a este número. Incluye el código de país (ej: 573175153178).
+            </p>
+            <input
+                    type="tel"
+                    class="form-control"
+                    id="adminPhoneInput"
+                    placeholder="Ej: 573175153178"
+                    value="<?= esc($savedAdminPhone) ?>"
+                    maxlength="20"
+                    style="max-width:280px"
+            >
+            <div id="adminPhoneHelp" class="invalid-feedback">
+                Ingresa tu número con código de país, sin espacios ni guiones.
             </div>
         </div>
 
@@ -335,19 +363,40 @@ $waConfigured = $whatsapp_configured ?? false;
      * @param {string|null} wabaId
      * @param {string|null} phoneNumberId
      */
-    async function saveWhatsAppConfig(codeOrToken, wabaId, phoneNumberId) {
-        // Deshabilitar botón y mostrar spinner
-        const btn       = document.getElementById('btnConnectWA');
-        btn.disabled    = true;
-        btn.innerHTML   = '<span class="spinner-border spinner-border-sm me-2"></span>Conectando...';
 
+    /**
+     * Envía el token, los IDs de Meta Y el teléfono admin al backend.
+     * PATCH: agrega admin_whatsapp_phone al payload.
+     */
+    async function saveWhatsAppConfig(codeOrToken, wabaId, phoneNumberId) {
+        const btn = document.getElementById('btnConnectWA');
+
+        // ── Validar teléfono admin antes de conectar ──────────────────────────
+        const adminPhoneInput = document.getElementById('adminPhoneInput');
+        const adminPhone      = adminPhoneInput ? adminPhoneInput.value.trim() : '';
+
+        // Limpiar número: quitar espacios, guiones, paréntesis
+        const cleanPhone = adminPhone.replace(/[\s\-\(\)\+]/g, '');
+
+        if (!cleanPhone || cleanPhone.length < 7) {
+            adminPhoneInput?.classList.add('is-invalid');
+            document.getElementById('adminPhoneHelp').style.display = 'block';
+            return; // No continúa hasta que ingresen un número válido
+        }
+        adminPhoneInput?.classList.remove('is-invalid');
+
+        // ── Deshabilitar botón y mostrar spinner ──────────────────────────────
+        btn.disabled  = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Conectando...';
         showWaStatus('connecting');
 
         try {
+            // PATCH: incluir admin_whatsapp_phone en el payload
             const payload = new URLSearchParams({
-                access_token   : codeOrToken,
-                waba_id        : wabaId        || '',
-                phone_number_id: phoneNumberId || '',
+                access_token          : codeOrToken,
+                waba_id               : wabaId        || '',
+                phone_number_id       : phoneNumberId || '',
+                admin_whatsapp_phone  : cleanPhone,        // ← NUEVO
             });
 
             const res  = await fetch('/whatsapp/save_config', {
@@ -361,14 +410,9 @@ $waConfigured = $whatsapp_configured ?? false;
 
             if (data.success) {
                 showWaStatus('success');
-
-                // Actualizar botón de avance
                 const btnNext = document.getElementById('btnNext7');
                 btnNext.innerHTML = 'Continuar <i class="bi bi-arrow-right ms-2"></i>';
-
-                // Avanzar automáticamente tras 2 segundos
                 setTimeout(() => advanceStep7(), 2000);
-
             } else {
                 showWaStatus('error', data.message || 'Error al vincular WhatsApp.');
                 btn.disabled  = false;

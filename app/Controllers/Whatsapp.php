@@ -97,7 +97,9 @@ class Whatsapp extends BaseController
 // Recibe el code OAuth + waba_id + phone_number_id y los persiste
 // en tenants.settings_json del tenant activo.
 // ─────────────────────────────────────────────────────────────────────────
-    public function saveConfig(): ResponseInterface
+
+
+    public function saveConfig(): \CodeIgniter\HTTP\ResponseInterface
     {
         // Solo acepta POST autenticado
         if (strtolower($this->request->getMethod()) !== 'post') {
@@ -105,7 +107,8 @@ class Whatsapp extends BaseController
                 ->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
         }
 
-        $tenantId = session('active_tenant_id');
+        // ── FIX: soportar tanto active_tenant_id como tenant_id en sesión ──────
+        $tenantId = session('active_tenant_id') ?? session('tenant_id');
 
         if (!$tenantId) {
             log_message('error', '[WA/saveConfig] Intento sin sesión activa.');
@@ -113,9 +116,14 @@ class Whatsapp extends BaseController
                 ->setJSON(['success' => false, 'message' => 'No autorizado.']);
         }
 
-        $codeOrToken  = trim($this->request->getPost('access_token')    ?? '');
-        $wabaId       = trim($this->request->getPost('waba_id')         ?? '');
-        $phoneNumberId= trim($this->request->getPost('phone_number_id') ?? '');
+        // ── Datos recibidos del frontend ─────────────────────────────────────
+        $codeOrToken   = trim($this->request->getPost('access_token')     ?? '');
+        $wabaId        = trim($this->request->getPost('waba_id')          ?? '');
+        $phoneNumberId = trim($this->request->getPost('phone_number_id')  ?? '');
+
+        // ── NUEVO: teléfono admin (campo extra en el formulario del wizard) ───
+        // Si el frontend no lo envía, intentamos tomarlo del tenant actual
+        $adminPhone    = trim($this->request->getPost('admin_whatsapp_phone') ?? '');
 
         if (empty($codeOrToken)) {
             return $this->response->setJSON([
@@ -127,8 +135,6 @@ class Whatsapp extends BaseController
         log_message('info', "[WA/saveConfig] Tenant {$tenantId} — waba_id: {$wabaId} | phone_number_id: {$phoneNumberId}");
 
         // ── Intercambiar el code por un access_token permanente ───────────────
-        // Si Meta envió un 'code' OAuth (response_type: 'code'), hay que
-        // canjearlo por el token real. Si ya es un token directo, lo usamos tal cual.
         $accessToken = $codeOrToken;
 
         if (strlen($codeOrToken) < 100) {
@@ -146,7 +152,7 @@ class Whatsapp extends BaseController
             $accessToken = $exchanged['token'];
         }
 
-        // ── Persistir en settings_json del tenant ─────────────────────────────
+        // ── Leer tenant actual para merge seguro ─────────────────────────────
         $tenantModel = new \App\Models\TenantModel();
         $tenant      = $tenantModel->find($tenantId);
 
@@ -157,14 +163,42 @@ class Whatsapp extends BaseController
             ]);
         }
 
-        // Merge con settings_json existente para no pisar otros valores
+        // ── Merge con settings_json existente (no pisamos otros valores) ──────
         $settings = json_decode($tenant['settings_json'] ?? '{}', true) ?? [];
 
+        // ── CAMPOS ORIGINALES ────────────────────────────────────────────────
         $settings['whatsapp_access_token']    = $accessToken;
         $settings['whatsapp_waba_id']         = $wabaId;
         $settings['whatsapp_phone_number_id'] = $phoneNumberId;
         $settings['whatsapp_connected_at']    = date('Y-m-d H:i:s');
 
+        // ── CAMPOS NUEVOS / FALTANTES ────────────────────────────────────────
+
+        // 'whatsapp_token' es el alias que usa WhatsappModel->callWhatsappApi()
+        // para leer las credenciales: $settings['whatsapp_token']
+        $settings['whatsapp_token'] = $accessToken;
+
+        // Proveedor de IA — por defecto 'gemini', configurable en .env
+        if (empty($settings['ai_provider'])) {
+            $settings['ai_provider'] = env('DEFAULT_AI_PROVIDER', 'gemini');
+        }
+
+        // Token de verificación del webhook de Meta
+        // Se lee del .env; si no existe allí, usa el valor por defecto del sistema
+        if (empty($settings['whatsapp_verify_token'])) {
+            $settings['whatsapp_verify_token'] = env('META_WEBHOOK_VERIFY_TOKEN', '96155826');
+        }
+
+        // Teléfono del administrador para escalamiento de conversaciones
+        // Prioridad: POST > valor ya guardado > teléfono del tenant
+        if (!empty($adminPhone)) {
+            $settings['admin_whatsapp_phone'] = $adminPhone;
+        } elseif (empty($settings['admin_whatsapp_phone'])) {
+            // Fallback al teléfono principal del tenant si no se especificó uno dedicado
+            $settings['admin_whatsapp_phone'] = $tenant['phone'] ?? '';
+        }
+
+        // ── Persistir ────────────────────────────────────────────────────────
         $updated = $tenantModel->update($tenantId, [
             'settings_json' => json_encode($settings)
         ]);
@@ -177,7 +211,7 @@ class Whatsapp extends BaseController
             ]);
         }
 
-        log_message('info', "[WA/saveConfig] WhatsApp configurado exitosamente para tenant {$tenantId}");
+        log_message('info', "[WA/saveConfig] WhatsApp configurado exitosamente para tenant {$tenantId}. Campos guardados: whatsapp_token, whatsapp_access_token, whatsapp_waba_id, whatsapp_phone_number_id, ai_provider, whatsapp_verify_token, admin_whatsapp_phone");
 
         return $this->response->setJSON([
             'success' => true,

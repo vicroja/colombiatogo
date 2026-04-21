@@ -14,14 +14,42 @@ class AuthController extends BaseController
         return view('auth/login');
     }
 
+
+
     public function authenticate()
     {
-        $session = session();
-        $email = $this->request->getPost('email');
+        $session  = session();
+        $email    = $this->request->getPost('email');
         $password = $this->request->getPost('password');
 
-        // Buscamos al usuario en TODA la base de datos (por eso no usamos el UserModel aquí)
         $db = \Config\Database::connect();
+
+        // 1. Buscar primero en super_admins
+        $superAdmin = $db->table('super_admins')
+            ->where('email', $email)
+            ->get()->getRowArray();
+
+        if ($superAdmin && password_verify($password, $superAdmin['password_hash'])) {
+            if ($superAdmin['is_active'] != 1) {
+                return redirect()->back()->with('error', 'Usuario inactivo.');
+            }
+
+            $session->set([
+                'user_id'          => $superAdmin['id'],
+                'user_name'        => $superAdmin['name'],
+                'user_role'        => 'superadmin',
+                'active_tenant_id' => null,
+                'is_logged_in'     => true,
+            ]);
+
+            $db->table('super_admins')
+                ->where('id', $superAdmin['id'])
+                ->update(['last_login_at' => date('Y-m-d H:i:s')]);
+
+            return redirect()->to('/superadmin/dashboard');
+        }
+
+        // 2. Si no es super admin, buscar en users normal
         $user = $db->table('users')->where('email', $email)->get()->getRowArray();
 
         if ($user) {
@@ -30,28 +58,25 @@ class AuthController extends BaseController
             }
 
             if (password_verify($password, $user['password_hash'])) {
-                // Obtenemos los datos del hotel para guardarlos en sesión
                 $tenant = $db->table('tenants')->where('id', $user['tenant_id'])->get()->getRowArray();
 
-                // Verificamos si la propiedad no está bloqueada ANTES de dejarlo entrar
                 if ($tenant['is_suspended'] == 1) {
                     return redirect()->back()->with('error', 'La cuenta de este establecimiento está suspendida.');
                 }
 
-                // Creamos el contexto Multi-Tenant
-                $ses_data = [
+                $session->set([
                     'user_id'          => $user['id'],
                     'user_name'        => $user['name'],
                     'user_role'        => $user['role'],
                     'active_tenant_id' => $tenant['id'],
                     'tenant_name'      => $tenant['name'],
-                    'currency_symbol'  => $tenant['currency_symbol'], // Útil para las vistas financieras
-                    'is_logged_in'     => true
-                ];
-                $session->set($ses_data);
+                    'currency_symbol'  => $tenant['currency_symbol'],
+                    'is_logged_in'     => true,
+                ]);
 
-                // Actualizamos último login
-                $db->table('users')->where('id', $user['id'])->update(['last_login_at' => date('Y-m-d H:i:s')]);
+                $db->table('users')
+                    ->where('id', $user['id'])
+                    ->update(['last_login_at' => date('Y-m-d H:i:s')]);
 
                 return redirect()->to('/dashboard');
             }
