@@ -42,6 +42,12 @@ $routes->get('/logout', 'AuthController::logout');
 // Rutas protegidas (Requieren sesión de empleado y tenant activo)
 $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
 
+
+    // Simulador de asistente IA
+    $routes->get('whatsapp/simulator',          'SimulatorController::index');
+    $routes->post('whatsapp/simulator/save',    'SimulatorController::savePrompt');
+    $routes->post('whatsapp/simulator/turn',    'SimulatorController::simulateTurn');
+
     $routes->get('crm',                          'CrmController::index');
     $routes->get('crm/guest/(:num)',             'CrmController::show/$1');
     $routes->post('crm/guest/(:num)/note',       'CrmController::addNote/$1');

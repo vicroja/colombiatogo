@@ -84,6 +84,7 @@ class Filters extends BaseFilters
                     'website/ai-generate',
                     'maintenance/update-status/.*',
                     'crm/ai/message',
+                    'whatsapp/simulator/turn',
 
                 ]
             ],

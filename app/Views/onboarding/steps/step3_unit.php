@@ -361,7 +361,7 @@ $unitTypes = [
                         <i class="bi bi-upload me-1"></i> Seleccionar foto
                     </button>
                     <p class="text-muted mb-0" style="font-size:.75rem">
-                        JPG, PNG o WEBP · Máx. 5MB
+                        JPG, PNG o WEBP · Máx. 50MB
                     </p>
                 </div>
             </div>

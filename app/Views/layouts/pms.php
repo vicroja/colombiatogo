@@ -48,6 +48,11 @@
                         <i class="bi bi-people"></i> CRM
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('/whatsapp/simulator') ?>">
+                        <i class="bi bi-people"></i> Whatsapp
+                    </a>
+                </li>
             </ul>
 
             <div class="d-flex text-white align-items-center">
