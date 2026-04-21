@@ -26,7 +26,6 @@ class SimulatorController extends BaseController
     private RatePlanModel        $ratePlanModel;
     private int                  $tenantId;
     private array                $tenant;
-    private \CodeIgniter\Database\BaseConnection $db;
 
     public function initController(
         \CodeIgniter\HTTP\RequestInterface  $request,
@@ -42,7 +41,6 @@ class SimulatorController extends BaseController
         $this->unitRateModel = new UnitRateModel();
         $this->ratePlanModel = new RatePlanModel();
         $this->tenant        = $this->tenantModel->find($this->tenantId) ?? [];
-        $this->db            = \Config\Database::connect();
     }
 
     // =========================================================================
@@ -428,41 +426,47 @@ class SimulatorController extends BaseController
      * Carga el historial real de conversación de un número de teléfono.
      * Permite que el asistente "recuerde" conversaciones previas con ese contacto.
      */
+    /**
+     * Carga el contexto completo real del huésped usando el helper de producción.
+     * Idéntico al flujo del webhook — el simulador ve exactamente lo que ve Alfonso en producción:
+     * datos del tenant, catálogo de unidades con precios, perfil del huésped,
+     * reservas activas con saldos, consumos y historial reciente de chat.
+     */
     private function loadPhoneContext(string $phone): array
     {
-        // Normalizar: quitar +, espacios, guiones
         $phone = preg_replace('/[^0-9]/', '', $phone);
         if (empty($phone)) return [];
 
-        // Buscar últimos mensajes de ese teléfono (últimas 20 interacciones)
-        $messages = $this->db->table('whatsapp_messages')
+        // Cargar el helper de contexto real (app/Helpers/whatsapp_context_helper.php)
+        helper('whatsapp_context');
+
+        // Buscar el huésped por teléfono — igual que el webhook en producción
+        $guest = $this->db->table('guests')
             ->where('tenant_id', $this->tenantId)
-            ->groupStart()
-            ->where('sender_phone', $phone)
-            ->orWhere('recipient_phone', $phone)
-            ->groupEnd()
-            ->whereIn('message_type', ['text', 'audio'])
-            ->whereNotNull('message_body')
-            ->orderBy('whatsapp_timestamp', 'ASC')
-            ->limit(20)
-            ->get()->getResultArray();
+            ->where('phone', $phone)
+            ->get()->getRow();
 
-        if (empty($messages)) return [];
+        // Construir contexto completo con el helper de producción
+        $contextString = build_guest_context_data($guest, $this->tenantId, $phone);
 
-        $history = [];
-        foreach ($messages as $msg) {
-            $role = $msg['direction'] === 'incoming' ? 'user' : 'model';
-            $text = $msg['message_body'] ?? '';
-            if (empty(trim($text))) continue;
+        if (empty(trim($contextString))) return [];
 
-            $history[] = [
-                'role'  => $role,
-                'parts' => [['text' => $text]],
-            ];
-        }
+        log_message('info', "[Simulator] Contexto real cargado para {$phone} — "
+            . strlen($contextString) . " chars — huésped: "
+            . ($guest->full_name ?? 'nuevo/desconocido'));
 
-        log_message('info', "[Simulator] Contexto cargado para {$phone}: " . count($history) . " mensajes");
-
-        return $history;
+        // Inyectar como primer intercambio del historial:
+        // user = contexto del sistema, model = acuse de recibo en JSON
+        // Esto replica exactamente cómo el webhook pasa el contexto a Gemini
+        return [
+            [
+                'role'  => 'user',
+                'parts' => [['text' => 'CONTEXTO DEL SISTEMA (no mostrar al cliente): ' . $contextString]],
+            ],
+            [
+                'role'  => 'model',
+                'parts' => [['text' => '{"final_response": "Contexto cargado. Listo para atender."}']],
+            ],
+        ];
     }
 }
