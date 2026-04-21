@@ -713,13 +713,14 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         // ── Estado de la simulación ───────────────────────────────────────────────
         const STATE = {
             running         : false,
-            history         : [],       // [{role:'user'|'model', parts:[{text:'...'}]}]
+            history         : [],
             turnCount       : 0,
             maxTurns        : 20,
-            autoTimer       : null,     // timer entre turnos
-            countdownTimer  : null,     // intervalo del countdown visual
-            countdownSecs   : 5,        // segundos de espera antes de auto-avance
-            waitingForInput : false,    // true cuando está esperando input manual
+            autoTimer       : null,
+            countdownTimer  : null,
+            countdownSecs   : 5,
+            waitingForInput : false,
+            busy            : false,   // ← bloquea turnos simultáneos
         };
 
         const CSRF_NAME = '<?= csrf_token() ?>';
@@ -950,6 +951,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
 
         function stopSimulation() {
             STATE.running         = false;
+            STATE.busy            = false;  // ← agregar
             STATE.waitingForInput = false;
             stopCountdown();
             if (STATE.autoTimer) {
@@ -985,48 +987,64 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
 
         // ── Turno del bot cliente ─────────────────────────────────────────────────
 
-        async function triggerClientBot() {
-            if (!STATE.running) return;
-            if (STATE.turnCount >= STATE.maxTurns) {
-                addSystemMessage(`Límite de ${STATE.maxTurns} turnos alcanzado`);
-                stopSimulation();
-                return;
-            }
+        async function triggerHotelBot() {
+            if (!STATE.running) { STATE.busy = false; return; }
 
-            showTyping('client');
-            document.getElementById('btnNextBot').disabled = true;
+            showTyping('hotel');
 
             try {
                 const data = await simFetch({
-                    role        : 'client',
-                    history     : STATE.history,
-                    client_role : getClientRole(),
-                    phone       : getSimPhone(),
+                    role    : 'hotel',
+                    history : STATE.history,
+                    phone   : getSimPhone(),
                 });
 
                 removeTyping();
+                if (!STATE.running) { STATE.busy = false; return; }
 
                 if (!data.success) {
-                    addSystemMessage('Error del bot cliente: ' + (data.message || 'Error desconocido'));
+                    addSystemMessage('Error del asistente: ' + (data.message || ''));
+                    STATE.busy = false;
                     stopSimulation();
                     return;
                 }
 
-                addMessage('client', data.text);
+                addMessage('hotel', data.text, data.tool_calls || []);
 
+                if (data.new_history && data.new_history.length > STATE.history.length) {
+                    STATE.history = data.new_history;
+                }
                 STATE.history.push({
-                    role  : 'user',
-                    parts : [{ text: data.text }]
+                    role  : 'model',
+                    parts : [{ text: data.raw || data.text }]
                 });
 
                 STATE.turnCount++;
+                STATE.busy = false;  // ← liberar solo cuando hotel terminó
 
-                // Hotel responde automáticamente al cliente
-                STATE.autoTimer = setTimeout(() => triggerHotelBot(), 3000);
+                if (!STATE.running) return;
+
+                // Detectar fin natural
+                const finalWords = ['reserva creada', 'folio', 'hasta pronto',
+                    'gracias por', 'nos vemos', 'confirmad', 'sim-'];
+                if (finalWords.some(w => data.text.toLowerCase().includes(w))) {
+                    addSystemMessage('Conversación llegó a su fin natural');
+                    document.getElementById('btnNextBot').disabled = false;
+                    return;
+                }
+
+                // Esperar input manual 5s, si no → siguiente turno cliente
+                document.getElementById('btnNextBot').disabled = false;
+                setSimStatus('Esperando tu respuesta o auto-continúa...', 'state-waiting', 'hourglass-split', 'Esperando');
+                startCountdown(() => {
+                    setSimStatus('Simulación activa', 'state-running', 'circle-fill', 'Activo');
+                    triggerClientBot();
+                });
 
             } catch (err) {
-                console.error('[Sim/Client]', err);
-                addSystemMessage('Error de conexión en bot cliente');
+                console.error('[Sim/Hotel]', err);
+                addSystemMessage('Error de conexión en asistente hotel');
+                STATE.busy = false;
                 stopSimulation();
             }
         }
@@ -1099,7 +1117,8 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         // ── Mensaje manual del usuario ────────────────────────────────────────────
 
         function sendManual() {
-            if (!STATE.running) return;
+            if (!STATE.running || STATE.busy) return;  // ← agregar STATE.busy
+
 
             const input = document.getElementById('manualInput');
             const text  = input.value.trim();
