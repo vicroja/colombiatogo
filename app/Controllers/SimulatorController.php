@@ -26,6 +26,7 @@ class SimulatorController extends BaseController
     private RatePlanModel        $ratePlanModel;
     private int                  $tenantId;
     private array                $tenant;
+    private \CodeIgniter\Database\BaseConnection $db;
 
     public function initController(
         \CodeIgniter\HTTP\RequestInterface  $request,
@@ -41,6 +42,7 @@ class SimulatorController extends BaseController
         $this->unitRateModel = new UnitRateModel();
         $this->ratePlanModel = new RatePlanModel();
         $this->tenant        = $this->tenantModel->find($this->tenantId) ?? [];
+        $this->db            = \Config\Database::connect();
     }
 
     // =========================================================================
