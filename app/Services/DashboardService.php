@@ -59,9 +59,9 @@ class DashboardService
                       guests.full_name, accommodation_units.name as unit_name')
             ->join('guests', 'guests.id = reservations.guest_id')
             ->join('accommodation_units', 'accommodation_units.id = reservations.accommodation_unit_id')
-            ->whereIn('check_in_date', [$today, $tomorrow])
-            ->whereIn('status', ['pending', 'confirmed'])
-            ->orderBy('check_in_date', 'ASC')
+            ->whereIn('reservations.check_in_date', [$today, $tomorrow])
+            ->whereIn('reservations.status', ['pending', 'confirmed'])
+            ->orderBy('reservations.check_in_date', 'ASC')
             ->findAll();
 
         // 8. In-house: quién está hospedado ahora
@@ -70,8 +70,8 @@ class DashboardService
                       guests.full_name, accommodation_units.name as unit_name')
             ->join('guests', 'guests.id = reservations.guest_id')
             ->join('accommodation_units', 'accommodation_units.id = reservations.accommodation_unit_id')
-            ->where('status', 'checked_in')
-            ->orderBy('check_out_date', 'ASC')
+            ->where('reservations.status', 'checked_in')
+            ->orderBy('reservations.check_out_date', 'ASC')
             ->findAll();
 
         return [
