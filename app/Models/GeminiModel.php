@@ -24,7 +24,13 @@ class GeminiModel extends Model
     public function __construct()
     {
         parent::__construct();
-        $this->apiKey = getenv('GEMINI_API_KEY');
+        $this->apiKey = env('GEMINI_API_KEY') ?: getenv('GEMINI_API_KEY');
+
+        if (empty($this->apiKey)) {
+            log_message('critical', '[GeminiModel] GEMINI_API_KEY no está configurada en el archivo .env');
+        } else {
+            log_message('info', '[GeminiModel] API Key cargada: ' . substr($this->apiKey, 0, 8) . '...');
+        }
 
         if (empty($this->apiKey)) {
             log_message('critical', '[GeminiModel] GEMINI_API_KEY no está configurada en el archivo .env');

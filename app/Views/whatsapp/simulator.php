@@ -1022,7 +1022,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                 STATE.turnCount++;
 
                 // Hotel responde automáticamente al cliente
-                STATE.autoTimer = setTimeout(() => triggerHotelBot(), 1200);
+                STATE.autoTimer = setTimeout(() => triggerHotelBot(), 3000);
 
             } catch (err) {
                 console.error('[Sim/Client]', err);
