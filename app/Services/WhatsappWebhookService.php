@@ -583,4 +583,75 @@ class WhatsappWebhookService
             ]);
         }
     }
+
+    public function toolEnviarFotosCabana(array $args): string
+    {
+        $entityType = $args['entity_type'] ?? 'tenant';
+        $unitId     = $args['unit_id'] ?? null;
+
+        // 1. Obtener la URL base del servidor para construir URLs públicas
+        $baseUrl = rtrim(config('App')->baseURL, '/');
+
+        // 2. Consultar fotos según el tipo
+        $builder = $this->db->table('tenant_media')
+            ->where('tenant_id', $this->currentTenantId)
+            ->where('entity_type', $entityType)
+            ->where('file_type', 'image')
+            ->orderBy('is_main', 'DESC') // La foto principal primero
+            ->orderBy('sort_order', 'ASC');
+
+        if ($entityType === 'unit' && $unitId) {
+            $builder->where('entity_id', $unitId);
+        }
+
+        $fotos = $builder->limit(5)->get()->getResult(); // Máx 5 fotos para no saturar
+
+        if (empty($fotos)) {
+            return json_encode([
+                'error'       => 'No hay fotos disponibles para mostrar.',
+                'instruccion' => 'Dile al cliente que en este momento no tienes fotos cargadas pero que puede visitar la web del hotel.'
+            ]);
+        }
+
+        // 3. Enviar cada foto por WhatsApp
+        $enviadas = 0;
+        foreach ($fotos as $foto) {
+            $imageUrl = $baseUrl . '/' . ltrim($foto->file_path, '/');
+            $caption  = $foto->description ?? '';
+
+            $payload = [
+                'messaging_product' => 'whatsapp',
+                'to'                => $this->currentSenderPhone,
+                'type'              => 'image',
+                'image'             => [
+                    'link'    => $imageUrl,
+                    'caption' => $caption
+                ]
+            ];
+
+            // Reutilizamos el método privado callWhatsappApi del WhatsappModel
+            $result = $this->whatsappModel->sendImageApi(
+                $this->currentSenderPhone,
+                $imageUrl,
+                $caption,
+                $this->isSaas,
+                $this->currentTenantId
+            );
+
+            if (isset($result['messages'][0]['id'])) {
+                $enviadas++;
+            }
+
+            // Pequeña pausa para no saturar la API de Meta
+            if (count($fotos) > 1) {
+                usleep(300000); // 0.3 segundos entre fotos
+            }
+        }
+
+        return json_encode([
+            'success'     => true,
+            'enviadas'    => $enviadas,
+            'instruccion' => "Se enviaron {$enviadas} foto(s) al cliente. Ahora pregúntale qué le pareció o si quiere reservar."
+        ]);
+    }
 }

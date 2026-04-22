@@ -239,4 +239,18 @@ class WhatsappModel extends Model
     {
         return $this->db->table($this->table)->where('tenant_id', $tenantId)->groupBy('sender_phone')->countAllResults();
     }
+    public function sendImageApi($recipientPhone, $imageUrl, $caption = '', $is_saas = false, $tenant_id_override = null)
+    {
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to'                => $recipientPhone,
+            'type'              => 'image',
+            'image'             => [
+                'link'    => $imageUrl,
+                'caption' => $caption
+            ]
+        ];
+
+        return $this->callWhatsappApi($payload, $is_saas, $tenant_id_override);
+    }
 }

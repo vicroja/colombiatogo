@@ -51,14 +51,35 @@ if (!function_exists('build_guest_context_data')) {
             WHERE au.tenant_id = ? AND au.status != 'maintenance'
         ", [$tenantId])->getResult();
 
+
+        $baseUrl = rtrim(config('App')->baseURL, '/');
+
         foreach ($unidadesQuery as $u) {
-            $basePriceF = number_format((float)$u->base_price, 0, ',', '.');
+            $basePriceF  = number_format((float)$u->base_price,  0, ',', '.');
             $extraPriceF = number_format((float)$u->extra_price, 0, ',', '.');
-            $contexto .= "🏠 *{$u->name}* (Capacidad Base: {$u->base_capacity} | Max: {$u->max_occupancy} personas).\n";
+
+            $contexto .= "🏠 *{$u->name}* (ID: {$u->id} | Capacidad Base: {$u->base_capacity} | Max: {$u->max_occupancy} personas).\n";
             $contexto .= "  - Descripción: {$u->description}\n";
             $contexto .= "  - Camas: {$u->beds_info}\n";
             $contexto .= "  - Precio Base: {$tenant->currency_symbol}{$basePriceF}/noche. (Persona extra: {$tenant->currency_symbol}{$extraPriceF}/noche).\n";
+
+            // Consultar fotos de esta unidad
+            $fotos = $db->table('tenant_media')
+                ->where('tenant_id', $tenantId)
+                ->where('entity_type', 'unit')
+                ->where('entity_id', $u->id)
+                ->where('file_type', 'image')
+                ->orderBy('is_main', 'DESC')
+                ->orderBy('sort_order', 'ASC')
+                ->get()->getResult();
+
+            if (!empty($fotos)) {
+                $contexto .= "  - 📸 Fotos disponibles: SÍ ({$count} foto(s)). Puedes llamar a enviar_fotos_cabana con unit_id: {$u->id}\n";
+            } else {
+                $contexto .= "  - 📸 Fotos disponibles: NO. No llames a enviar_fotos_cabana para esta unidad.\n";
+            }
         }
+
         $contexto .= "\n";
 
 
