@@ -351,8 +351,8 @@ $statusLabels = [
 $avatarColors = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#0ea5e9','#14b8a6'];
 
 function avatarColor(string $name): string {
-    global $avatarColors;
-    return $avatarColors[crc32($name) % count($avatarColors)];
+    $colors = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#0ea5e9','#14b8a6'];
+    return $colors[abs(crc32($name)) % count($colors)];
 }
 
 // Construir URL de filtro manteniendo los demás parámetros
