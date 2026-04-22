@@ -56,7 +56,16 @@ class PriceCalculatorService
         $totalExtraDaily = ($extraAdults * $extraAdultPrice) + ($extraChildren * $extraChildPrice);
 
         // LOG CLAVE: Por si un cliente reclama un cobro, aquí sabemos exactamente la matemática que se hizo
-        log_message('info', "[PriceCalculator] Calc. Unidad ID {$unitId} | Ocupación Base: {$baseOccupancy} | Huéspedes: {$numAdults} Ad, {$numChildren} Ni | Extras cobrados: {$extraAdults} Ad, {$extraChildren} Ni | Costo Extra Diario: {$totalExtraDaily}");
+
+        log_message('info', implode(' | ', [
+            "[PriceCalculator] Unidad ID {$unitId}",
+            "Rate Plan ID {$ratePlanId}",          // ← nuevo
+            "Ocupación Base: {$baseOccupancy}",
+            "Huéspedes: {$numAdults} Ad / {$numChildren} Ni",
+            "Extras cobrados: {$extraAdults} Ad / {$extraChildren} Ni",
+            "Costo Extra Diario: $" . number_format($totalExtraDaily, 2),  // ← formato de moneda
+            "Check-in: {$checkIn} → Check-out: {$checkOut}"               // ← nuevo, fechas completas
+        ]));
 
         $totalPrice = 0;
         $dailyDetails = [];

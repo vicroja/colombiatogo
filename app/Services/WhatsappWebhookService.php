@@ -32,36 +32,41 @@ class WhatsappWebhookService
      * Herramienta para buscar qué cabañas están libres en ciertas fechas.
      */
 
+
+
     public function toolConsultarDisponibilidad(array $args)
     {
-        $fechaIn = $args['check_in_date'] ?? null;
-        $fechaOut = $args['check_out_date'] ?? null;
-        $huespedes = (int) ($args['numero_personas'] ?? 2);
+        $fechaIn    = $args['check_in_date']  ?? null;
+        $fechaOut   = $args['check_out_date'] ?? null;
+        $numAdults  = (int) ($args['num_adults']   ?? 1);
+        $numChildren = (int) ($args['num_children'] ?? 0);
+
+        // Capacidad total para el filtro SQL (quién cabe físicamente)
+        $totalPersonas = $numAdults + $numChildren;
 
         if (!$fechaIn || !$fechaOut) {
-            return json_encode(['error' => 'Faltan fechas de check-in o check-out para buscar disponibilidad.']);
+            return json_encode(['error' => 'Faltan fechas de check-in o check-out.']);
         }
 
-        // 1. Buscamos unidades libres y su capacidad base (haciendo JOIN con accommodation_types)
+        // 1. Buscar unidades libres por capacidad física y fechas
         $sql = "
-            SELECT au.id, au.name, au.max_occupancy, au.beds_info, au.description, at.base_capacity
-            FROM accommodation_units au
-            JOIN accommodation_types at ON au.type_id = at.id
-            WHERE au.tenant_id = ? 
-            AND au.status = 'available'
-            AND au.max_occupancy >= ?
-            AND au.id NOT IN (
-                SELECT accommodation_unit_id 
-                FROM reservations 
-                WHERE tenant_id = ? 
-                AND status IN ('pending', 'confirmed', 'checked_in')
-                AND (check_in_date < ? AND check_out_date > ?)
-            )
-        ";
+        SELECT au.id, au.name, au.max_occupancy, au.beds_info, au.base_occupancy
+        FROM accommodation_units au
+        WHERE au.tenant_id = ?
+        AND au.status = 'available'
+        AND au.max_occupancy >= ?
+        AND au.id NOT IN (
+            SELECT accommodation_unit_id
+            FROM reservations
+            WHERE tenant_id = ?
+            AND status IN ('pending', 'confirmed', 'checked_in')
+            AND (check_in_date < ? AND check_out_date > ?)
+        )
+    ";
 
         $unidades = $this->db->query($sql, [
             $this->currentTenantId,
-            $huespedes,
+            $totalPersonas,          // ← filtra por capacidad real
             $this->currentTenantId,
             $fechaOut,
             $fechaIn
@@ -69,54 +74,46 @@ class WhatsappWebhookService
 
         if (empty($unidades)) {
             return json_encode([
-                'mensaje' => 'No hay cabañas disponibles para esas fechas y esa cantidad de personas.',
+                'mensaje'    => 'No hay cabañas disponibles para esas fechas y cantidad de personas.',
                 'sugerencia' => 'Pregúntale si tiene flexibilidad de fechas o si pueden dividirse en dos cabañas.'
             ]);
         }
 
-        // 2. Calcular el precio EXACTO para cada unidad libre
-        $priceService = new \App\Services\PriceCalculatorService();
-
-        // Obtenemos el plan de tarifas por defecto del tenant
+        // 2. Obtener plan tarifario por defecto
         $defaultPlan = $this->db->table('rate_plans')
             ->where('tenant_id', $this->currentTenantId)
             ->where('is_default', 1)
             ->get()->getRow();
-        $ratePlanId = $defaultPlan ? $defaultPlan->id : 1; // Fallback al plan 1
+        $ratePlanId = $defaultPlan ? $defaultPlan->id : 1;
 
+        // 3. Calcular precio con PriceCalculatorService (él maneja extras internamente)
+        $priceService = new \App\Services\PriceCalculatorService();
         $resultadosIA = [];
 
         foreach ($unidades as $u) {
-            // Calcular precio base por noches y temporadas
-            $stayCalc = $priceService->calculateStay($u->id, $ratePlanId, $fechaIn, $fechaOut);
-            $totalHabitacion = $stayCalc['total_price'];
-            $noches = $stayCalc['nights'];
-
-            // Calcular cobro por personas extra
-            $unitRate = $this->db->table('unit_rates')
-                ->where('unit_id', $u->id)
-                ->where('rate_plan_id', $ratePlanId)
-                ->get()->getRow();
-
-            $extraPrice = $unitRate ? $unitRate->extra_person_price : 0;
-            $paxExtra = max(0, $huespedes - $u->base_capacity);
-            $totalExtras = $paxExtra * $extraPrice * $noches;
-
-            $precioTotal = $totalHabitacion + $totalExtras;
+            $calc = $priceService->calculateStay(
+                $u->id,
+                $ratePlanId,
+                $fechaIn,
+                $fechaOut,
+                $numAdults,   // ← adultos separados
+                $numChildren  // ← niños separados
+            );
 
             $resultadosIA[] = [
-                'id_unidad' => $u->id,
-                'nombre' => $u->name,
-                'noches' => $noches,
-                'personas_cotizadas' => $huespedes,
-                'precio_total_definitivo' => $precioTotal,
-                'desglose' => "Base de habitacion: $totalHabitacion, Cobro por personas extra: $totalExtras",
-                'camas' => $u->beds_info
+                'id_unidad'               => $u->id,
+                'nombre'                  => $u->name,
+                'noches'                  => $calc['nights'],
+                'adultos'                 => $numAdults,
+                'niños'                   => $numChildren,
+                'precio_total_definitivo' => $calc['total_price'],
+                'desglose'                => "Habitación: {$calc['room_total']} | Extras: {$calc['extra_total']}",
+                'camas'                   => $u->beds_info,
             ];
         }
 
         return json_encode([
-            'mensaje' => 'Sí hay disponibilidad. Aquí están las opciones con el PRECIO TOTAL YA CALCULADO para toda la estancia.',
+            'mensaje'        => 'Hay disponibilidad. Precios TOTALES ya calculados para toda la estancia.',
             'unidades_libres' => $resultadosIA
         ]);
     }
@@ -197,6 +194,8 @@ class WhatsappWebhookService
         $contact = $entry['contacts'][0] ?? [];
 
         $senderPhone = $message['from'];
+        $this->currentSenderPhone = $senderPhone;
+
         $wamid = $message['id'];
         $messageType = $message['type'];
         $whatsappTimestamp = $message['timestamp'];
@@ -212,7 +211,7 @@ class WhatsappWebhookService
                 $message['interactive']['list_reply']['title'] ?? 'Interacción';
         }
 
-        $this->whatsappModel->saveMessage([
+        $savedMessageId = $this->whatsappModel->saveMessage([
             'whatsapp_message_id' => $wamid,
             'direction'         => 'incoming',
             'sender_phone'      => $senderPhone,
@@ -266,7 +265,7 @@ class WhatsappWebhookService
 
         // 6. OBTENER HISTORIAL DE CHAT RECIENTE
         // Extraemos los últimos 10 mensajes para que Gemini tenga memoria de la conversación
-        $chatHistory = $this->getChatHistory($senderPhone, $tenantId, 10);
+        $chatHistory = $this->getChatHistory($senderPhone, $tenantId, 10, $savedMessageId);
 
         // 7. LLAMAR A GEMINI
         // Le pasamos la instrucción del sistema, el historial y el mensaje actual
@@ -351,27 +350,48 @@ class WhatsappWebhookService
         return $contexto;
     }
 
-    private function getChatHistory(string $phone, int $tenantId, int $limit = 10): array
+
+    private function getChatHistory(string $phone, int $tenantId, int $limit = 10, int $excludeId = 0): array
     {
-        // Obtenemos los últimos mensajes de este número en este tenant
-        $messages = $this->db->table('whatsapp_messages')
+        // 1. Subconsulta: trae los IDs de los últimos $limit mensajes (orden DESC)
+        $subQuery = $this->db->table('whatsapp_messages')
+            ->select('id')
             ->where('tenant_id', $tenantId)
             ->groupStart()
             ->where('sender_phone', $phone)
             ->orWhere('recipient_phone', $phone)
             ->groupEnd()
-            ->whereIn('message_type', ['text', 'interactive']) // Solo texto por ahora
-            ->orderBy('created_at', 'ASC') // Importante: ASC para que la IA lea en orden cronológico
+            ->whereIn('message_type', ['text', 'interactive']);
+
+        if ($excludeId > 0) {
+            $subQuery->where('id !=', $excludeId);
+        }
+
+        $lastIds = $subQuery
+            ->orderBy('created_at', 'DESC') // ← los más recientes primero
             ->limit($limit)
+            ->get()
+            ->getResultArray();
+
+        if (empty($lastIds)) {
+            return [];
+        }
+
+        $ids = array_column($lastIds, 'id');
+
+        // 2. Query principal: trae esos mensajes en orden ASC (cronológico para Gemini)
+        $messages = $this->db->table('whatsapp_messages')
+            ->whereIn('id', $ids)
+            ->orderBy('created_at', 'ASC') // ← Gemini los lee en orden natural
             ->get()
             ->getResult();
 
+        // 3. Formatear para Gemini
         $history = [];
         foreach ($messages as $msg) {
-            // Formatear para Gemini (usualmente usa roles 'user' y 'model')
             $role = ($msg->direction === 'incoming') ? 'user' : 'model';
             $history[] = [
-                'role' => $role,
+                'role'  => $role,
                 'parts' => [['text' => $msg->message_body]]
             ];
         }
@@ -423,20 +443,19 @@ class WhatsappWebhookService
 
             // OPCIÓN B: La IA decidió enviar un mensaje final al usuario
             if (isset($iaDecision['final_response'])) {
-                // Guardar la respuesta de la IA en el historial (para la BD luego)
                 $history[] = [
-                    'role' => 'model',
-                    'parts' => [['text' => $cleanJson]] // Guardamos el JSON crudo en el historial para mantener la estructura
+                    'role'  => 'model',
+                    'parts' => [['text' => $iaDecision['final_response']]] // ← solo el texto legible
                 ];
                 return $iaDecision['final_response'];
             }
 
             // OPCIÓN A: La IA decidió llamar a una herramienta
             if (isset($iaDecision['tool_calls']) && is_array($iaDecision['tool_calls'])) {
-                // Guardamos la decisión de llamar a la herramienta en el historial
+                $toolNames = array_column($iaDecision['tool_calls'], 'name');
                 $history[] = [
-                    'role' => 'model',
-                    'parts' => [['text' => $cleanJson]]
+                    'role'  => 'model',
+                    'parts' => [['text' => '[Consultando: ' . implode(', ', $toolNames) . '...]']]
                 ];
 
                 $toolOutputs = [];

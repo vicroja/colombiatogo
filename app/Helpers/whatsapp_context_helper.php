@@ -24,10 +24,9 @@ if (!function_exists('build_guest_context_data')) {
 
         // Ajustar la zona horaria a la del tenant (Vital para que Gemini agende bien)
         $tz = $tenant->timezone ?? 'America/Bogota';
-        date_default_timezone_set($tz);
-
-        $fechaActual = date('Y-m-d H:i:s');
-        $diaSemana = translate_day_to_spanish(date('l'));
+        $dt = new \DateTime('now', new \DateTimeZone($tz));
+        $fechaActual = $dt->format('Y-m-d H:i:s');
+        $diaSemana = translate_day_to_spanish($dt->format('l'));
 
         // --- INICIO DEL CONTEXTO ---
         $contexto = "========================================\n";
@@ -136,31 +135,6 @@ if (!function_exists('build_guest_context_data')) {
             $contexto .= "- Teléfono de contacto: {$senderPhone}\n\n";
         }
 
-        // 4. HISTORIAL DE MENSAJES (Como en tu sistema anterior)
-        // Extraemos los últimos 4 mensajes para que la IA tenga un paneo textual inmediato
-        $mensajes = $db->table('whatsapp_messages')
-            ->where('tenant_id', $tenantId)
-            ->groupStart()
-            ->where('sender_phone', $senderPhone)
-            ->orWhere('recipient_phone', $senderPhone)
-            ->groupEnd()
-            ->orderBy('created_at', 'DESC')
-            ->limit(4)
-            ->get()
-            ->getResult();
-
-        if (count($mensajes) > 0) {
-            // Invertimos el array para que queden en orden cronológico (del más viejo al más nuevo)
-            $mensajes = array_reverse($mensajes);
-            $contexto .= "[HISTORIAL RECIENTE DE CHAT]\n";
-            foreach ($mensajes as $msg) {
-                $rol = ($msg->direction === 'incoming') ? 'Huésped' : 'Tú (Hotel/IA)';
-                // Limpiamos saltos de línea y truncamos si es muy largo
-                $texto = mb_substr($msg->message_body, 0, 150) . (mb_strlen($msg->message_body) > 150 ? '...' : '');
-                $texto = str_replace(["\r", "\n"], ' ', $texto);
-                $contexto .= "({$msg->created_at}) {$rol}: {$texto}\n";
-            }
-        }
 log_message('info', "Contexto Final: {$contexto}");
         return $contexto;
     }
