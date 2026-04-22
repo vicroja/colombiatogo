@@ -43,6 +43,10 @@ $routes->get('/logout', 'AuthController::logout');
 $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
 
 
+    $routes->get('inventory/wizard/step/(:num)',  'InventoryController::wizardStep/$1');
+    $routes->post('inventory/wizard/save/(:num)', 'InventoryController::wizardSave/$1');
+    $routes->get('inventory/wizard/skip/(:num)',  'InventoryController::wizardSkip/$1');
+
     // Simulador de asistente IA
     $routes->get('whatsapp/simulator',          'SimulatorController::index');
     $routes->post('whatsapp/simulator/save',    'SimulatorController::savePrompt');

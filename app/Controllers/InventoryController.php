@@ -5,8 +5,7 @@ namespace App\Controllers;
 use App\Models\AccommodationTypeModel;
 use App\Models\AccommodationUnitModel;
 use App\Services\PlanLimitService;
-use App\Models\TenantMediaModel; // Asegúrate de tener e importar este modelo
-// Nuevos modelos para la jerarquía y características
+use App\Models\TenantMediaModel;
 use App\Models\AmenityModel;
 use App\Models\BedTypeModel;
 use App\Models\UnitAmenityModel;
@@ -15,417 +14,451 @@ use App\Models\UnitBedModel;
 class InventoryController extends BaseController
 {
 
+    // =========================================================================
+    // INDEX
+    // =========================================================================
+    public function index()
+    {
+        $tenantId     = session('active_tenant_id');
+        $limitService = new PlanLimitService();
+        $unitModel    = new AccommodationUnitModel();
 
-    /**
-     * Muestra el formulario de edición cargando toda la jerarquía de la unidad
-     */
+        $units = $unitModel
+            ->select('accommodation_units.*, accommodation_types.name as type_name')
+            ->join('accommodation_types', 'accommodation_types.id = accommodation_units.type_id', 'left')
+            ->where('accommodation_units.tenant_id', $tenantId)
+            ->orderBy('COALESCE(accommodation_units.parent_id, accommodation_units.id) ASC', '', false)
+            ->orderBy('accommodation_units.parent_id', 'ASC')
+            ->orderBy('accommodation_units.name', 'ASC')
+            ->findAll();
+
+        return view('inventory/index', [
+            'units'     => $units,
+            'limitInfo' => $limitService->getUnitUsageInfo(),
+        ]);
+    }
+
+
+    // =========================================================================
+    // WIZARD — Muestra el paso actual
+    // =========================================================================
+    public function wizardStep(int $step = 1)
+    {
+        $tenantId     = session('active_tenant_id');
+        $typeModel    = new AccommodationTypeModel();
+        $amenityModel = new AmenityModel();
+        $bedTypeModel = new BedTypeModel();
+        $mediaModel   = new TenantMediaModel();
+
+        // Pasos 2 y 3 requieren que el paso 1 ya haya sido completado
+        $unitId = session('wizard_unit_id');
+        if ($step > 1 && empty($unitId)) {
+            return redirect()->to('/inventory/wizard/step/1')
+                ->with('error', 'Primero completa la información base.');
+        }
+
+        $existingPhotos = [];
+        if ($step === 3 && $unitId) {
+            $existingPhotos = $mediaModel
+                ->where('entity_type', 'unit')
+                ->where('entity_id', $unitId)
+                ->orderBy('sort_order', 'ASC')
+                ->findAll();
+        }
+
+        // FIX: pasar unitName y unitId explícitamente a la vista
+        return view('inventory/wizard_layout', [
+            'currentStep'    => $step,
+            'types'          => $typeModel->findAll(),
+            'amenities'      => $amenityModel->where('tenant_id', $tenantId)->findAll(),
+            'bedTypes'       => $bedTypeModel->where('tenant_id', $tenantId)->findAll(),
+            'existingPhotos' => $existingPhotos,
+            'unitId'         => $unitId,
+            'unitName'       => session('wizard_unit_name') ?? '',
+        ]);
+    }
+
+    // /inventory/create → limpia sesión y arranca wizard
+    public function create()
+    {
+        session()->remove(['wizard_unit_id', 'wizard_unit_name', 'wizard_amenities']);
+        return redirect()->to('/inventory/wizard/step/1');
+    }
+
+    // Saltar paso opcional
+    public function wizardSkip(int $step)
+    {
+        $next = $step + 1;
+        if ($next > 3) {
+            $unitName = session('wizard_unit_name') ?? 'la unidad';
+            session()->remove(['wizard_unit_id', 'wizard_unit_name', 'wizard_amenities']);
+            return redirect()->to('/inventory')
+                ->with('success', "Unidad «{$unitName}» creada. Puedes completar los detalles en cualquier momento.");
+        }
+        return redirect()->to("/inventory/wizard/step/{$next}");
+    }
+
+
+    // =========================================================================
+    // WIZARD — Guarda cada paso
+    // =========================================================================
+    public function wizardSave(int $step)
+    {
+        return match($step) {
+            1 => $this->saveStep1(),
+            2 => $this->saveStep2(),
+            3 => $this->saveStep3(),
+            default => redirect()->to('/inventory'),
+        };
+    }
+
+    // ── Paso 1: Crear unidad padre + camas (simple) o sub-habitaciones (compuesta)
+    private function saveStep1()
+    {
+        $tenantId     = session('active_tenant_id');
+        $unitModel    = new AccommodationUnitModel();
+        $unitBedModel = new UnitBedModel();
+
+        // Validación básica antes de tocar la BD
+        $name   = trim($this->request->getPost('parent_name') ?? '');
+        $typeId = $this->request->getPost('type_id');
+        if (empty($name) || empty($typeId)) {
+            return redirect()->back()->withInput()
+                ->with('error', 'El nombre y el tipo son obligatorios.');
+        }
+
+        $unitModel->db->transStart();
+
+        // 1. Insertar unidad padre
+        $parentData = [
+            'tenant_id'      => $tenantId,
+            'type_id'        => $typeId,
+            'name'           => $name,
+            'description'    => $this->request->getPost('parent_description') ?? null,
+            'base_occupancy' => (int)($this->request->getPost('parent_base_occupancy') ?? 2),
+            'max_occupancy'  => (int)($this->request->getPost('max_occupancy') ?? 4),
+            'bathrooms'      => (float)($this->request->getPost('bathrooms') ?? 1),
+            'beds_info'      => $this->request->getPost('beds_info') ?? null,
+            'status'         => 'available',
+        ];
+
+        $parentId = $unitModel->insert($parentData, true);
+
+        $unitModel->db->transComplete();
+
+        if ($unitModel->db->transStatus() === false || !$parentId) {
+            log_message('error', "[InventoryWizard] Error al insertar unidad para tenant {$tenantId}");
+            return redirect()->back()->withInput()
+                ->with('error', 'Error al guardar la unidad. Intenta de nuevo.');
+        }
+
+        $mode = $this->request->getPost('unit_mode');
+
+        // 2a. Modo simple → camas de la unidad padre
+        if ($mode !== 'compound') {
+            $simpleBeds = $this->request->getPost('simple_beds') ?? [];
+            foreach ($simpleBeds as $bed) {
+                if (!empty($bed['bed_type_id']) && !empty($bed['quantity'])) {
+                    $unitBedModel->insert([
+                        'unit_id'     => $parentId,
+                        'bed_type_id' => $bed['bed_type_id'],
+                        'quantity'    => (int)$bed['quantity'],
+                    ]);
+                }
+            }
+        }
+
+        // 2b. Modo compuesto → sub-habitaciones con sus camas
+        if ($mode === 'compound') {
+            $rooms = $this->request->getPost('rooms') ?? [];
+            foreach ($rooms as $room) {
+                if (empty(trim($room['name'] ?? ''))) continue;
+
+                $roomId = $unitModel->insert([
+                    'tenant_id'  => $tenantId,
+                    'parent_id'  => $parentId,
+                    'type_id'    => $room['type_id'] ?? $typeId,
+                    'name'       => trim($room['name']),
+                    'bathrooms'  => (float)($room['bathrooms'] ?? 1),
+                    'status'     => 'available',
+                ], true);
+
+                foreach ($room['beds'] ?? [] as $bed) {
+                    if (!empty($bed['bed_type_id']) && !empty($bed['quantity'])) {
+                        $unitBedModel->insert([
+                            'unit_id'     => $roomId,
+                            'bed_type_id' => $bed['bed_type_id'],
+                            'quantity'    => (int)$bed['quantity'],
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // Guardar en sesión para los pasos siguientes
+        session()->set([
+            'wizard_unit_id'   => $parentId,
+            'wizard_unit_name' => $name,
+        ]);
+
+        log_message('info', "[InventoryWizard] Paso 1 OK — Unidad '{$name}' ID {$parentId} para tenant {$tenantId}");
+
+        return redirect()->to('/inventory/wizard/step/2')
+            ->with('success', '¡Unidad creada! Ahora configura sus amenidades.');
+    }
+
+    // ── Paso 2: Guardar amenidades ────────────────────────────────────────
+    private function saveStep2()
+    {
+        $tenantId         = session('active_tenant_id');
+        $unitId           = session('wizard_unit_id');
+        $unitAmenityModel = new UnitAmenityModel();
+        $unitModel        = new AccommodationUnitModel();
+
+        if (!$unitId) {
+            return redirect()->to('/inventory/wizard/step/1')
+                ->with('error', 'Sesión expirada. Completa el paso 1 de nuevo.');
+        }
+
+        // Amenidades del catálogo canónico → JSON en la columna amenities
+        $amenities     = $this->request->getPost('amenities') ?? [];
+        $amenitiesJson = [];
+        foreach ($amenities as $key) {
+            $amenitiesJson[$key] = true;
+        }
+
+        // Verificar que 'amenities' esté en allowedFields del modelo antes de actualizar
+        // Si no está, este update simplemente no guarda nada sin error visible
+        $unitModel->update($unitId, ['amenities' => json_encode($amenitiesJson)]);
+
+        // Amenidades personalizadas del tenant → tabla unit_amenities
+        $unitAmenityModel->where('unit_id', $unitId)->delete();
+        foreach ($this->request->getPost('custom_amenities') ?? [] as $amenityId) {
+            $unitAmenityModel->insert(['unit_id' => $unitId, 'amenity_id' => $amenityId]);
+        }
+
+        session()->set('wizard_amenities', $amenities);
+        log_message('info', "[InventoryWizard] Paso 2 OK — Amenidades para unidad {$unitId}");
+
+        return redirect()->to('/inventory/wizard/step/3')
+            ->with('success', 'Amenidades guardadas.');
+    }
+
+    // ── Paso 3: Subir fotos y finalizar ──────────────────────────────────
+    private function saveStep3()
+    {
+        $tenantId   = session('active_tenant_id');
+        $unitId     = session('wizard_unit_id');
+        // FIX: leer el nombre ANTES de limpiar la sesión
+        $unitName   = session('wizard_unit_name') ?? 'la unidad';
+        $mediaModel = new TenantMediaModel();
+
+        if (!$unitId) {
+            return redirect()->to('/inventory')
+                ->with('success', 'Unidad lista en el inventario.');
+        }
+
+        $files = $this->request->getFileMultiple('photos');
+
+        if ($files && isset($files[0]) && $files[0]->isValid()) {
+            $uploadPath = FCPATH . "uploads/tenants/{$tenantId}/units/";
+            if (!is_dir($uploadPath)) mkdir($uploadPath, 0777, true);
+
+            foreach ($files as $file) {
+                if (!$file->isValid() || $file->hasMoved()) continue;
+
+                $newName = $file->getRandomName();
+                $file->move($uploadPath, $newName);
+
+                $mediaModel->insert([
+                    'tenant_id'   => $tenantId,
+                    'entity_type' => 'unit',
+                    'entity_id'   => $unitId,
+                    'file_path'   => "uploads/tenants/{$tenantId}/units/{$newName}",
+                    'file_type'   => 'image',
+                    'sort_order'  => 0,
+                ]);
+            }
+            log_message('info', "[InventoryWizard] Paso 3 OK — Fotos para unidad {$unitId}");
+        }
+
+        // FIX: limpiar sesión DESPUÉS de leer los datos que necesitamos
+        session()->remove(['wizard_unit_id', 'wizard_unit_name', 'wizard_amenities']);
+
+        return redirect()->to('/inventory')
+            ->with('success', "¡Todo listo! «{$unitName}» está configurada y disponible.");
+    }
+
+
+    // =========================================================================
+    // EDICIÓN DE UNIDAD
+    // =========================================================================
     public function editUnit($id)
     {
-        $tenantId = session('active_tenant_id');
+        $tenantId     = session('active_tenant_id');
+        $unitModel    = new AccommodationUnitModel();
+        $mediaModel   = new TenantMediaModel();
+        $typeModel    = new AccommodationTypeModel();
+        $amenityModel = new AmenityModel();
+        $bedTypeModel = new BedTypeModel();
 
-        $unitModel = new \App\Models\AccommodationUnitModel();
-        $mediaModel = new \App\Models\TenantMediaModel();
-        $typeModel = new \App\Models\AccommodationTypeModel();
-        $amenityModel = new \App\Models\AmenityModel();
-        $bedTypeModel = new \App\Models\BedTypeModel();
-
-        // 1. Buscamos usando la jerarquía completa (Padre e Hijos)
         $unit = $unitModel->getUnitWithHierarchy($id);
 
         if (!$unit || $unit['tenant_id'] != $tenantId) {
-            log_message('warning', "Intento de acceso a unidad no autorizada o inexistente. Tenant: {$tenantId}, Unidad: {$id}");
             return redirect()->to('/inventory')->with('error', 'Unidad no encontrada.');
         }
 
-        $data = [
-            'title'     => 'Editar Unidad: ' . $unit['name'],
+        return view('inventory/unit_edit', [
+            'title'     => 'Editar: ' . $unit['name'],
             'unit'      => $unit,
             'types'     => $typeModel->findAll(),
             'amenities' => $amenityModel->where('tenant_id', $tenantId)->findAll(),
             'bedTypes'  => $bedTypeModel->where('tenant_id', $tenantId)->findAll(),
-            'media'     => $mediaModel->where('entity_type', 'unit')
+            'media'     => $mediaModel
+                ->where('entity_type', 'unit')
                 ->where('entity_id', $id)
                 ->orderBy('sort_order', 'ASC')
                 ->findAll(),
-        ];
-
-        // Se confirma que la vista a usar es unit_edit.php
-        return view('inventory/unit_edit', $data);
+        ]);
     }
 
-    /**
-     * Procesa la actualización de datos, jerarquía (habitaciones) y multimedia
-     */
     public function updateUnit($id)
     {
-        $tenantId = session('active_tenant_id');
-
-        $unitModel = new \App\Models\AccommodationUnitModel();
-        $unitBedModel = new \App\Models\UnitBedModel();
-        $unitAmenityModel = new \App\Models\UnitAmenityModel();
+        $tenantId         = session('active_tenant_id');
+        $unitModel        = new AccommodationUnitModel();
+        $unitBedModel     = new UnitBedModel();
+        $unitAmenityModel = new UnitAmenityModel();
 
         $unit = $unitModel->find($id);
         if (!$unit || $unit['tenant_id'] != $tenantId) {
             return redirect()->to('/inventory')->with('error', 'Operación no permitida.');
         }
 
-        // Iniciamos la transacción global para Base de Datos
         $unitModel->db->transStart();
 
         try {
-            log_message('info', "[InventoryController] Sincronizando edición jerárquica para Unidad ID: {$id}");
-
-            // 1. Actualizar datos del Padre
-            // Soportamos los names viejos y nuevos por compatibilidad con el front
-            $updateData = [
+            $unitModel->update($id, [
                 'name'           => $this->request->getPost('parent_name') ?? $this->request->getPost('name'),
                 'type_id'        => $this->request->getPost('type_id'),
                 'status'         => $this->request->getPost('status') ?? $unit['status'],
                 'description'    => $this->request->getPost('parent_description') ?? $this->request->getPost('description'),
-                // Guardamos la capacidad base enviada desde el formulario, o 2 por defecto si viene vacío
-                'base_occupancy' => $this->request->getPost('parent_base_occupancy') ?? 2,
-            ];
-            $unitModel->update($id, $updateData);
+                'base_occupancy' => (int)($this->request->getPost('parent_base_occupancy') ?? 2),
+                'max_occupancy'  => $this->request->getPost('max_occupancy') ?? null,
+                'bathrooms'      => (float)($this->request->getPost('bathrooms') ?? 1),
+                'beds_info'      => $this->request->getPost('beds_info') ?? null,
+            ]);
 
-            // 2. Sincronizar Amenidades del Padre (Borrar todas y recrear es más eficiente)
             $unitAmenityModel->where('unit_id', $id)->delete();
-            $parentAmenities = $this->request->getPost('parent_amenities');
-            if (!empty($parentAmenities) && is_array($parentAmenities)) {
-                foreach ($parentAmenities as $amenityId) {
-                    $unitAmenityModel->insert(['unit_id' => $id, 'amenity_id' => $amenityId]);
-                }
+            foreach ($this->request->getPost('parent_amenities') ?? [] as $amenityId) {
+                $unitAmenityModel->insert(['unit_id' => $id, 'amenity_id' => $amenityId]);
             }
 
-            // 3. Procesar Habitaciones Hijas
-            $roomsPayload = $this->request->getPost('rooms') ?? [];
-            $submittedRoomIds = []; // Rastrea habitaciones que se mantienen/crean
+            $roomsPayload     = $this->request->getPost('rooms') ?? [];
+            $submittedRoomIds = [];
 
             foreach ($roomsPayload as $room) {
-                $roomId = $room['id'] ?? null;
-
+                $roomId   = $room['id'] ?? null;
                 $roomData = [
                     'tenant_id' => $tenantId,
                     'parent_id' => $id,
                     'type_id'   => $room['type_id'],
                     'name'      => $room['name'],
-                    'bathrooms' => $room['bathrooms'] ?? 1,
+                    'bathrooms' => (float)($room['bathrooms'] ?? 1),
                 ];
 
                 if (!empty($roomId)) {
-                    // Si trae ID, la actualizamos
                     $unitModel->update($roomId, $roomData);
                     $submittedRoomIds[] = $roomId;
                 } else {
-                    // Si no trae ID, fue agregada por JS. La insertamos.
                     $roomData['status'] = 'available';
                     $roomId = $unitModel->insert($roomData, true);
                     $submittedRoomIds[] = $roomId;
                 }
 
-                // Sincronizar Camas de esta habitación
                 $unitBedModel->where('unit_id', $roomId)->delete();
-                if (!empty($room['beds']) && is_array($room['beds'])) {
-                    foreach ($room['beds'] as $bed) {
-                        if (!empty($bed['bed_type_id']) && !empty($bed['quantity'])) {
-                            $unitBedModel->insert([
-                                'unit_id'     => $roomId,
-                                'bed_type_id' => $bed['bed_type_id'],
-                                'quantity'    => $bed['quantity']
-                            ]);
-                        }
-                    }
-                }
-
-                // Sincronizar Amenidades de esta habitación
-                $unitAmenityModel->where('unit_id', $roomId)->delete();
-                if (!empty($room['amenities']) && is_array($room['amenities'])) {
-                    foreach ($room['amenities'] as $amenityId) {
-                        $unitAmenityModel->insert(['unit_id' => $roomId, 'amenity_id' => $amenityId]);
-                    }
-                }
-            }
-
-            // 4. Limpieza: Eliminar habitaciones que fueron quitadas en la vista
-            $existingRooms = $unitModel->where('parent_id', $id)->findAll();
-            foreach ($existingRooms as $existingRoom) {
-                if (!in_array($existingRoom['id'], $submittedRoomIds)) {
-                    $unitModel->delete($existingRoom['id']);
-                }
-            }
-
-            // 5. PROCESAMIENTO DE MULTIMEDIA (Se mantiene tu lógica original intacta)
-            $existingDescriptions = $this->request->getPost('existing_media_descriptions');
-            if ($existingDescriptions && is_array($existingDescriptions)) {
-                $mediaModel = new \App\Models\TenantMediaModel();
-                foreach ($existingDescriptions as $mediaId => $desc) {
-                    $mediaModel->update($mediaId, ['description' => $desc]);
-                }
-            }
-
-            $files = $this->request->getFileMultiple('media');
-            $newDescriptions = $this->request->getPost('new_media_descriptions') ?? [];
-
-            if ($files && isset($files[0]) && $files[0]->isValid()) {
-                $mediaModel = new \App\Models\TenantMediaModel();
-                $uploadPath = FCPATH . "uploads/tenants/{$tenantId}/units/";
-
-                if (!is_dir($uploadPath)) {
-                    mkdir($uploadPath, 0777, true);
-                }
-
-                foreach ($files as $index => $file) {
-                    if ($file->isValid() && !$file->hasMoved()) {
-                        $newName = $file->getRandomName();
-                        $file->move($uploadPath, $newName);
-
-                        $mime = $file->getClientMimeType();
-                        $fileType = strpos($mime, 'video') !== false ? 'video' : 'image';
-                        $description = isset($newDescriptions[$index]) ? trim($newDescriptions[$index]) : null;
-
-                        // Se utiliza insert directo inyectando el tenant_id
-                        $mediaModel->insert([
-                            'tenant_id'   => $tenantId,
-                            'entity_type' => 'unit',
-                            'entity_id'   => $id,
-                            'file_path'   => "uploads/tenants/{$tenantId}/units/{$newName}",
-                            'file_type'   => $fileType,
-                            'description' => $description,
-                            'is_main'     => 0,
-                            'sort_order'  => 0
+                foreach ($room['beds'] ?? [] as $bed) {
+                    if (!empty($bed['bed_type_id']) && !empty($bed['quantity'])) {
+                        $unitBedModel->insert([
+                            'unit_id'     => $roomId,
+                            'bed_type_id' => $bed['bed_type_id'],
+                            'quantity'    => (int)$bed['quantity'],
                         ]);
                     }
                 }
-            }
 
-            $unitModel->db->transComplete();
-
-            if ($unitModel->db->transStatus() === false) {
-                throw new \Exception('Fallo en la transacción SQL general.');
-            }
-
-            return redirect()->to("/inventory/unit/edit/{$id}")->with('success', 'Unidad actualizada correctamente.');
-
-        } catch (\Exception $e) {
-            log_message('critical', "[InventoryController] Error en updateUnit(): " . $e->getMessage());
-            return redirect()->back()->withInput()->with('error', 'Error al actualizar: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Elimina un archivo multimedia específico de la unidad
-     */
-    public function deleteUnitMedia($mediaId)
-    {
-        $mediaModel = new \App\Models\TenantMediaModel();
-
-        // Protegido por BaseMultiTenantModel
-        $media = $mediaModel->find($mediaId);
-
-        if ($media) {
-            $filePath = FCPATH . $media['file_path'];
-            if (file_exists($filePath)) {
-                unlink($filePath);
-            }
-            $mediaModel->delete($mediaId);
-        }
-
-        return redirect()->back()->with('success', 'Archivo eliminado.');
-    }
-
-
-
-
-    /**
-     * Lista el inventario ordenando jerárquicamente (Padres primero, luego sus hijos)
-     */
-    public function index()
-    {
-        $unitModel = new AccommodationUnitModel();
-        $limitService = new PlanLimitService();
-
-        $tenantId = session('active_tenant_id');
-
-        // 1. Join manual con FILTRO MULTI-TENANT OBLIGATORIO y ordenamiento Padre/Hijo
-        $units = $unitModel->select('accommodation_units.*, accommodation_types.name as type_name')
-            ->join('accommodation_types', 'accommodation_types.id = accommodation_units.type_id', 'left')
-            ->where('accommodation_units.tenant_id', $tenantId)
-            // false evita que CodeIgniter rompa la sintaxis de la función COALESCE
-            ->orderBy('COALESCE(accommodation_units.parent_id, accommodation_units.id) ASC', '', false)
-            // Asegura que el Padre salga primero, y luego sus hijos
-            ->orderBy('accommodation_units.parent_id', 'ASC')
-            // Orden secundario alfabético como lo tenías originalmente
-            ->orderBy('accommodation_units.name', 'ASC')
-            ->findAll();
-
-        log_message('info', "[InventoryController] Index cargado. Unidades encontradas: " . count($units) . " para el tenant: " . $tenantId);
-
-        // 2. Traer información de los límites usando tu método original
-        $data = [
-            'units'     => $units,
-            'limitInfo' => $limitService->getUnitUsageInfo()
-        ];
-
-        return view('inventory/index', $data);
-    }
-
-    /**
-     * Carga la vista para crear una nueva cabaña/unidad con sus catálogos
-     */
-    public function create()
-    {
-        $tenantId = session('active_tenant_id');
-
-        $amenityModel = new AmenityModel();
-        $bedTypeModel = new BedTypeModel();
-        $typeModel = new AccommodationTypeModel();
-
-        $data = [
-            'title'     => 'Crear Nueva Unidad/Cabaña',
-            'types'     => $typeModel->findAll(),
-            'amenities' => $amenityModel->where('tenant_id', $tenantId)->findAll(),
-            'bedTypes'  => $bedTypeModel->where('tenant_id', $tenantId)->findAll(),
-        ];
-
-        return view('inventory/create', $data);
-    }
-
-    /**
-     * Procesa la creación de la cabaña, sus habitaciones, camas y amenidades
-     * usando una transacción estricta para evitar inconsistencias.
-     */
-    public function store()
-    {
-        $tenantId = session('active_tenant_id');
-
-        $unitModel = new AccommodationUnitModel();
-        $unitBedModel = new UnitBedModel();
-        $unitAmenityModel = new UnitAmenityModel();
-
-        // INICIO DE TRANSACCIÓN: Todo se guarda o nada se guarda
-        $unitModel->db->transStart();
-
-        try {
-            log_message('info', "[InventoryController] Iniciando guardado de unidad jerárquica para Tenant ID: {$tenantId}");
-
-            // 1. Crear la Unidad Padre (Ej. La Cabaña Completa)
-            $parentData = [
-                'tenant_id'      => $tenantId,
-                'type_id'        => $this->request->getPost('type_id'),
-                'name'           => $this->request->getPost('parent_name'),
-                'description'    => $this->request->getPost('parent_description'),
-                'status'         => 'available',
-                // Guardamos la capacidad base desde la creación
-                'base_occupancy' => $this->request->getPost('parent_base_occupancy') ?? 2
-            ];
-
-            // Insertamos y capturamos el ID
-            $parentId = $unitModel->insert($parentData, true);
-
-            if (!$parentId) {
-                throw new \Exception('Fallo al insertar la entidad Padre en la base de datos.');
-            }
-
-            // 2. Asociar amenidades globales al Padre (Ej. Piscina)
-            $parentAmenities = $this->request->getPost('parent_amenities');
-            if (!empty($parentAmenities) && is_array($parentAmenities)) {
-                foreach ($parentAmenities as $amenityId) {
-                    $unitAmenityModel->insert([
-                        'unit_id'    => $parentId,
-                        'amenity_id' => $amenityId
-                    ]);
+                $unitAmenityModel->where('unit_id', $roomId)->delete();
+                foreach ($room['amenities'] ?? [] as $amenityId) {
+                    $unitAmenityModel->insert(['unit_id' => $roomId, 'amenity_id' => $amenityId]);
                 }
             }
 
-            // 3. Iterar y guardar las Habitaciones Hijas
-            $rooms = $this->request->getPost('rooms');
-
-            if (!empty($rooms) && is_array($rooms)) {
-                foreach ($rooms as $room) {
-                    $roomData = [
-                        'tenant_id'   => $tenantId,
-                        'parent_id'   => $parentId, // Clave: Relación con la cabaña
-                        'type_id'     => $room['type_id'],
-                        'name'        => $room['name'],
-                        'bathrooms'   => $room['bathrooms'] ?? 1,
-                        'status'      => 'available'
-                    ];
-
-                    $roomId = $unitModel->insert($roomData, true);
-
-                    if (!$roomId) {
-                        throw new \Exception("Fallo al insertar la habitación hija: {$room['name']}");
-                    }
-
-                    // 4. Asignar tipos de cama a esta habitación
-                    if (!empty($room['beds']) && is_array($room['beds'])) {
-                        foreach ($room['beds'] as $bed) {
-                            if (!empty($bed['bed_type_id']) && !empty($bed['quantity'])) {
-                                $unitBedModel->insert([
-                                    'unit_id'     => $roomId,
-                                    'bed_type_id' => $bed['bed_type_id'],
-                                    'quantity'    => $bed['quantity']
-                                ]);
-                            }
-                        }
-                    }
-
-                    // 5. Asignar amenidades específicas a esta habitación (Ej. Aire Acondicionado)
-                    if (!empty($room['amenities']) && is_array($room['amenities'])) {
-                        foreach ($room['amenities'] as $amenityId) {
-                            $unitAmenityModel->insert([
-                                'unit_id'    => $roomId,
-                                'amenity_id' => $amenityId
-                            ]);
-                        }
-                    }
+            foreach ($unitModel->where('parent_id', $id)->findAll() as $existing) {
+                if (!in_array($existing['id'], $submittedRoomIds)) {
+                    $unitModel->delete($existing['id']);
                 }
             }
 
-            // CIERRE DE TRANSACCIÓN
             $unitModel->db->transComplete();
-
             if ($unitModel->db->transStatus() === false) {
-                throw new \Exception('La transacción SQL devolvió un estado fallido tras intentar confirmar.');
+                throw new \Exception('Error en la transacción.');
             }
 
-            log_message('info', "[InventoryController] Cabaña ID {$parentId} y sub-unidades creadas con éxito.");
-            return redirect()->to('/inventory')->with('success', 'Alojamiento creado exitosamente con toda su distribución.');
+            return redirect()->to("/inventory/unit/edit/{$id}")
+                ->with('success', 'Unidad actualizada correctamente.');
 
         } catch (\Exception $e) {
-            // Rollback automático por transStart() de CodeIgniter
-            log_message('critical', "[InventoryController] Error en store(): " . $e->getMessage());
-            return redirect()->back()->withInput()->with('error', 'Error al guardar la configuración: ' . $e->getMessage());
+            log_message('error', "[InventoryController] updateUnit: " . $e->getMessage());
+            return redirect()->back()->withInput()
+                ->with('error', 'Error al guardar: ' . $e->getMessage());
         }
     }
 
 
-
-
+    // =========================================================================
+    // MEDIA
+    // =========================================================================
     public function uploadUnitMedia()
     {
-        $mediaModel = new \App\Models\TenantMediaModel();
-        $unitId = $this->request->getPost('unit_id');
-        $file = $this->request->getFile('media_file');
+        $mediaModel = new TenantMediaModel();
+        $tenantId   = session('active_tenant_id');
+        $unitId     = $this->request->getPost('unit_id');
+        $file       = $this->request->getFile('media_file');
 
         if ($file && $file->isValid() && !$file->hasMoved()) {
-            $mimeType = $file->getMimeType();
-            $fileType = strpos($mimeType, 'video') !== false ? 'video' : 'image';
-            $newName = $file->getRandomName();
+            $mime     = $file->getMimeType();
+            $fileType = strpos($mime, 'video') !== false ? 'video' : 'image';
+            $newName  = $file->getRandomName();
+            $path     = FCPATH . "uploads/tenants/{$tenantId}/units/";
 
-            // Guardar en subcarpeta de unidades
-            if (!is_dir(FCPATH . 'uploads/units')) mkdir(FCPATH . 'uploads/units', 0777, true);
-            $file->move(FCPATH . 'uploads/units', $newName);
+            if (!is_dir($path)) mkdir($path, 0777, true);
+            $file->move($path, $newName);
 
             $mediaModel->insert([
-                'tenant_id'   => session('active_tenant_id'),
+                'tenant_id'   => $tenantId,
                 'entity_type' => 'unit',
                 'entity_id'   => $unitId,
-                'file_path'   => 'uploads/units/' . $newName,
-                'file_type'   => $fileType
+                'file_path'   => "uploads/tenants/{$tenantId}/units/{$newName}",
+                'file_type'   => $fileType,
+                'sort_order'  => 0,
             ]);
-            return redirect()->to("/inventory/edit-unit/{$unitId}")->with('success', 'Archivo subido con éxito.');
+
+            return redirect()->to("/inventory/unit/edit/{$unitId}")->with('success', 'Archivo subido.');
         }
-        return redirect()->to("/inventory/edit-unit/{$unitId}")->with('error', 'Error al subir el archivo.');
+
+        return redirect()->to("/inventory/unit/edit/{$unitId}")->with('error', 'Error al subir el archivo.');
     }
 
+    public function deleteUnitMedia($id)
+    {
+        $mediaModel = new TenantMediaModel();
+        $media      = $mediaModel->find($id);
+
+        if ($media) {
+            $fullPath = FCPATH . $media['file_path'];
+            if (file_exists($fullPath)) unlink($fullPath);
+            $mediaModel->delete($id);
+        }
+
+        return redirect()->back()->with('success', 'Imagen eliminada.');
+    }
 }
