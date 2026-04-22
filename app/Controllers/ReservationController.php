@@ -43,12 +43,22 @@ class ReservationController extends BaseController
         $tenantId = session('active_tenant_id');
         $agents = $agentModel->where('tenant_id', $tenantId)->where('is_active', 1)->findAll();
 
+
+
         return view('reservations/create', [
             'units' => $units,
             'plans' => $plans,
             'agents' => $agents, // NUEVO
             'sources' => $sources,
             'rate_plans' => $ratePlanModel->findAll(),
+            'prefill' => [
+            'unit_id'   => $this->request->getGet('unit_id'),
+            'check_in'  => $this->request->getGet('check_in'),
+            'check_out' => $this->request->getGet('check_out'),
+            'adults'    => (int)($this->request->getGet('adults')   ?? 1),
+            'children'  => (int)($this->request->getGet('children') ?? 0),
+            'rate_plan' => $this->request->getGet('rate_plan')]
+
         ]);
     }
 

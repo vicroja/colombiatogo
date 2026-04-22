@@ -24,7 +24,6 @@
 
         body { background: var(--c-bg); }
 
-        /* ── Layout ── */
         .rsv-grid {
             display: grid;
             grid-template-columns: 1fr 360px;
@@ -35,12 +34,8 @@
             .rsv-grid { grid-template-columns: 1fr; }
             .rsv-sticky { position: static !important; }
         }
-        .rsv-sticky {
-            position: sticky;
-            top: 20px;
-        }
+        .rsv-sticky { position: sticky; top: 20px; }
 
-        /* ── Cards ── */
         .rsv-card {
             background: var(--c-surface);
             border: 1px solid var(--c-border);
@@ -52,341 +47,198 @@
         .rsv-card-header {
             padding: 16px 20px;
             border-bottom: 1px solid var(--c-border);
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            display: flex; align-items: center; gap: 10px;
         }
         .rsv-card-header .icon {
-            width: 32px; height: 32px;
-            border-radius: 8px;
+            width: 32px; height: 32px; border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 15px;
-            flex-shrink: 0;
+            font-size: 15px; flex-shrink: 0;
         }
         .icon-blue  { background: #eff6ff; color: var(--c-primary); }
         .icon-green { background: #f0fdf4; color: var(--c-success); }
         .icon-amber { background: #fffbeb; color: #b45309; }
         .icon-slate { background: #f8fafc; color: #475569; }
-
-        .rsv-card-header h6 {
-            margin: 0;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--c-text);
-            letter-spacing: -.01em;
-        }
-        .rsv-card-header .sub {
-            font-size: 12px;
-            color: var(--c-muted);
-            margin: 0;
-        }
+        .rsv-card-header h6 { margin: 0; font-size: 14px; font-weight: 600; color: var(--c-text); letter-spacing: -.01em; }
+        .rsv-card-header .sub { font-size: 12px; color: var(--c-muted); margin: 0; }
         .rsv-card-body { padding: 20px; }
 
-        /* ── Form controls ── */
         .field-group { margin-bottom: 16px; }
         .field-group:last-child { margin-bottom: 0; }
-
         .field-label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--c-label);
-            margin-bottom: 5px;
-            letter-spacing: .02em;
-            text-transform: uppercase;
+            display: block; font-size: 12px; font-weight: 600;
+            color: var(--c-label); margin-bottom: 5px;
+            letter-spacing: .02em; text-transform: uppercase;
         }
         .field-label .req { color: var(--c-danger); margin-left: 2px; }
 
         .form-control, .form-select {
-            border: 1.5px solid var(--c-border);
-            border-radius: 8px;
-            padding: 9px 12px;
-            font-size: 14px;
-            color: var(--c-text);
-            background: #fff;
-            transition: border-color .15s, box-shadow .15s;
-            width: 100%;
+            border: 1.5px solid var(--c-border); border-radius: 8px;
+            padding: 9px 12px; font-size: 14px; color: var(--c-text);
+            background: #fff; transition: border-color .15s, box-shadow .15s; width: 100%;
         }
         .form-control:focus, .form-select:focus {
             border-color: var(--c-primary);
-            box-shadow: 0 0 0 3px rgba(26,86,219,.12);
-            outline: none;
+            box-shadow: 0 0 0 3px rgba(26,86,219,.12); outline: none;
         }
         .form-control::placeholder { color: #9ca3af; }
 
-        /* ── Date range visual ── */
         .date-range-row {
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            gap: 8px;
-            align-items: end;
+            display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: end;
         }
-        .date-sep {
-            font-size: 18px;
-            color: var(--c-muted);
-            padding-bottom: 10px;
-            text-align: center;
-        }
+        .date-sep { font-size: 18px; color: var(--c-muted); padding-bottom: 10px; text-align: center; }
 
-        /* ── Occupancy stepper ── */
-        .occ-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
+        .occ-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .occ-box {
-            border: 1.5px solid var(--c-border);
-            border-radius: 8px;
-            padding: 10px 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #fafafa;
+            border: 1.5px solid var(--c-border); border-radius: 8px;
+            padding: 10px 12px; display: flex; align-items: center;
+            justify-content: space-between; background: #fafafa;
         }
         .occ-box-info { line-height: 1.3; }
-        .occ-box-info .occ-label {
-            font-size: 12px; font-weight: 600;
-            color: var(--c-label); text-transform: uppercase; letter-spacing: .02em;
-        }
+        .occ-box-info .occ-label { font-size: 12px; font-weight: 600; color: var(--c-label); text-transform: uppercase; letter-spacing: .02em; }
         .occ-box-info .occ-sub { font-size: 11px; color: var(--c-muted); }
-        .occ-stepper {
-            display: flex; align-items: center; gap: 8px;
-        }
+        .occ-stepper { display: flex; align-items: center; gap: 8px; }
         .occ-btn {
-            width: 28px; height: 28px;
-            border-radius: 50%;
-            border: 1.5px solid var(--c-border);
-            background: #fff;
-            color: var(--c-text);
-            font-size: 16px; line-height: 1;
-            cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            transition: all .15s;
-            padding: 0;
+            width: 28px; height: 28px; border-radius: 50%;
+            border: 1.5px solid var(--c-border); background: #fff;
+            color: var(--c-text); font-size: 16px; line-height: 1;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all .15s; padding: 0;
         }
-        .occ-btn:hover:not(:disabled) {
-            border-color: var(--c-primary);
-            color: var(--c-primary);
-            background: #eff6ff;
-        }
+        .occ-btn:hover:not(:disabled) { border-color: var(--c-primary); color: var(--c-primary); background: #eff6ff; }
         .occ-btn:disabled { opacity: .35; cursor: not-allowed; }
-        .occ-val {
-            font-size: 16px; font-weight: 700;
-            color: var(--c-text); min-width: 20px; text-align: center;
-        }
-        /* Hidden inputs reales */
-        .occ-hidden { display: none; }
+        .occ-val { font-size: 16px; font-weight: 700; color: var(--c-text); min-width: 20px; text-align: center; }
 
-        /* ── Guest companion rows ── */
         .companion-row {
-            border: 1.5px solid var(--c-border);
-            border-radius: 8px;
-            padding: 14px;
-            margin-bottom: 10px;
-            background: #fafafa;
+            border: 1.5px solid var(--c-border); border-radius: 8px;
+            padding: 14px; margin-bottom: 10px; background: #fafafa;
             animation: fadeSlide .2s ease;
         }
         .companion-row:last-child { margin-bottom: 0; }
-        .companion-header {
-            display: flex; align-items: center;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-        .companion-label {
-            font-size: 12px; font-weight: 600;
-            color: var(--c-muted); text-transform: uppercase; letter-spacing: .04em;
-        }
-        .companion-type-badge {
-            font-size: 11px; padding: 2px 8px;
-            border-radius: 20px; font-weight: 500;
-        }
-        .badge-adult   { background: #eff6ff; color: var(--c-primary); }
-        .badge-child   { background: #f0fdf4; color: var(--c-success); }
-        .companion-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 100px 1fr;
-            gap: 8px;
-        }
-        @media (max-width: 600px) {
-            .companion-grid { grid-template-columns: 1fr 1fr; }
-        }
+        .companion-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .companion-label { font-size: 12px; font-weight: 600; color: var(--c-muted); text-transform: uppercase; letter-spacing: .04em; }
+        .companion-type-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+        .badge-adult { background: #eff6ff; color: var(--c-primary); }
+        .badge-child { background: #f0fdf4; color: var(--c-success); }
+        .companion-grid { display: grid; grid-template-columns: 1fr 1fr 100px 1fr; gap: 8px; }
+        @media (max-width: 600px) { .companion-grid { grid-template-columns: 1fr 1fr; } }
         .empty-companions {
-            text-align: center; padding: 20px;
-            color: var(--c-muted); font-size: 13px;
-            border: 1.5px dashed var(--c-border);
-            border-radius: 8px;
+            text-align: center; padding: 20px; color: var(--c-muted);
+            font-size: 13px; border: 1.5px dashed var(--c-border); border-radius: 8px;
         }
         .empty-companions i { font-size: 20px; display: block; margin-bottom: 6px; opacity: .5; }
 
-        /* ── Price panel ── */
         .price-panel {
             background: linear-gradient(135deg, #1a56db 0%, #1e429f 100%);
-            border-radius: var(--radius);
-            padding: 20px;
-            color: #fff;
-            margin-bottom: 16px;
+            border-radius: var(--radius); padding: 20px; color: #fff; margin-bottom: 16px;
         }
         .price-panel .label { font-size: 11px; opacity: .75; text-transform: uppercase; letter-spacing: .06em; }
-        .price-panel .amount {
-            font-size: 32px; font-weight: 800; letter-spacing: -.03em;
-            line-height: 1.1;
-        }
+        .price-panel .amount { font-size: 32px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; }
         .price-panel .amount input {
-            background: transparent;
-            border: none;
+            background: transparent; border: none;
             border-bottom: 2px solid rgba(255,255,255,.4);
-            color: #fff;
-            font-size: 32px; font-weight: 800; letter-spacing: -.03em;
-            width: 100%;
-            padding: 0;
+            color: #fff; font-size: 32px; font-weight: 800;
+            letter-spacing: -.03em; width: 100%; padding: 0;
         }
-        .price-panel .amount input:focus {
-            outline: none;
-            border-bottom-color: #fff;
-        }
+        .price-panel .amount input:focus { outline: none; border-bottom-color: #fff; }
         .price-panel .amount input::placeholder { color: rgba(255,255,255,.4); }
-
         .price-breakdown {
-            background: rgba(255,255,255,.1);
-            border-radius: 8px;
-            padding: 12px;
-            margin-top: 12px;
-            font-size: 12.5px;
+            background: rgba(255,255,255,.1); border-radius: 8px;
+            padding: 12px; margin-top: 12px; font-size: 12.5px;
         }
-        .price-breakdown .row-item {
-            display: flex; justify-content: space-between;
-            padding: 3px 0;
-            opacity: .85;
-        }
+        .price-breakdown .row-item { display: flex; justify-content: space-between; padding: 3px 0; opacity: .85; }
         .price-breakdown .row-item.total {
-            border-top: 1px solid rgba(255,255,255,.25);
-            margin-top: 6px; padding-top: 8px;
-            font-weight: 700; opacity: 1; font-size: 13px;
+            border-top: 1px solid rgba(255,255,255,.25); margin-top: 6px;
+            padding-top: 8px; font-weight: 700; opacity: 1; font-size: 13px;
         }
         .price-breakdown .discount { color: #6ee7b7; }
-
-        .price-loading {
-            display: flex; align-items: center; gap: 8px;
-            font-size: 12px; opacity: .8; margin-top: 8px;
-        }
+        .price-loading { display: flex; align-items: center; gap: 8px; font-size: 12px; opacity: .8; margin-top: 8px; }
         .spinner-xs {
             width: 14px; height: 14px;
-            border: 2px solid rgba(255,255,255,.3);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin .6s linear infinite;
-            display: inline-block;
+            border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
+            border-radius: 50%; animation: spin .6s linear infinite; display: inline-block;
         }
 
-        /* ── Promo code ── */
-        .promo-row {
-            display: flex; gap: 8px;
+        /* ── Prefill banner ── */
+        .prefill-banner {
+            background: #eff6ff; border: 1.5px solid #bfdbfe;
+            border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;
+            display: flex; align-items: center; gap: 8px;
+            font-size: 12.5px; color: #1e40af;
         }
+        .prefill-banner i { font-size: 14px; flex-shrink: 0; }
+
+        .promo-row { display: flex; gap: 8px; }
         .promo-row .form-control { flex: 1; }
         .btn-promo {
-            padding: 9px 14px;
-            background: #fff; color: var(--c-primary);
-            border: 1.5px solid var(--c-primary);
-            border-radius: 8px; font-size: 13px; font-weight: 600;
-            cursor: pointer; white-space: nowrap;
-            transition: all .15s;
+            padding: 9px 14px; background: #fff; color: var(--c-primary);
+            border: 1.5px solid var(--c-primary); border-radius: 8px;
+            font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all .15s;
         }
         .btn-promo:hover { background: var(--c-primary); color: #fff; }
 
-        /* ── Submit button ── */
         .btn-create {
-            width: 100%;
-            padding: 13px;
-            background: #057a55;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px; font-weight: 700;
-            cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            transition: background .15s, transform .1s;
-            letter-spacing: -.01em;
+            width: 100%; padding: 13px; background: #057a55; color: #fff;
+            border: none; border-radius: 8px; font-size: 15px; font-weight: 700;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: background .15s, transform .1s; letter-spacing: -.01em;
         }
         .btn-create:hover { background: #046c4e; }
         .btn-create:active { transform: scale(.99); }
 
-        /* ── Status toggle ── */
-        .status-pills {
-            display: flex; gap: 8px;
-        }
+        .status-pills { display: flex; gap: 8px; }
         .status-pill {
-            flex: 1; padding: 8px 6px;
-            border: 1.5px solid var(--c-border);
-            border-radius: 8px; background: #fff;
-            font-size: 12px; font-weight: 600; color: var(--c-muted);
-            cursor: pointer; text-align: center;
-            transition: all .15s;
+            flex: 1; padding: 8px 6px; border: 1.5px solid var(--c-border);
+            border-radius: 8px; background: #fff; font-size: 12px; font-weight: 600;
+            color: var(--c-muted); cursor: pointer; text-align: center; transition: all .15s;
         }
         .status-pill:hover { border-color: #9ca3af; color: var(--c-text); }
-        .status-pill.active-pending  { border-color: #f59e0b; background: #fffbeb; color: #b45309; }
+        .status-pill.active-pending   { border-color: #f59e0b; background: #fffbeb; color: #b45309; }
         .status-pill.active-confirmed { border-color: var(--c-primary); background: #eff6ff; color: var(--c-primary); }
         .status-pill input { display: none; }
 
-        /* ── Divider with label ── */
         .divider-label {
             display: flex; align-items: center; gap: 10px;
-            margin: 18px 0 14px;
-            font-size: 11px; font-weight: 600; color: var(--c-muted);
-            text-transform: uppercase; letter-spacing: .06em;
+            margin: 18px 0 14px; font-size: 11px; font-weight: 600;
+            color: var(--c-muted); text-transform: uppercase; letter-spacing: .06em;
         }
-        .divider-label::before, .divider-label::after {
-            content: ''; flex: 1; height: 1px; background: var(--c-border);
-        }
+        .divider-label::before, .divider-label::after { content: ''; flex: 1; height: 1px; background: var(--c-border); }
 
-        /* ── Animations ── */
-        @keyframes fadeSlide {
-            from { opacity: 0; transform: translateY(-6px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes fadeSlide { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ── Misc ── */
-        .page-header {
-            display: flex; align-items: center;
-            gap: 12px; margin-bottom: 24px;
-        }
-        .page-header h1 {
-            font-size: 20px; font-weight: 700;
-            color: var(--c-text); margin: 0; letter-spacing: -.02em;
-        }
+        .page-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+        .page-header h1 { font-size: 20px; font-weight: 700; color: var(--c-text); margin: 0; letter-spacing: -.02em; }
         .page-header .back-btn {
-            padding: 7px 12px;
-            border: 1.5px solid var(--c-border);
-            border-radius: 8px; background: #fff;
-            color: var(--c-muted); font-size: 13px;
-            text-decoration: none;
-            display: flex; align-items: center; gap: 5px;
-            transition: all .15s;
+            padding: 7px 12px; border: 1.5px solid var(--c-border); border-radius: 8px;
+            background: #fff; color: var(--c-muted); font-size: 13px; text-decoration: none;
+            display: flex; align-items: center; gap: 5px; transition: all .15s;
         }
         .page-header .back-btn:hover { border-color: #9ca3af; color: var(--c-text); }
 
         .hint { font-size: 11.5px; color: var(--c-muted); margin-top: 4px; }
-        .unit-select-option-sub { font-size: 11px; color: var(--c-muted); }
-
         .nights-chip {
             display: inline-flex; align-items: center; gap: 5px;
             background: #eff6ff; color: var(--c-primary);
-            padding: 3px 10px; border-radius: 20px;
-            font-size: 12px; font-weight: 600;
-            margin-top: 6px;
+            padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 6px;
         }
         .nights-chip.hidden { display: none; }
-
-        .invalid-msg {
-            font-size: 12px; color: var(--c-danger);
-            margin-top: 4px; display: none;
-        }
+        .invalid-msg { font-size: 12px; color: var(--c-danger); margin-top: 4px; display: none; }
         .is-invalid { border-color: var(--c-danger) !important; }
-
-        /* Agente / Fuente row */
         .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         @media (max-width: 480px) { .two-col { grid-template-columns: 1fr; } }
     </style>
+
+<?php
+// ── Leer prefill desde GET (viene del cotizador) ──────────────
+$prefill = $prefill ?? [];
+$hasPrefill = !empty($prefill['unit_id']) || !empty($prefill['check_in']);
+$pCheckIn   = $prefill['check_in']  ?? date('Y-m-d');
+$pCheckOut  = $prefill['check_out'] ?? date('Y-m-d', strtotime('+1 day'));
+$pAdults    = (int)($prefill['adults']   ?? 1);
+$pChildren  = (int)($prefill['children'] ?? 0);
+$pUnitId    = $prefill['unit_id']   ?? '';
+$pRatePlan  = $prefill['rate_plan'] ?? '';
+?>
 
     <div class="container-fluid px-3 px-md-4" style="max-width:1200px;">
 
@@ -396,14 +248,26 @@
                 <i class="bi bi-arrow-left"></i> Reservas
             </a>
             <h1>Nueva Reserva</h1>
+            <?php if ($hasPrefill): ?>
+                <a href="<?= base_url('/reservations/quote') ?>" class="back-btn" style="margin-left:auto;">
+                    <i class="bi bi-arrow-left"></i> Volver al cotizador
+                </a>
+            <?php endif; ?>
         </div>
+
+        <?php if ($hasPrefill): ?>
+            <div class="prefill-banner">
+                <i class="bi bi-magic"></i>
+                Formulario pre-llenado desde el cotizador. Revisa los datos y completa el titular.
+            </div>
+        <?php endif; ?>
 
         <form action="<?= base_url('/reservations/store') ?>" method="post" id="reservation-form" novalidate>
             <?= csrf_field() ?>
 
             <!-- Hidden inputs que realmente se envían al servidor -->
-            <input type="hidden" name="num_adults"   id="num_adults_hidden"   value="1">
-            <input type="hidden" name="num_children" id="num_children_hidden" value="0">
+            <input type="hidden" name="num_adults"   id="num_adults_hidden"   value="<?= $pAdults ?>">
+            <input type="hidden" name="num_children" id="num_children_hidden" value="<?= $pChildren ?>">
             <input type="hidden" name="promo_id"     id="promo_id_hidden"     value="">
 
             <div class="rsv-grid">
@@ -432,7 +296,8 @@
                                     <?php foreach ($units as $u): ?>
                                         <option value="<?= $u['id'] ?>"
                                                 data-capacity="<?= $u['base_occupancy'] ?? 2 ?>"
-                                                data-max="<?= $u['max_occupancy'] ?? 10 ?>">
+                                                data-max="<?= $u['max_occupancy'] ?? 10 ?>"
+                                            <?= $pUnitId == $u['id'] ? 'selected' : '' ?>>
                                             <?= esc($u['name']) ?> — <?= esc($u['type_name']) ?>
                                             <?php if($u['base_occupancy']): ?>(base <?= $u['base_occupancy'] ?> pax)<?php endif; ?>
                                         </option>
@@ -442,22 +307,20 @@
 
                             <!-- Fechas -->
                             <div class="field-group">
-                                <label class="field-label">
-                                    Fechas <span class="req">*</span>
-                                </label>
+                                <label class="field-label">Fechas <span class="req">*</span></label>
                                 <div class="date-range-row">
                                     <div>
                                         <label class="hint mb-1 d-block">Check-In</label>
                                         <input type="date" name="check_in" id="check_in"
                                                class="form-control trigger-calc" required
-                                               value="<?= date('Y-m-d') ?>">
+                                               value="<?= esc($pCheckIn) ?>">
                                     </div>
                                     <div class="date-sep">→</div>
                                     <div>
                                         <label class="hint mb-1 d-block">Check-Out</label>
                                         <input type="date" name="check_out" id="check_out"
                                                class="form-control trigger-calc" required
-                                               value="<?= date('Y-m-d', strtotime('+1 day')) ?>">
+                                               value="<?= esc($pCheckOut) ?>">
                                     </div>
                                 </div>
                                 <div id="nights-chip" class="nights-chip hidden">
@@ -476,7 +339,10 @@
                                 </label>
                                 <select name="rate_plan_id" id="rate_plan_id" class="form-select trigger-calc" required>
                                     <?php foreach ($rate_plans as $rp): ?>
-                                        <option value="<?= $rp['id'] ?>" <?= $rp['is_default'] ? 'selected' : '' ?>>
+                                        <option value="<?= $rp['id'] ?>"
+                                            <?= ($pRatePlan && $pRatePlan == $rp['id'])
+                                                ? 'selected'
+                                                : (!$pRatePlan && $rp['is_default'] ? 'selected' : '') ?>>
                                             <?= esc($rp['name']) ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -493,8 +359,8 @@
                                             <div class="occ-sub">≥ 18 años</div>
                                         </div>
                                         <div class="occ-stepper">
-                                            <button type="button" class="occ-btn" id="adults-minus" disabled>−</button>
-                                            <span class="occ-val" id="adults-val">1</span>
+                                            <button type="button" class="occ-btn" id="adults-minus" <?= $pAdults <= 1 ? 'disabled' : '' ?>>−</button>
+                                            <span class="occ-val" id="adults-val"><?= $pAdults ?></span>
                                             <button type="button" class="occ-btn" id="adults-plus">+</button>
                                         </div>
                                     </div>
@@ -504,8 +370,8 @@
                                             <div class="occ-sub">< 18 años</div>
                                         </div>
                                         <div class="occ-stepper">
-                                            <button type="button" class="occ-btn" id="children-minus" disabled>−</button>
-                                            <span class="occ-val" id="children-val">0</span>
+                                            <button type="button" class="occ-btn" id="children-minus" <?= $pChildren <= 0 ? 'disabled' : '' ?>>−</button>
+                                            <span class="occ-val" id="children-val"><?= $pChildren ?></span>
                                             <button type="button" class="occ-btn" id="children-plus">+</button>
                                         </div>
                                     </div>
@@ -538,20 +404,17 @@
                                 <div class="field-group">
                                     <label class="field-label" for="document">Documento</label>
                                     <input type="text" name="document" id="document"
-                                           class="form-control"
-                                           placeholder="CC / Pasaporte / CE">
+                                           class="form-control" placeholder="CC / Pasaporte / CE">
                                 </div>
                                 <div class="field-group">
                                     <label class="field-label" for="phone">WhatsApp / Teléfono</label>
                                     <input type="text" name="phone" id="phone"
-                                           class="form-control"
-                                           placeholder="+57 300 000 0000">
+                                           class="form-control" placeholder="+57 300 000 0000">
                                 </div>
                                 <div class="field-group" style="grid-column: span 2;">
                                     <label class="field-label" for="email">Correo Electrónico</label>
                                     <input type="email" name="email" id="email"
-                                           class="form-control"
-                                           placeholder="cliente@correo.com">
+                                           class="form-control" placeholder="cliente@correo.com">
                                 </div>
                             </div>
                         </div>
@@ -712,26 +575,22 @@
             const childrenHidden = document.getElementById('num_children_hidden');
             const promoIdHidden  = document.getElementById('promo_id_hidden');
 
-            const companionsBadge = document.getElementById('companions-badge');
+            const companionsBadge     = document.getElementById('companions-badge');
             const companionsContainer = document.getElementById('companions-container');
-
             const nightsChip  = document.getElementById('nights-chip');
             const nightsLabel = document.getElementById('nights-label');
             const datesError  = document.getElementById('dates-error');
-
-            const priceLoading      = document.getElementById('price-loading');
+            const priceLoading       = document.getElementById('price-loading');
             const priceBreakdownWrap = document.getElementById('price-breakdown-wrap');
-            const priceBreakdown    = document.getElementById('price-breakdown');
-
+            const priceBreakdown     = document.getElementById('price-breakdown');
             const pillPending   = document.getElementById('pill-pending');
             const pillConfirmed = document.getElementById('pill-confirmed');
 
-            // CSRF
             window.csrfHash = '<?= csrf_hash() ?>';
 
-            /* ═══ Estado local ═══ */
-            let numAdults   = 1;
-            let numChildren = 0;
+            /* ═══ Estado inicial — viene del prefill PHP ═══ */
+            let numAdults   = <?= $pAdults ?>;
+            let numChildren = <?= $pChildren ?>;
             let maxOccupancy = 10;
             let calcDebounce = null;
 
@@ -749,7 +608,6 @@
                 adultsPlus.disabled   = total >= maxOccupancy;
                 childrenPlus.disabled = total >= maxOccupancy;
 
-                // Hint de capacidad
                 const unit = unitSelect.options[unitSelect.selectedIndex];
                 const base = unit ? parseInt(unit.dataset.capacity || 2) : 2;
                 if (total > base) {
@@ -763,12 +621,11 @@
                 triggerCalc();
             }
 
-            adultsPlus.addEventListener('click', () => { numAdults++;   updateOccupancy(); });
-            adultsMinus.addEventListener('click', () => { if(numAdults > 1) { numAdults--; updateOccupancy(); } });
+            adultsPlus.addEventListener('click',   () => { numAdults++;   updateOccupancy(); });
+            adultsMinus.addEventListener('click',  () => { if(numAdults > 1)   { numAdults--;   updateOccupancy(); } });
             childrenPlus.addEventListener('click', () => { numChildren++; updateOccupancy(); });
-            childrenMinus.addEventListener('click', () => { if(numChildren > 0) { numChildren--; updateOccupancy(); } });
+            childrenMinus.addEventListener('click',() => { if(numChildren > 0) { numChildren--; updateOccupancy(); } });
 
-            // Actualizar max cuando cambia la unidad
             unitSelect.addEventListener('change', function () {
                 const opt = this.options[this.selectedIndex];
                 maxOccupancy = parseInt(opt.dataset.max || 10);
@@ -797,23 +654,23 @@
                 nightsChip.classList.remove('hidden');
             }
 
-            checkInInput.addEventListener('change', () => { updateNightsChip(); triggerCalc(); });
+            checkInInput.addEventListener('change',  () => { updateNightsChip(); triggerCalc(); });
             checkOutInput.addEventListener('change', () => { updateNightsChip(); triggerCalc(); });
             ratePlanSel.addEventListener('change', triggerCalc);
 
-            /* ═══ 3. GENERAR ACOMPAÑANTES ═══ */
+            /* ═══ 3. ACOMPAÑANTES ═══ */
             function generateCompanionFields() {
-                const totalCompanions = (numAdults - 1) + numChildren; // titular no cuenta
+                const totalCompanions = (numAdults - 1) + numChildren;
                 companionsContainer.innerHTML = '';
 
                 if (totalCompanions <= 0) {
                     companionsBadge.textContent = 'Solo titular';
                     companionsBadge.className = 'badge bg-secondary ms-auto';
                     companionsContainer.innerHTML = `
-                <div class="empty-companions">
-                    <i class="bi bi-person-plus"></i>
-                    Agrega adultos o niños en la sección de ocupación para registrar sus datos.
-                </div>`;
+                    <div class="empty-companions">
+                        <i class="bi bi-person-plus"></i>
+                        Agrega adultos o niños en la sección de ocupación para registrar sus datos.
+                    </div>`;
                     return;
                 }
 
@@ -821,14 +678,10 @@
                 companionsBadge.className = 'badge bg-primary ms-auto';
 
                 let idx = 0;
-
-                // Adultos extra (adultos - 1 titular)
                 for (let i = 0; i < numAdults - 1; i++) {
                     idx++;
                     companionsContainer.insertAdjacentHTML('beforeend', companionRowHTML(idx, 'adult', i + 2));
                 }
-
-                // Niños
                 for (let i = 0; i < numChildren; i++) {
                     idx++;
                     companionsContainer.insertAdjacentHTML('beforeend', companionRowHTML(idx, 'child', i + 1));
@@ -840,41 +693,37 @@
                 const badge = type === 'adult'
                     ? `<span class="companion-type-badge badge-adult"><i class="bi bi-person"></i> Adulto</span>`
                     : `<span class="companion-type-badge badge-child"><i class="bi bi-person-hearts"></i> Niño/a</span>`;
-
                 return `
-        <div class="companion-row">
-            <div class="companion-header">
-                <span class="companion-label">${label}</span>
-                ${badge}
-            </div>
-            <div class="companion-grid">
-                <div>
-                    <label class="field-label" style="font-size:11px;">Nombres</label>
-                    <input type="text" name="extra_guest_name[]"
-                           class="form-control form-control-sm" placeholder="Nombre">
+            <div class="companion-row">
+                <div class="companion-header">
+                    <span class="companion-label">${label}</span>
+                    ${badge}
                 </div>
-                <div>
-                    <label class="field-label" style="font-size:11px;">Apellidos</label>
-                    <input type="text" name="extra_guest_lastname[]"
-                           class="form-control form-control-sm" placeholder="Apellido">
+                <div class="companion-grid">
+                    <div>
+                        <label class="field-label" style="font-size:11px;">Nombres</label>
+                        <input type="text" name="extra_guest_name[]" class="form-control form-control-sm" placeholder="Nombre">
+                    </div>
+                    <div>
+                        <label class="field-label" style="font-size:11px;">Apellidos</label>
+                        <input type="text" name="extra_guest_lastname[]" class="form-control form-control-sm" placeholder="Apellido">
+                    </div>
+                    <div>
+                        <label class="field-label" style="font-size:11px;">Tipo Doc.</label>
+                        <select name="extra_guest_doc_type[]" class="form-select form-select-sm">
+                            <option value="">—</option>
+                            <option value="CC">CC</option>
+                            <option value="TI">TI</option>
+                            <option value="CE">CE</option>
+                            <option value="PA">Pasaporte</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="field-label" style="font-size:11px;">Documento</label>
+                        <input type="text" name="extra_guest_doc_number[]" class="form-control form-control-sm" placeholder="Número">
+                    </div>
                 </div>
-                <div>
-                    <label class="field-label" style="font-size:11px;">Tipo Doc.</label>
-                    <select name="extra_guest_doc_type[]" class="form-select form-select-sm">
-                        <option value="">—</option>
-                        <option value="CC">CC</option>
-                        <option value="TI">TI</option>
-                        <option value="CE">CE</option>
-                        <option value="PA">Pasaporte</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="field-label" style="font-size:11px;">Documento</label>
-                    <input type="text" name="extra_guest_doc_number[]"
-                           class="form-control form-control-sm" placeholder="Número">
-                </div>
-            </div>
-        </div>`;
+            </div>`;
             }
 
             /* ═══ 4. CÁLCULO DE PRECIO ═══ */
@@ -884,11 +733,11 @@
             }
 
             async function calculatePrice() {
-                const unitId    = unitSelect.value;
-                const checkIn   = checkInInput.value;
-                const checkOut  = checkOutInput.value;
+                const unitId     = unitSelect.value;
+                const checkIn    = checkInInput.value;
+                const checkOut   = checkOutInput.value;
                 const ratePlanId = ratePlanSel.value;
-                const promoCode = promoInput.value.trim();
+                const promoCode  = promoInput.value.trim();
 
                 if (!unitId || !checkIn || !checkOut || !ratePlanId) return;
                 if (new Date(checkIn) >= new Date(checkOut)) return;
@@ -901,8 +750,8 @@
                     fd.append('accommodation_unit_id', unitId);
                     fd.append('check_in_date',  checkIn);
                     fd.append('check_out_date', checkOut);
-                    fd.append('num_adults',   numAdults);      // ← BUG FIX: enviamos adultos y niños por separado
-                    fd.append('num_children', numChildren);    // ← BUG FIX
+                    fd.append('num_adults',   numAdults);
+                    fd.append('num_children', numChildren);
                     fd.append('rate_plan_id', ratePlanId);
                     fd.append('promo_code',   promoCode);
                     fd.append('<?= csrf_token() ?>', window.csrfHash);
@@ -953,7 +802,7 @@
                 priceBreakdownWrap.style.display = 'block';
             }
 
-            /* ═══ 5. CUPÓN (botón explícito) ═══ */
+            /* ═══ 5. CUPÓN ═══ */
             document.getElementById('btn-apply-promo').addEventListener('click', function() {
                 promoFeedback.innerHTML = '';
                 promoIdHidden.value = '';
@@ -971,7 +820,6 @@
             /* ═══ 7. VALIDACIÓN SUBMIT ═══ */
             document.getElementById('reservation-form').addEventListener('submit', function(e) {
                 let valid = true;
-
                 if (!unitSelect.value)    { unitSelect.classList.add('is-invalid'); valid = false; }
                 if (!checkInInput.value)  { checkInInput.classList.add('is-invalid'); valid = false; }
                 if (!checkOutInput.value) { checkOutInput.classList.add('is-invalid'); valid = false; }
@@ -984,19 +832,23 @@
                 if (!totalInput.value || parseFloat(totalInput.value) <= 0) {
                     totalInput.classList.add('is-invalid'); valid = false;
                 }
-
                 if (!valid) { e.preventDefault(); }
             });
 
-            // Limpiar is-invalid al corregir
             document.querySelectorAll('.form-control, .form-select').forEach(el => {
-                el.addEventListener('input', () => el.classList.remove('is-invalid'));
+                el.addEventListener('input',  () => el.classList.remove('is-invalid'));
                 el.addEventListener('change', () => el.classList.remove('is-invalid'));
             });
 
             /* ═══ INIT ═══ */
             updateNightsChip();
-            updateOccupancy();  // Dibuja estado inicial y dispara primer cálculo si hay datos
+            updateOccupancy();
+
+            // Si la unidad ya estaba seleccionada por prefill, leer su max_occupancy
+            if (unitSelect.value) {
+                const opt = unitSelect.options[unitSelect.selectedIndex];
+                if (opt) maxOccupancy = parseInt(opt.dataset.max || 10);
+            }
         });
     </script>
 
