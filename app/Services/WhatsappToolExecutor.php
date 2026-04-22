@@ -33,6 +33,9 @@ class WhatsappToolExecutor
                 case 'notificar_administrador':
                     $output = $this->webhookService->toolNotificarAdministrador($arguments);
                     break;
+                case 'enviar_fotos_cabana':              // ← FALTABA ESTE
+                    $output = $this->webhookService->toolEnviarFotosCabana($arguments);
+                    break;
                 default:
                     $output = json_encode(['error' => "Herramienta '{$functionName}' desconocida."]);
                     break;
