@@ -74,6 +74,7 @@ if (!function_exists('build_guest_context_data')) {
                 ->get()->getResult();
 
             if (!empty($fotos)) {
+                $count = count($fotos); // ← faltaba esta línea
                 $contexto .= "  - 📸 Fotos disponibles: SÍ ({$count} foto(s)). Puedes llamar a enviar_fotos_cabana con unit_id: {$u->id}\n";
             } else {
                 $contexto .= "  - 📸 Fotos disponibles: NO. No llames a enviar_fotos_cabana para esta unidad.\n";
