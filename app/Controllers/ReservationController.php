@@ -52,20 +52,107 @@ class ReservationController extends BaseController
         ]);
     }
 
-
-
     public function index()
     {
         $resModel = new ReservationModel();
+        $today    = date('Y-m-d');
 
-        // Traemos las reservas con los nombres de los huéspedes y habitaciones
-        $reservations = $resModel->select('reservations.*, guests.full_name, accommodation_units.name as unit_name')
-            ->join('guests', 'guests.id = reservations.guest_id')
+        // ── Filtros desde GET ────────────────────────────────────────
+        $filterStatus = $this->request->getGet('status')  ?? 'active';
+        $filterSearch = trim($this->request->getGet('q')  ?? '');
+        $filterDate   = $this->request->getGet('date')    ?? '';
+        $filterUnit   = $this->request->getGet('unit')    ?? '';
+
+        // ── Contadores para los chips de resumen ─────────────────────
+        $base = fn() => $resModel
+            ->select('reservations.*, guests.full_name, accommodation_units.name as unit_name')
+            ->join('guests',              'guests.id = reservations.guest_id')
+            ->join('accommodation_units', 'accommodation_units.id = reservations.accommodation_unit_id');
+
+        $counts = [
+            'in_house'  => (clone $resModel)->where('reservations.status', 'checked_in')->countAllResults(),
+            'arriving'  => (clone $resModel)->where('check_in_date', $today)->whereIn('reservations.status', ['pending','confirmed'])->countAllResults(),
+            'departing' => (clone $resModel)->where('check_out_date', $today)->where('reservations.status', 'checked_in')->countAllResults(),
+            'pending'   => (clone $resModel)->where('reservations.status', 'pending')->countAllResults(),
+        ];
+
+        // ── Query principal con filtros ──────────────────────────────
+        $query = $resModel
+            ->select('reservations.*, guests.full_name, guests.document,
+                      accommodation_units.name as unit_name,
+                      reservation_sources.name as source_name,
+                      reservation_sources.color as source_color,
+                      DATEDIFF(reservations.check_out_date, reservations.check_in_date) as nights')
+            ->join('guests',              'guests.id = reservations.guest_id')
             ->join('accommodation_units', 'accommodation_units.id = reservations.accommodation_unit_id')
-            ->orderBy('check_in_date', 'ASC')
-            ->findAll();
+            ->join('reservation_sources', 'reservation_sources.id = reservations.source_id', 'left');
 
-        return view('reservations/index', ['reservations' => $reservations]);
+        // Filtro por estado
+        switch ($filterStatus) {
+            case 'active':
+                $query->whereIn('reservations.status', ['pending', 'confirmed', 'checked_in']);
+                break;
+            case 'checked_in':
+                $query->where('reservations.status', 'checked_in');
+                break;
+            case 'pending':
+                $query->where('reservations.status', 'pending');
+                break;
+            case 'confirmed':
+                $query->where('reservations.status', 'confirmed');
+                break;
+            case 'arriving_today':
+                $query->where('check_in_date', $today)
+                    ->whereIn('reservations.status', ['pending', 'confirmed']);
+                break;
+            case 'departing_today':
+                $query->where('check_out_date', $today)
+                    ->where('reservations.status', 'checked_in');
+                break;
+            case 'checked_out':
+                $query->where('reservations.status', 'checked_out');
+                break;
+            case 'cancelled':
+                $query->where('reservations.status', 'cancelled');
+                break;
+            // 'all' → sin filtro de estado
+        }
+
+        // Filtro de búsqueda (nombre o número de reserva)
+        if ($filterSearch !== '') {
+            if (is_numeric($filterSearch)) {
+                $query->where('reservations.id', (int)$filterSearch);
+            } else {
+                $query->like('guests.full_name', $filterSearch);
+            }
+        }
+
+        // Filtro por fecha de check-in
+        if ($filterDate !== '') {
+            $query->where('check_in_date', $filterDate);
+        }
+
+        // Filtro por unidad (viene del mapa del dashboard)
+        if ($filterUnit !== '') {
+            $query->where('reservations.accommodation_unit_id', (int)$filterUnit);
+        }
+
+        $reservations = $query->orderBy('check_in_date', 'ASC')->findAll();
+
+        // ── Unidades para el filtro de habitación ────────────────────
+        $unitModel = new AccommodationUnitModel();
+        $units = $unitModel->select('id, name')->orderBy('name', 'ASC')->findAll();
+
+        return view('reservations/index', [
+            'reservations'  => $reservations,
+            'counts'        => $counts,
+            'filterStatus'  => $filterStatus,
+            'filterSearch'  => $filterSearch,
+            'filterDate'    => $filterDate,
+            'filterUnit'    => $filterUnit,
+            'units'         => $units,
+            'today'         => $today,
+        ]);
     }
 
 
