@@ -71,7 +71,7 @@ class InventoryController extends BaseController
             'currentStep'    => $step,
             'types'          => $typeModel->findAll(),
             'amenities'      => $amenityModel->where('tenant_id', $tenantId)->findAll(),
-            'bedTypes'       => $bedTypeModel->where('tenant_id', $tenantId)->findAll(),
+            'bedTypes'       => $bedTypeModel->whereIn('tenant_id', [0, $tenantId])->orderBy('tenant_id', 'ASC')->orderBy('name', 'ASC')->findAll(),
             'existingPhotos' => $existingPhotos,
             'unitId'         => $unitId,
             'unitName'       => session('wizard_unit_name') ?? '',
@@ -313,7 +313,7 @@ class InventoryController extends BaseController
             'unit'      => $unit,
             'types'     => $typeModel->findAll(),
             'amenities' => $amenityModel->where('tenant_id', $tenantId)->findAll(),
-            'bedTypes'  => $bedTypeModel->where('tenant_id', $tenantId)->findAll(),
+            'bedTypes'  => $bedTypeModel->whereIn('tenant_id', [0, $tenantId])->orderBy('tenant_id', 'ASC')->orderBy('name', 'ASC')->findAll(),
             'media'     => $mediaModel
                 ->where('entity_type', 'unit')
                 ->where('entity_id', $id)
