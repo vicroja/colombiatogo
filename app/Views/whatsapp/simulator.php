@@ -599,7 +599,6 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         // ── Mensajes ──────────────────────────────────────────────────────────────────
         function addMessage(role, text, toolCalls = []) {
             removeTyping();
-            stopCountdown();
 
             const container = document.getElementById('simMessages');
             document.getElementById('simEmpty')?.remove();
@@ -819,9 +818,11 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                 if (!STATE.running) { STATE.busy = false; return; }
 
                 if (!data.success) {
-                    addSystemMsg('Error generando mensaje del cliente: ' + (data.message || ''), 'error');
+                    addSystemMsg('⚠️ Error generando mensaje del cliente: ' + (data.message || 'sin detalle'), 'error');
                     STATE.busy = false;
-                    stopSimulation();
+                    // No parar la simulación, solo saltar este turno
+                    // stopSimulation(); ← quitar esto
+                    setTimeout(() => triggerClientTurn(), 2000); // reintento
                     return;
                 }
 
@@ -846,6 +847,8 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         async function triggerHotelTurn(clientMessage) {
             if (!STATE.running || STATE.busy) return;
             STATE.busy = true;
+            stopCountdown(); // ← aquí sí tiene sentido
+
 
             showTyping('hotel');
             document.getElementById('btnNextBot').disabled = true;
@@ -892,6 +895,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                 document.getElementById('btnNextBot').disabled = false;
                 setSimStatus('Esperando... o continúa solo', 'state-waiting', 'hourglass-split', 'Esperando');
                 startCountdown(() => {
+                    STATE.busy = false;
                     setSimStatus('Simulación activa', 'state-running', 'circle-fill', 'Activo');
                     triggerClientTurn();
                 });
