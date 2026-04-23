@@ -840,8 +840,9 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         // Solo usa el último mensaje del hotel para generar la respuesta.
         // NO acumula historial — el historial real vive en la BD.
         // ═══════════════════════════════════════════════════════════════════
-        async function triggerClientTurn(isFirst = false) {
-            if (!STATE.running || STATE.busy) return;
+        async function triggerClientTurn(isFirst = false, forced = false) {
+            if (!STATE.running) return;
+            if (!forced && STATE.busy) return; // ← si viene del countdown, ignora busy
             STATE.busy = true;
 
             showTyping('client');
@@ -946,9 +947,15 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                 setSimStatus('Esperando tu respuesta o continúa...', 'state-waiting', 'hourglass-split', 'Esperando');
 
                 startCountdown(() => {
-                    STATE.busy = false; // reset por si acaso
+                    // Forzar reset de busy antes de continuar — el countdown garantiza
+                    // que no hay nada procesándose porque esperamos N segundos sin actividad
+                    STATE.busy = false;
+                    STATE.waitingForInput = false;
                     setSimStatus('Simulación activa', 'state-running', 'circle-fill', 'Activo');
-                    triggerClientTurn();
+
+                    if (!STATE.running) return;
+                    triggerClientTurn(false, true); // ← forced = true
+
                 });
 
             } catch(e) {
@@ -984,7 +991,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         function forceClientTurn() {
             stopCountdown();
             STATE.busy = false;
-            triggerClientTurn();
+            triggerClientTurn(false, true); // ← forced = true
         }
 
         // ═══════════════════════════════════════════════════════════════════
