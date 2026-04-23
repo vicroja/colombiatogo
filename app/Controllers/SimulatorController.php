@@ -147,26 +147,37 @@ class SimulatorController extends BaseController
         if ($role === 'client') {
             $lastHotelMsg = trim($input['last_hotel_msg'] ?? '');
 
+            $conversationLog = $input['conversation_log'] ?? [];
+
+            // Construir el historial como texto para el prompt
+            $historialTexto = '';
+            if (!empty($conversationLog)) {
+                $historialTexto = "\n\nHistorial de la conversación (para que no repitas ni ignores lo dicho):\n";
+                $historialTexto .= implode("\n", array_map('strval', $conversationLog));
+                $historialTexto .= "\n";
+            }
+
             if ($isFirst) {
-                // Primer mensaje: el cliente abre la conversación
                 $instruccion =
                     "Eres un {$clientRole} que acaba de escribirle por WhatsApp a {$hotelName}. " .
-                    "Escribe tu primer mensaje inicial: corto, natural, como texto de WhatsApp real. " .
+                    "Escribe tu primer mensaje inicial: corto, natural, como texto de WhatsApp real.  es el primer mensaje que alguien enviaría para inciar la conversacion" .
                     "Máximo 2 oraciones. Solo el texto, sin comillas, sin explicaciones, sin saludos formales.";
             } else {
-                // Turnos siguientes: responder al último mensaje del hotel
                 if (empty($lastHotelMsg)) {
                     return $this->response->setJSON([
                         'success' => false,
-                        'message' => 'No se recibió el último mensaje del hotel para generar respuesta del cliente.'
+                        'message' => 'No se recibió el último mensaje del hotel.'
                     ]);
                 }
 
                 $instruccion =
-                    "Eres un {$clientRole} chateando por WhatsApp con {$hotelName}. " .
-                    "El hotel acaba de decirte:\n\"{$lastHotelMsg}\"\n\n" .
-                    "Escribe tu respuesta como cliente: corta, natural, con errores ocasionales de tipeo si aplica. " .
-                    "Tu objetivo final es reservar, pero llega ahí de forma natural según tu rol. " .
+                    "Eres un {$clientRole} chateando por WhatsApp con {$hotelName}." .
+                    $historialTexto .
+                    "\nEl hotel acaba de decirte:\n\"{$lastHotelMsg}\"\n\n" .
+                    "Escribe tu SIGUIENTE respuesta como cliente: corta, natural, coherente con el historial. " .
+                    "No repitas preguntas que ya te respondieron. " .
+                    "Con errores ocasionales de tipeo si aplica. " .
+                    "Tu objetivo final es reservar, llega ahí de forma natural según tu rol. " .
                     "Máximo 2 oraciones. Solo el texto, sin comillas, sin explicaciones.";
             }
 

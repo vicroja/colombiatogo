@@ -540,6 +540,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             running        : false,
             busy           : false,
             lastHotelMsg   : '',      // Solo el último mensaje del hotel para el bot-cliente
+            conversationLog: [],   // ← nuevo: historial liviano para el bot-cliente
             turnCount      : 0,
             maxTurns       : 24,
             countdownTimer : null,
@@ -763,7 +764,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         // ═══════════════════════════════════════════════════════════════════
         function startSimulation() {
             if (STATE.running) return;
-
+            STATE.conversationLog = []; // ← resetear
             const phone = getPhone();
             if (!phone || phone.length < 10) {
                 document.getElementById('phoneWrap').classList.add('error');
@@ -803,6 +804,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             stopSimulation();
             STATE.lastHotelMsg = '';
             STATE.turnCount    = 0;
+            STATE.conversationLog = []; // ← resetear
 
             const container = document.getElementById('simMessages');
             container.innerHTML = '';
@@ -849,6 +851,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                     role          : 'client',
                     is_first      : isFirst,
                     last_hotel_msg: STATE.lastHotelMsg,
+                    conversation_log: STATE.conversationLog.slice(-10),
                     client_role   : getClientRole(),
                     phone         : getPhone(),
                 });
@@ -867,6 +870,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                 const clientText = data.text || '';
                 addMessage('client', clientText);
                 STATE.turnCount++;
+                STATE.conversationLog.push(`Cliente: ${clientText}`); // ← acumular
                 STATE.busy = false;
 
                 // Pequeña pausa natural antes de que el hotel responda
@@ -917,6 +921,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
 
                 // Guardar SOLO el último mensaje del hotel para el siguiente turno del cliente
                 STATE.lastHotelMsg = hotelText;
+                STATE.conversationLog.push(`Hotel: ${hotelText}`); // ← acumular
                 STATE.turnCount++;
                 STATE.busy = false;
 
@@ -968,6 +973,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             input.value = '';
 
             addMessage('client', text);
+            STATE.conversationLog.push(`Cliente: ${text}`); // ← acumular
             STATE.turnCount++;
             setSimStatus('Simulación activa', 'state-running', 'circle-fill', 'Activo');
 
