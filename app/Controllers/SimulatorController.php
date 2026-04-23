@@ -43,6 +43,8 @@ class SimulatorController extends BaseController
         $this->ratePlanModel = new RatePlanModel();
         $this->tenant        = $this->tenantModel->find($this->tenantId) ?? [];
         $this->db            = \Config\Database::connect();
+        $this->whatsappModel = new \App\Models\WhatsappModel(); // ← FALTA ESTA LÍNEA
+
     }
 
     // =========================================================================
