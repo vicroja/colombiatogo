@@ -704,10 +704,16 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             STATE.countdownTimer = setInterval(() => {
                 secsLeft--;
                 secs.textContent = secsLeft;
+
                 if (secsLeft <= 0) {
+                    // 1. Guardamos el estado actual ANTES de limpiar
+                    const shouldComplete = (STATE.running && STATE.waitingForInput);
+
+                    // 2. Limpiamos la UI y los intervalos
                     stopCountdown();
-                    if (STATE.running && STATE.waitingForInput) {
-                        STATE.waitingForInput = false;
+
+                    // 3. Ejecutamos el trigger si cumplía las condiciones
+                    if (shouldComplete) {
                         onComplete();
                     }
                 }
