@@ -121,43 +121,122 @@ class SimulatorController extends BaseController
     // =========================================================================
     // SIMULATE TURN — Un turno de la simulación (AJAX)
     // =========================================================================
+
+
     public function simulateTurn(): \CodeIgniter\HTTP\ResponseInterface
     {
-        $input = $this->request->getJSON(true);
+        $input      = $this->request->getJSON(true);
+        $clientPhone = trim($input['phone'] ?? '');
+        $isFirst     = $input['is_first'] ?? false;
+        $history     = $input['history']  ?? '';
+        $clientRole  = $input['client_role'] ?? 'cliente curioso que quiere reservar';
 
-        $role       = $input['role']     ?? 'hotel';
-        $history    = $input['history']  ?? [];
-        $clientRole = $input['client_role'] ?? 'cliente curioso que quiere reservar';
-        $phone      = trim($input['phone'] ?? '');
-
-        // Cargar prompt del hotel
-        $promptRecord = $this->promptModel
-            ->where('profile_role', 'assistant')
-            ->first();
-
-        if (!$promptRecord) {
+        if (empty($clientPhone)) {
             return $this->response->setJSON([
                 'success' => false,
-                'message' => 'No hay prompt configurado para este hotel.'
+                'message' => 'Debes ingresar un número de teléfono para simular.'
             ]);
         }
 
-        $hotelInstruction = $promptRecord['system_instruction'];
+        // 1. Si no es el primer mensaje, Gemini genera el mensaje del cliente
+        $mensajeTexto = trim($input['message'] ?? '');
 
-        // Si hay teléfono, cargar el contexto real de conversaciones previas
-        if (!empty($phone) && empty($history)) {
-            $priorHistory = $this->loadPhoneContext($phone);
-            if (!empty($priorHistory)) {
-                $history = $priorHistory;
+        if (!$isFirst && empty($mensajeTexto)) {
+            $instruccion = "Actúa como un {$clientRole} chateando por WhatsApp con un hotel. " .
+                "Historial:\n{$history}\n\n" .
+                "Escribe tu próxima respuesta corta y natural, sin formato, solo el texto del chat.";
+
+            $result = $this->geminiModel->generateText($instruccion, 150, 0.9);
+
+            if (!($result['success'] ?? false)) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Error generando mensaje del cliente simulado.'
+                ]);
             }
+            $mensajeTexto = trim($result['text'], '"\'');
         }
 
-        if ($role === 'hotel') {
-            return $this->simulateHotelTurn($history, $hotelInstruction);
-        } else {
-            return $this->simulateClientTurn($history, $clientRole, $hotelInstruction);
+        // 2. Construir payload falso de Meta con prefijo TEST_SIM_
+        $wamidSimulado = 'TEST_SIM_' . time() . '_' . rand(1000, 9999);
+        $timestampInicio = time();
+
+        $fakePayload = [
+            'object' => 'whatsapp_business_account',
+            'entry'  => [[
+                'id'      => 'SIMULATION_ENTRY',
+                'changes' => [[
+                    'field' => 'messages',
+                    'value' => [
+                        'messaging_product' => 'whatsapp',
+                        'metadata'          => [
+                            'display_phone_number' => 'SIMULATOR',
+                            'phone_number_id'      => $this->getPhoneIdForTenant($this->tenantId)
+                        ],
+                        'contacts' => [[
+                            'profile' => ['name' => 'Cliente Simulado'],
+                            'wa_id'   => $clientPhone
+                        ]],
+                        'messages' => [[
+                            'from'      => $clientPhone,
+                            'id'        => $wamidSimulado,
+                            'timestamp' => time(),
+                            'type'      => 'text',
+                            'text'      => ['body' => $mensajeTexto]
+                        ]]
+                    ]
+                ]]
+            ]]
+        ];
+
+        $jsonPayload = json_encode($fakePayload);
+
+        // 3. Inyectar directo al WebhookService real (pasa por TODO el flujo)
+        $webhookService = new \App\Services\WhatsappWebhookService();
+        $webhookService->processNotification($fakePayload, $jsonPayload, false, $this->tenantId);
+
+        // 4. Polling: esperar hasta 10s la respuesta del bot en BD
+        $botReply = null;
+        for ($i = 0; $i < 10; $i++) {
+            $botReply = $this->whatsappModel->getLatestSimReply(
+                $clientPhone,
+                $this->tenantId,
+                $timestampInicio
+            );
+            if ($botReply) break;
+            sleep(1);
         }
+
+        $botText = $botReply
+            ? $botReply->message_body
+            : '[Sin respuesta tras 10s. Revisa los logs.]';
+
+        return $this->response->setJSON([
+            'success'            => true,
+            'role'               => 'hotel',
+            'simulated_user_msg' => $mensajeTexto,
+            'text'               => $botText,
+        ]);
     }
+
+// Endpoint para limpiar datos de simulación
+    public function clearSimulation(): \CodeIgniter\HTTP\ResponseInterface
+    {
+        $borrados = $this->whatsappModel->clearSimulationData($this->tenantId);
+        return $this->response->setJSON([
+            'success' => true,
+            'deleted' => $borrados,
+            'message' => "Se eliminaron {$borrados} mensajes de simulación."
+        ]);
+    }
+
+    private function getPhoneIdForTenant(int $tenantId): string
+    {
+        $tenant = $this->tenantModel->find($tenantId);
+        $settings = json_decode($tenant['settings_json'] ?? '{}', true);
+        return $settings['whatsapp_phone_number_id'] ?? '';
+    }
+
 
     // =========================================================================
     // Simular turno del BOT HOTEL (Alfonso)

@@ -45,6 +45,13 @@ class WhatsappModel extends Model
      */
     public function saveMessage($data)
     {
+        // Si el WAMID tiene prefijo de simulación, marcar automáticamente
+        if (isset($data['whatsapp_message_id']) &&
+            str_starts_with($data['whatsapp_message_id'], 'TEST_SIM_') ||
+            str_starts_with($data['whatsapp_message_id'] ?? '', 'wamid.SIM_')) {
+            $data['is_simulation'] = 1;
+        }
+
         // Asegurar que los campos JSON sean strings
         foreach (['raw_data', 'interactive_data', 'template_data'] as $json_field) {
             if (isset($data[$json_field]) && !is_string($data[$json_field]) && $data[$json_field] !== null) {
@@ -83,6 +90,25 @@ class WhatsappModel extends Model
         if (isset($payload_array['to'])) {
             $payload_array['to'] = $this->cleanAndValidatePhoneNumber($payload_array['to']);
         }
+
+        // ── FIREWALL SIMULADOR ──────────────────────────────────────────────
+        // Si el destinatario tiene actividad simulada en los últimos 10 min,
+        // bloqueamos el envío real y devolvemos un WAMID falso
+        if (isset($payload_array['to'])) {
+            $isUnderSim = $this->db->table('whatsapp_messages')
+                    ->like('whatsapp_message_id', 'TEST_SIM_', 'after')
+                    ->where('sender_phone', $payload_array['to'])
+                    ->where('tenant_id', $tenant_id_override ?? session()->get('tenant_id'))
+                    ->where('created_at >=', date('Y-m-d H:i:s', strtotime('-10 minutes')))
+                    ->countAllResults() > 0;
+
+            if ($isUnderSim) {
+                $fakeWamid = 'wamid.SIM_OUT_' . time() . '_' . rand(1000, 9999);
+                log_message('info', "[SIM FIREWALL] Bloqueado envío real a {$payload_array['to']}. WAMID falso: {$fakeWamid}");
+                return ['messages' => [['id' => $fakeWamid]]];
+            }
+        }
+        // ── FIN FIREWALL ────────────────────────────────────────────────────
 
         // 3. Obtener credenciales del Tenant desde la tabla `tenants`
         // En CI4 puedes llamar a la BD sin necesidad de cargar modelos completos si es algo rápido
@@ -252,5 +278,31 @@ class WhatsappModel extends Model
         ];
 
         return $this->callWhatsappApi($payload, $is_saas, $tenant_id_override);
+    }
+
+    public function clearSimulationData(int $tenantId): int
+    {
+        // Borrar todos los mensajes marcados como simulación de este tenant
+        $this->db->table('whatsapp_messages')
+            ->where('tenant_id', $tenantId)
+            ->where('is_simulation', 1)
+            ->delete();
+
+        $borrados = $this->db->affectedRows();
+        log_message('info', "[SIM] Limpiados {$borrados} mensajes simulados del tenant {$tenantId}");
+        return $borrados;
+    }
+
+    public function getLatestSimReply(string $phone, int $tenantId, int $sinceTimestamp): ?object
+    {
+        return $this->db->table('whatsapp_messages')
+            ->where('recipient_phone', $phone)
+            ->where('tenant_id', $tenantId)
+            ->where('direction', 'outgoing')
+            ->where('created_at >=', date('Y-m-d H:i:s', $sinceTimestamp))
+            ->orderBy('id', 'DESC')
+            ->limit(1)
+            ->get()
+            ->getRow();
     }
 }
