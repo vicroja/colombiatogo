@@ -127,11 +127,12 @@ class SimulatorController extends BaseController
 
     public function simulateTurn(): \CodeIgniter\HTTP\ResponseInterface
     {
-        $input      = $this->request->getJSON(true);
+        $input       = $this->request->getJSON(true);
         $clientPhone = trim($input['phone'] ?? '');
-        $isFirst     = $input['is_first'] ?? false;
-        $history     = $input['history']  ?? '';
+        $role        = $input['role']        ?? 'hotel';
+        $isFirst     = $input['is_first']    ?? false;
         $clientRole  = $input['client_role'] ?? 'cliente curioso que quiere reservar';
+        $hotelName   = $this->tenant['name'] ?? 'el hotel';
 
         if (empty($clientPhone)) {
             return $this->response->setJSON([
@@ -140,27 +141,67 @@ class SimulatorController extends BaseController
             ]);
         }
 
-        // 1. Si no es el primer mensaje, Gemini genera el mensaje del cliente
-        $mensajeTexto = trim($input['message'] ?? '');
+        // =========================================================================
+        // ROL: CLIENT — Gemini actúa como el cliente, genera su próximo mensaje
+        // =========================================================================
+        if ($role === 'client') {
+            $lastHotelMsg = trim($input['last_hotel_msg'] ?? '');
 
-        if (!$isFirst && empty($mensajeTexto)) {
-            $instruccion = "Actúa como un {$clientRole} chateando por WhatsApp con un hotel. " .
-                "Historial:\n{$history}\n\n" .
-                "Escribe tu próxima respuesta corta y natural, sin formato, solo el texto del chat.";
+            if ($isFirst) {
+                // Primer mensaje: el cliente abre la conversación
+                $instruccion =
+                    "Eres un {$clientRole} que acaba de escribirle por WhatsApp a {$hotelName}. " .
+                    "Escribe tu primer mensaje inicial: corto, natural, como texto de WhatsApp real. " .
+                    "Máximo 2 oraciones. Solo el texto, sin comillas, sin explicaciones, sin saludos formales.";
+            } else {
+                // Turnos siguientes: responder al último mensaje del hotel
+                if (empty($lastHotelMsg)) {
+                    return $this->response->setJSON([
+                        'success' => false,
+                        'message' => 'No se recibió el último mensaje del hotel para generar respuesta del cliente.'
+                    ]);
+                }
+
+                $instruccion =
+                    "Eres un {$clientRole} chateando por WhatsApp con {$hotelName}. " .
+                    "El hotel acaba de decirte:\n\"{$lastHotelMsg}\"\n\n" .
+                    "Escribe tu respuesta como cliente: corta, natural, con errores ocasionales de tipeo si aplica. " .
+                    "Tu objetivo final es reservar, pero llega ahí de forma natural según tu rol. " .
+                    "Máximo 2 oraciones. Solo el texto, sin comillas, sin explicaciones.";
+            }
 
             $result = $this->geminiModel->generateText($instruccion, 150, 0.9);
 
             if (!($result['success'] ?? false)) {
                 return $this->response->setJSON([
                     'success' => false,
-                    'message' => 'Error generando mensaje del cliente simulado.'
+                    'message' => 'Error generando mensaje del cliente: ' . ($result['message'] ?? '')
                 ]);
             }
-            $mensajeTexto = trim($result['text'], '"\'');
+
+            return $this->response->setJSON([
+                'success' => true,
+                'role'    => 'client',
+                'text'    => trim($result['text'], '"\''),
+            ]);
         }
 
-        // 2. Construir payload falso de Meta con prefijo TEST_SIM_
-        $wamidSimulado = 'TEST_SIM_' . time() . '_' . rand(1000, 9999);
+        // =========================================================================
+        // ROL: HOTEL — Inyecta el mensaje al sistema real y espera la respuesta
+        // =========================================================================
+
+        // El mensaje del cliente viene directo desde la vista
+        $mensajeTexto = trim($input['message'] ?? '');
+
+        if (empty($mensajeTexto)) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'No se recibió el mensaje del cliente para procesar.'
+            ]);
+        }
+
+        // 1. Construir payload falso de Meta con prefijo TEST_SIM_
+        $wamidSimulado   = 'TEST_SIM_' . time() . '_' . rand(1000, 9999);
         $timestampInicio = time();
 
         $fakePayload = [
@@ -193,11 +234,14 @@ class SimulatorController extends BaseController
 
         $jsonPayload = json_encode($fakePayload);
 
-        // 3. Inyectar directo al WebhookService real (pasa por TODO el flujo)
+        // 2. Inyectar directo al WebhookService real — pasa por TODO el flujo:
+        //    Router → getOrCreateGuest → build_guest_context → getChatHistory → Gemini → tools → sendDirectReply
         $webhookService = new \App\Services\WhatsappWebhookService();
         $webhookService->processNotification($fakePayload, $jsonPayload, false, $this->tenantId);
 
-        // 4. Polling: esperar hasta 10s la respuesta del bot en BD
+        // 3. Polling: esperar hasta 10s la respuesta del bot en BD
+        //    El firewall en WhatsappModel::callWhatsappApi() detecta el WAMID TEST_SIM_
+        //    y bloquea el envío real, guardando la respuesta con WAMID wamid.SIM_OUT_*
         $botReply = null;
         for ($i = 0; $i < 10; $i++) {
             $botReply = $this->whatsappModel->getLatestSimReply(
@@ -209,15 +253,18 @@ class SimulatorController extends BaseController
             sleep(1);
         }
 
-        $botText = $botReply
-            ? $botReply->message_body
-            : '[Sin respuesta tras 10s. Revisa los logs.]';
+        if (!$botReply) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => '[Sin respuesta tras 10s. Revisa los logs del servidor.]'
+            ]);
+        }
 
         return $this->response->setJSON([
             'success'            => true,
             'role'               => 'hotel',
             'simulated_user_msg' => $mensajeTexto,
-            'text'               => $botText,
+            'text'               => $botReply->message_body,
         ]);
     }
 

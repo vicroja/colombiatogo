@@ -8,7 +8,6 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
 ?>
 
     <style>
-        /* ── Layout principal ─────────────────────────────────────────────────── */
         .sim-wrap {
             display               : grid;
             grid-template-columns : 460px 1fr;
@@ -17,7 +16,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             align-items           : start;
         }
 
-        /* ── Panel izquierdo: editor del prompt ───────────────────────────────── */
+        /* ── Panel izquierdo ──────────────────────────────────────────────────── */
         .prompt-panel {
             background    : #fff;
             border        : 1px solid #e2e8f0;
@@ -30,12 +29,10 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         .prompt-header {
             padding       : 1rem 1.25rem;
             border-bottom : 1px solid #f1f5f9;
-            background    : #fff;
         }
         .prompt-header h5 { font-size:.9rem; font-weight:700; color:#0f172a; margin:0 }
         .prompt-header p  { font-size:.75rem; color:#64748b; margin:.15rem 0 0 }
         .prompt-body      { flex:1; padding:1rem 1.25rem; overflow-y:auto }
-
         .prompt-textarea {
             width         : 100%;
             min-height    : 320px;
@@ -53,7 +50,6 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         }
         .prompt-textarea:focus { border-color:#6366f1; background:#fff }
         .char-count { font-size:.7rem; color:#94a3b8; text-align:right; margin-top:.35rem }
-
         .var-tips {
             background    : #f0f4ff;
             border        : 1px solid #c7d2fe;
@@ -75,7 +71,6 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             transition    : background .15s;
         }
         .var-chip:hover { background:#c7d2fe }
-
         .units-ref {
             background    : #f8fafc;
             border        : 1px solid #e2e8f0;
@@ -113,7 +108,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         }
         .btn-save-prompt:hover { background:#4f46e5 }
 
-        /* ── Panel derecho: simulador ─────────────────────────────────────────── */
+        /* ── Panel derecho ────────────────────────────────────────────────────── */
         .sim-panel {
             background    : #fff;
             border        : 1px solid #e2e8f0;
@@ -133,17 +128,13 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         }
         .sim-header-info { display:flex; align-items:center; gap:.75rem }
         .sim-avatar {
-            width          : 38px; height:38px;
-            border-radius  : 50%;
-            background     : #25D366;
-            display        : flex; align-items:center; justify-content:center;
-            font-size      : 1.1rem; color:#fff; flex-shrink:0;
+            width:38px; height:38px; border-radius:50%;
+            background:#25D366; display:flex; align-items:center;
+            justify-content:center; font-size:1.1rem; color:#fff; flex-shrink:0;
         }
         .sim-name   { font-size:.875rem; font-weight:600; color:#fff }
         .sim-status { font-size:.72rem; color:rgba(255,255,255,.7) }
         .sim-header-actions { display:flex; align-items:center; gap:.5rem }
-
-        /* Badge modo real */
         .real-mode-badge {
             display       : inline-flex;
             align-items   : center;
@@ -157,6 +148,19 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             border-radius : 99px;
             letter-spacing: .04em;
         }
+        .sim-state-badge {
+            display       : inline-flex;
+            align-items   : center;
+            gap           : .3rem;
+            padding       : .25rem .65rem;
+            border-radius : 99px;
+            font-size     : .7rem;
+            font-weight   : 600;
+        }
+        .state-idle    { background:#f1f5f9; color:#64748b }
+        .state-running { background:#dcfce7; color:#166534 }
+        .state-stopped { background:#fee2e2; color:#991b1b }
+        .state-waiting { background:#fef3c7; color:#92400e }
 
         /* Config */
         .sim-config {
@@ -179,12 +183,10 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             color         : #0f172a;
             outline       : none;
             flex          : 1;
-            min-width     : 160px;
+            min-width     : 150px;
             cursor        : pointer;
         }
         .sim-select:focus { border-color:#075E54 }
-
-        /* Phone input — obligatorio, se resalta */
         .phone-wrap {
             display       : flex;
             align-items   : center;
@@ -222,10 +224,10 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             to   { opacity:1; transform:translateY(0) }
         }
         .msg-bubble {
-            max-width     : 72%;
-            padding       : .55rem .85rem .35rem;
-            border-radius : 8px;
-            box-shadow    : 0 1px 2px rgba(0,0,0,.15);
+            max-width  : 72%;
+            padding    : .55rem .85rem .35rem;
+            border-radius: 8px;
+            box-shadow : 0 1px 2px rgba(0,0,0,.15);
         }
         .msg-row.hotel  .msg-bubble { background:#dcf8c6; border-radius:8px 0 8px 8px }
         .msg-row.client .msg-bubble { background:#fff;    border-radius:0 8px 8px 8px }
@@ -233,10 +235,9 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         .msg-meta  { display:flex; justify-content:flex-end; align-items:center; gap:.25rem; margin-top:.15rem }
         .msg-time  { font-size:.65rem; color:#94a3b8 }
         .msg-check { font-size:.7rem; color:#53bdeb }
-        .msg-sender { font-size:.65rem; font-weight:700; color:#2563eb; margin-bottom:.15rem }
-        .msg-row.hotel .msg-sender { color:#075E54 }
-
-        /* Tool badge */
+        .msg-sender { font-size:.65rem; font-weight:700; margin-bottom:.15rem }
+        .msg-row.hotel  .msg-sender { color:#075E54 }
+        .msg-row.client .msg-sender { color:#2563eb }
         .tool-badge {
             display       : inline-flex;
             align-items   : center;
@@ -252,7 +253,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         }
 
         /* Typing */
-        .typing-indicator { display:flex; align-items:center; gap:.35rem; padding:.5rem .75rem }
+        .typing-indicator { display:flex; align-items:center; padding:.5rem .75rem }
         .typing-dots      { display:flex; gap:3px; align-items:center }
         .typing-dot {
             width:7px; height:7px; border-radius:50%;
@@ -265,15 +266,15 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             30%         { transform:translateY(-6px) }
         }
 
-        /* Controles inferiores */
+        /* Controles */
         .sim-controls {
-            background    : #f0f0f0;
-            border-top    : 1px solid #e2e8f0;
-            padding       : .75rem 1rem;
-            display       : flex;
-            gap           : .6rem;
-            align-items   : center;
-            flex-shrink   : 0;
+            background : #f0f0f0;
+            border-top : 1px solid #e2e8f0;
+            padding    : .75rem 1rem;
+            display    : flex;
+            gap        : .6rem;
+            align-items: center;
+            flex-shrink: 0;
         }
         .manual-input {
             flex          : 1;
@@ -285,7 +286,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             outline       : none;
             transition    : border-color .2s;
         }
-        .manual-input:focus   { border-color:#075E54 }
+        .manual-input:focus       { border-color:#075E54 }
         .manual-input::placeholder { color:#94a3b8 }
         .btn-sim {
             border:none; border-radius:50%;
@@ -293,13 +294,11 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             display:flex; align-items:center; justify-content:center;
             cursor:pointer; flex-shrink:0; transition:all .2s; font-size:.9rem;
         }
-        .btn-send-manual { background:#075E54; color:#fff }
-        .btn-send-manual:hover { background:#054d45 }
-        .btn-next-bot { background:#25D366; color:#fff }
-        .btn-next-bot:hover    { background:#1aab53 }
-        .btn-next-bot:disabled { background:#a7f3d0; cursor:not-allowed }
-
-        /* Botones de control */
+        .btn-send-manual           { background:#075E54; color:#fff }
+        .btn-send-manual:hover     { background:#054d45 }
+        .btn-next-bot              { background:#25D366; color:#fff }
+        .btn-next-bot:hover        { background:#1aab53 }
+        .btn-next-bot:disabled     { background:#a7f3d0; cursor:not-allowed }
         .btn-sim-control {
             display       : inline-flex;
             align-items   : center;
@@ -313,7 +312,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             transition    : all .2s;
             white-space   : nowrap;
         }
-        .btn-start      { background:#25D366; color:#fff }
+        .btn-start       { background:#25D366; color:#fff }
         .btn-start:hover { background:#1aab53 }
         .btn-stop        { background:#ef4444; color:#fff }
         .btn-stop:hover  { background:#dc2626 }
@@ -322,28 +321,24 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         .btn-purge       { background:#fff1f2; color:#be123c; border:1px solid #fecdd3 }
         .btn-purge:hover { background:#ffe4e6 }
 
-        /* Estado */
-        .sim-state-badge {
-            display       : inline-flex; align-items:center; gap:.3rem;
-            padding       : .25rem .65rem; border-radius:99px;
-            font-size     : .7rem; font-weight:600;
-        }
-        .state-idle    { background:#f1f5f9; color:#64748b }
-        .state-running { background:#dcfce7; color:#166534 }
-        .state-stopped { background:#fee2e2; color:#991b1b }
-        .state-waiting { background:#fef3c7; color:#92400e }
-
         /* Empty */
         .sim-empty {
             flex:1; display:flex; flex-direction:column;
             align-items:center; justify-content:center;
-            gap:.75rem; color:#94a3b8; font-size:.85rem;
-            padding:3rem; text-align:center;
+            gap:.75rem; padding:3rem; text-align:center;
         }
 
         /* Countdown */
-        #autoCountdown { display:none; position:absolute; bottom:0; left:0; height:3px; background:#25D366; border-radius:0 0 22px 22px; transition:width linear; width:100% }
-        #autoCountdownLabel { display:none; position:absolute; top:-22px; right:8px; font-size:.65rem; color:#94a3b8; white-space:nowrap }
+        #autoCountdown {
+            display:none; position:absolute; bottom:0; left:0;
+            height:3px; background:#25D366;
+            border-radius:0 0 22px 22px;
+            transition:width linear; width:100%;
+        }
+        #autoCountdownLabel {
+            display:none; position:absolute; top:-22px; right:8px;
+            font-size:.65rem; color:#94a3b8; white-space:nowrap;
+        }
 
         @media (max-width: 900px) {
             .sim-wrap { grid-template-columns:1fr }
@@ -351,7 +346,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         }
     </style>
 
-    <!-- ── Header ────────────────────────────────────────────────────────────── -->
+    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h4 class="mb-0 fw-bold">
@@ -359,16 +354,16 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                 Asistente IA &mdash; Prompt y Simulador
             </h4>
             <p class="text-muted small mb-0">
-                Edita el prompt del asistente y prueba conversaciones simuladas con el sistema real
+                Edita el prompt y prueba conversaciones con el flujo real del sistema
             </p>
         </div>
     </div>
 
     <div class="sim-wrap">
 
-        <!-- ════════════════════════════════
+        <!-- ══════════════════════════════════════
              PANEL IZQUIERDO — Editor de prompt
-        ════════════════════════════════ -->
+        ══════════════════════════════════════ -->
         <div class="prompt-panel">
             <div class="prompt-header">
                 <h5><i class="bi bi-pencil-square me-1 text-primary"></i> Prompt del asistente</h5>
@@ -388,13 +383,16 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                     <div class="char-count" id="charCount"><?= strlen($existingPrompt) ?> caracteres</div>
 
                     <div class="var-tips">
-                        <div class="var-tips-title"><i class="bi bi-lightbulb me-1"></i> Estructura recomendada</div>
+                        <div class="var-tips-title">
+                            <i class="bi bi-lightbulb me-1"></i> Estructura recomendada
+                        </div>
                         <div style="font-size:.72rem;color:#4338ca;line-height:1.6">
-                            Incluye: nombre del asistente, tono, <strong>instrucción crítica de formato JSON</strong>,
+                            Incluye: nombre del asistente, tono,
+                            <strong>instrucción crítica de formato JSON</strong>,
                             y guía de cuándo usar cada herramienta.
                         </div>
                         <div style="margin-top:.5rem">
-                            <span class="var-chip" onclick="insertText('INSTRUCCIÓN CRÍTICA: Siempre responde en JSON puro. Usa {&quot;final_response&quot;:&quot;...&quot;} o {&quot;tool_calls&quot;:[...]}')">JSON format</span>
+                            <span class="var-chip" onclick="insertText('INSTRUCCIÓN CRÍTICA: Siempre responde SOLO en JSON. Usa {\"final_response\":\"...\"} o {\"tool_calls\":[...]}')">JSON format</span>
                             <span class="var-chip" onclick="insertText('consultar_disponibilidad')">tool: disponibilidad</span>
                             <span class="var-chip" onclick="insertText('crear_reserva')">tool: reserva</span>
                             <span class="var-chip" onclick="insertText('notificar_administrador')">tool: admin</span>
@@ -427,18 +425,18 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             <span style="font-size:.72rem;color:#64748b">
                 Modelo: <strong style="color:#0f172a"><?= esc($modelVersion) ?></strong>
             </span>
-                <button type="submit" form="promptForm" class="btn-save-prompt" id="btnSavePrompt">
+                <button type="submit" form="promptForm" class="btn-save-prompt">
                     <i class="bi bi-floppy me-1"></i> Guardar prompt
                 </button>
             </div>
         </div>
 
-        <!-- ════════════════════════════════
+        <!-- ══════════════════════════════════════
              PANEL DERECHO — Simulador
-        ════════════════════════════════ -->
+        ══════════════════════════════════════ -->
         <div class="sim-panel">
 
-            <!-- Header WhatsApp -->
+            <!-- Header estilo WhatsApp -->
             <div class="sim-header">
                 <div class="sim-header-info">
                     <div class="sim-avatar"><i class="bi bi-robot"></i></div>
@@ -460,24 +458,24 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             <!-- Configuración -->
             <div class="sim-config">
                 <!-- Teléfono obligatorio -->
-                <div class="phone-wrap" id="phoneWrap" title="Teléfono requerido para identificar al huésped">
+                <div class="phone-wrap" id="phoneWrap" title="Requerido para identificar al huésped en el sistema">
                     <i class="bi bi-whatsapp" style="color:#25D366;font-size:.9rem;flex-shrink:0"></i>
                     <input type="text" id="simPhone" placeholder="573001234567" maxlength="15">
                     <i class="bi bi-asterisk" style="color:#ef4444;font-size:.55rem" title="Requerido"></i>
                 </div>
 
                 <!-- Rol del cliente -->
-                <select id="clientRole" class="sim-select" style="min-width:180px">
+                <select id="clientRole" class="sim-select">
                     <option value="cliente curioso que pregunta mucho sobre disponibilidad y precios pero al final reserva">Curioso que reserva</option>
                     <option value="cliente indeciso que necesita convencerse con detalles del lugar antes de reservar">Indeciso</option>
-                    <option value="cliente problemático que se queja del precio pero eventualmente acepta una oferta">Regatero</option>
+                    <option value="cliente que se queja del precio pero eventualmente acepta una oferta razonable">Regatero</option>
                     <option value="cliente impaciente que quiere reservar rápido para una fecha específica">Urgente</option>
                     <option value="cliente desconfiado que hace muchas preguntas antes de decidirse">Desconfiado</option>
-                    <option value="turista extranjero que escribe en inglés y español mezclado buscando información del lugar">Turista (spanglish)</option>
+                    <option value="turista extranjero que escribe en inglés y español mezclado buscando información">Turista (spanglish)</option>
                     <option value="CUSTOM">✏️ Personalizado...</option>
                 </select>
                 <div id="customRoleWrap" style="display:none;flex:1">
-                    <input type="text" id="customRole" class="sim-select" placeholder="Describe el rol...">
+                    <input type="text" id="customRole" class="sim-select" placeholder="Describe el rol del cliente...">
                 </div>
 
                 <!-- Controles -->
@@ -491,23 +489,22 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                     <i class="bi bi-x-lg"></i>
                 </button>
                 <button class="btn-sim-control btn-purge" onclick="purgeSimData()" title="Borrar mensajes de simulación de la BD">
-                    <i class="bi bi-database-x"></i>
+                    <i class="bi bi-database-x"></i> BD
                 </button>
             </div>
 
             <!-- Área de mensajes -->
             <div class="sim-messages" id="simMessages">
                 <div class="sim-empty" id="simEmpty">
-                    <i class="bi bi-chat-dots" style="font-size:2.5rem;opacity:.4"></i>
+                    <i class="bi bi-chat-dots" style="font-size:2.5rem;opacity:.4;color:#94a3b8"></i>
                     <p class="mb-0 fw-semibold" style="color:#64748b">Ingresa un teléfono y presiona Iniciar</p>
                     <p style="font-size:.78rem;color:#94a3b8">
-                        Esta simulación pasa por el flujo completo real:<br>
-                        Router → Contexto → Gemini → Tools → BD
+                        Flujo real: Router → Contexto → Gemini → Tools → BD
                     </p>
-                    <div style="font-size:.7rem;color:#94a3b8;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:.5rem .85rem;margin-top:.5rem">
-                        🛡️ Los mensajes se guardan en BD marcados como simulación<br>
-                        🚫 No se envían mensajes reales por WhatsApp<br>
-                        🗑️ Usa el botón <i class="bi bi-database-x"></i> para limpiar la BD al terminar
+                    <div style="font-size:.7rem;color:#94a3b8;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:.5rem .85rem;margin-top:.25rem;line-height:1.7">
+                        🛡️ Mensajes marcados como simulación en BD<br>
+                        🚫 Sin envíos reales por WhatsApp<br>
+                        🗑️ Usa <strong>BD</strong> para limpiar al terminar
                     </div>
                 </div>
             </div>
@@ -523,10 +520,12 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                     <div id="autoCountdown"></div>
                     <div id="autoCountdownLabel">Continuando en <span id="autoSecs">5</span>s...</div>
                 </div>
-                <button class="btn-sim btn-send-manual" id="btnSendManual" onclick="sendManual()" disabled title="Enviar mensaje manual">
+                <button class="btn-sim btn-send-manual" id="btnSendManual"
+                        onclick="sendManual()" disabled title="Enviar mensaje manual">
                     <i class="bi bi-send-fill"></i>
                 </button>
-                <button class="btn-sim btn-next-bot" id="btnNextBot" onclick="triggerClientTurn()" disabled title="Forzar turno del cliente bot">
+                <button class="btn-sim btn-next-bot" id="btnNextBot"
+                        onclick="forceClientTurn()" disabled title="Forzar turno del cliente bot">
                     <i class="bi bi-robot"></i>
                 </button>
             </div>
@@ -534,11 +533,13 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
     </div>
 
     <script>
-        // ── Estado ────────────────────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════════
+        // ESTADO
+        // ═══════════════════════════════════════════════════════════════════
         const STATE = {
             running        : false,
             busy           : false,
-            history        : [],       // historial de texto para el bot-cliente (no se envía al backend)
+            lastHotelMsg   : '',      // Solo el último mensaje del hotel para el bot-cliente
             turnCount      : 0,
             maxTurns       : 24,
             countdownTimer : null,
@@ -546,86 +547,105 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             waitingForInput: false,
         };
 
-        // ── Helpers UI ────────────────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════════
+        // HELPERS UI
+        // ═══════════════════════════════════════════════════════════════════
         function getPhone() {
             return document.getElementById('simPhone').value.trim();
         }
+
         function getClientRole() {
             const sel = document.getElementById('clientRole').value;
             return sel === 'CUSTOM'
                 ? (document.getElementById('customRole').value.trim() || 'cliente interesado en reservar')
                 : sel;
         }
+
         function setSimStatus(text, badgeClass, icon, label) {
             document.getElementById('simStatus').textContent = text;
             const b = document.getElementById('simBadge');
             b.className = 'sim-state-badge ' + badgeClass;
             b.innerHTML = `<i class="bi bi-${icon}"></i> ${label}`;
         }
+
         function setControlsEnabled(on) {
-            document.getElementById('btnStart').style.display  = on ? 'none'        : 'inline-flex';
-            document.getElementById('btnStop').style.display   = on ? 'inline-flex' : 'none';
-            document.getElementById('manualInput').disabled    = !on;
-            document.getElementById('btnSendManual').disabled  = !on;
-            document.getElementById('btnNextBot').disabled     = !on;
-            document.getElementById('simPhone').disabled       = on;
-            document.getElementById('clientRole').disabled     = on;
+            document.getElementById('btnStart').style.display = on ? 'none'        : 'inline-flex';
+            document.getElementById('btnStop').style.display  = on ? 'inline-flex' : 'none';
+            document.getElementById('manualInput').disabled   = !on;
+            document.getElementById('btnSendManual').disabled = !on;
+            document.getElementById('btnNextBot').disabled    = !on;
+            document.getElementById('simPhone').disabled      = on;
+            document.getElementById('clientRole').disabled    = on;
         }
+
         function scrollBottom() {
             const el = document.getElementById('simMessages');
             el.scrollTop = el.scrollHeight;
         }
 
-        // ── Typing indicator ──────────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════════
+        // TYPING INDICATOR
+        // ═══════════════════════════════════════════════════════════════════
         function showTyping(role) {
             removeTyping();
             const d = document.createElement('div');
             d.id = 'typingIndicator';
             d.className = `msg-row ${role}`;
-            d.innerHTML = `<div class="msg-bubble" style="padding:.5rem .85rem">
-        <div class="typing-indicator"><div class="typing-dots">
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-        </div></div></div>`;
+            d.innerHTML = `
+        <div class="msg-bubble" style="padding:.5rem .85rem">
+            <div class="typing-indicator">
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+        </div>`;
             document.getElementById('simMessages').appendChild(d);
             scrollBottom();
         }
+
         function removeTyping() {
             const el = document.getElementById('typingIndicator');
             if (el) el.remove();
         }
 
-        // ── Mensajes ──────────────────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════════
+        // MENSAJES
+        // ═══════════════════════════════════════════════════════════════════
         function addMessage(role, text, toolCalls = []) {
             removeTyping();
 
-            const container = document.getElementById('simMessages');
-            document.getElementById('simEmpty')?.remove();
+            // Eliminar empty state si existe
+            const empty = document.getElementById('simEmpty');
+            if (empty) empty.remove();
 
+            const container = document.getElementById('simMessages');
             const now  = new Date();
-            const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-            const isHotel = role === 'hotel';
+            const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            const isHotel = (role === 'hotel');
 
             let toolHtml = '';
             (toolCalls || []).forEach(tc => {
-                const args = JSON.stringify(tc.args || {}).substring(0, 60);
-                toolHtml += `<div class="tool-badge"><i class="bi bi-tools"></i>${tc.tool || tc}(${args}...)</div>`;
+                const name = tc.tool || tc.name || String(tc);
+                const args = JSON.stringify(tc.args || tc.arguments || {}).substring(0, 60);
+                toolHtml += `<div class="tool-badge"><i class="bi bi-tools"></i> ${escHtml(name)}(${escHtml(args)}...)</div>`;
             });
 
             const div = document.createElement('div');
             div.className = `msg-row ${isHotel ? 'hotel' : 'client'}`;
-            div.innerHTML = `<div>
-        <div class="msg-sender">${isHotel ? '🤖 Asistente' : '👤 Cliente simulado'}</div>
-        ${toolHtml}
-        <div class="msg-bubble">
-            <div class="msg-text">${escHtml(text)}</div>
-            <div class="msg-meta">
-                <span class="msg-time">${time}</span>
-                ${isHotel ? '<i class="bi bi-check2-all msg-check"></i>' : ''}
+            div.innerHTML = `
+        <div>
+            <div class="msg-sender">${isHotel ? '🤖 Asistente' : '👤 Cliente simulado'}</div>
+            ${toolHtml}
+            <div class="msg-bubble">
+                <div class="msg-text">${escHtml(text)}</div>
+                <div class="msg-meta">
+                    <span class="msg-time">${time}</span>
+                    ${isHotel ? '<i class="bi bi-check2-all msg-check"></i>' : ''}
+                </div>
             </div>
-        </div>
-    </div>`;
+        </div>`;
             container.appendChild(div);
             scrollBottom();
         }
@@ -633,11 +653,15 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         function addSystemMsg(text, type = '') {
             removeTyping();
             const container = document.getElementById('simMessages');
-            const color = type === 'error' ? '#fee2e2' : type === 'warn' ? '#fef3c7' : 'rgba(0,0,0,.1)';
-            const tcolor = type === 'error' ? '#991b1b' : type === 'warn' ? '#92400e' : '#555';
+            const colors = {
+                error : { bg: '#fee2e2', fg: '#991b1b' },
+                warn  : { bg: '#fef3c7', fg: '#92400e' },
+                ''    : { bg: 'rgba(0,0,0,.1)', fg: '#555' },
+            };
+            const c   = colors[type] || colors[''];
             const div = document.createElement('div');
             div.style.cssText = 'text-align:center;margin:.4rem 0';
-            div.innerHTML = `<span style="background:${color};color:${tcolor};font-size:.7rem;padding:.2rem .75rem;border-radius:99px">${text}</span>`;
+            div.innerHTML = `<span style="background:${c.bg};color:${c.fg};font-size:.7rem;padding:.2rem .75rem;border-radius:99px">${text}</span>`;
             container.appendChild(div);
             scrollBottom();
         }
@@ -657,9 +681,12 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             setTimeout(() => el.remove(), 4000);
         }
 
-        // ── Countdown ─────────────────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════════
+        // COUNTDOWN
+        // ═══════════════════════════════════════════════════════════════════
         function startCountdown(onComplete) {
             if (!STATE.running) return;
+
             STATE.waitingForInput = true;
             let secsLeft = STATE.countdownSecs;
 
@@ -670,7 +697,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             bar.style.display = label.style.display = 'block';
             bar.style.transition = `width ${STATE.countdownSecs}s linear`;
             secs.textContent = secsLeft;
-            bar.getBoundingClientRect();
+            bar.getBoundingClientRect(); // force reflow
             bar.style.width = '0%';
 
             STATE.countdownTimer = setInterval(() => {
@@ -685,6 +712,7 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                 }
             }, 1000);
         }
+
         function stopCountdown() {
             STATE.waitingForInput = false;
             clearInterval(STATE.countdownTimer);
@@ -695,16 +723,22 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             if (label)   label.style.display = 'none';
         }
 
-        // ── Fetch ─────────────────────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════════
+        // FETCH HELPERS
+        // ═══════════════════════════════════════════════════════════════════
+        function getCsrfToken() {
+            const el = document.querySelector('input[name="csrf_test_name"]');
+            return el ? el.value : '';
+        }
+
         async function simFetch(body) {
-            const csrfInput = document.querySelector('input[name="csrf_test_name"]');
             const res = await fetch('/whatsapp/simulator/turn', {
                 method     : 'POST',
                 credentials: 'same-origin',
                 headers    : {
                     'Content-Type'    : 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN'    : csrfInput ? csrfInput.value : '',
+                    'X-CSRF-TOKEN'    : getCsrfToken(),
                 },
                 body: JSON.stringify(body)
             });
@@ -712,70 +746,76 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
         }
 
         async function apiFetch(url) {
-            const csrfInput = document.querySelector('input[name="csrf_test_name"]');
             const res = await fetch(url, {
                 method     : 'POST',
                 credentials: 'same-origin',
                 headers    : {
                     'Content-Type'    : 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN'    : csrfInput ? csrfInput.value : '',
+                    'X-CSRF-TOKEN'    : getCsrfToken(),
                 }
             });
             return await res.json();
         }
 
-        // ── Control principal ─────────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════════
+        // CONTROL PRINCIPAL
+        // ═══════════════════════════════════════════════════════════════════
         function startSimulation() {
             if (STATE.running) return;
 
             const phone = getPhone();
             if (!phone || phone.length < 10) {
                 document.getElementById('phoneWrap').classList.add('error');
-                showFlash('⚠️ Ingresa un número de teléfono válido para simular.', 'warning');
+                showFlash('⚠️ Ingresa un número de teléfono válido (ej: 573001234567)', 'warning');
                 document.getElementById('simPhone').focus();
                 return;
             }
             document.getElementById('phoneWrap').classList.remove('error');
 
-            STATE.running  = true;
-            STATE.busy     = false;
-            STATE.history  = [];
-            STATE.turnCount = 0;
+            STATE.running       = true;
+            STATE.busy          = false;
+            STATE.lastHotelMsg  = '';
+            STATE.turnCount     = 0;
+            STATE.waitingForInput = false;
 
             document.getElementById('simMessages').innerHTML = '';
             setControlsEnabled(true);
             setSimStatus('Simulación activa', 'state-running', 'circle-fill', 'Activo');
-            addSystemMsg(`🚀 Simulación iniciada · Teléfono: ${phone} · Flujo: REAL`);
+            addSystemMsg(`🚀 Iniciada · Tel: ${phone} · Flujo: REAL`);
 
-            // Primer turno: cliente inicia
+            // Primer turno: el cliente bot abre la conversación
             triggerClientTurn(true);
         }
 
         function stopSimulation() {
-            STATE.running  = false;
-            STATE.busy     = false;
+            STATE.running       = false;
+            STATE.busy          = false;
             STATE.waitingForInput = false;
             stopCountdown();
-            clearTimeout(STATE.autoTimer);
             removeTyping();
             setControlsEnabled(false);
             setSimStatus('Detenida', 'state-stopped', 'stop-circle', 'Detenido');
-            addSystemMsg('🛑 Simulación detenida · Usa 🗑 para limpiar la BD');
+            addSystemMsg('🛑 Detenida · Usa 🗑 BD para limpiar mensajes');
         }
 
         function clearChat() {
             stopSimulation();
-            STATE.history   = [];
-            STATE.turnCount = 0;
-            document.getElementById('simMessages').innerHTML = '';
+            STATE.lastHotelMsg = '';
+            STATE.turnCount    = 0;
+
+            const container = document.getElementById('simMessages');
+            container.innerHTML = '';
+
             const d = document.createElement('div');
-            d.id = 'simEmpty'; d.className = 'sim-empty';
-            d.innerHTML = `<i class="bi bi-chat-dots" style="font-size:2.5rem;opacity:.4"></i>
+            d.id = 'simEmpty';
+            d.className = 'sim-empty';
+            d.innerHTML = `
+        <i class="bi bi-chat-dots" style="font-size:2.5rem;opacity:.4;color:#94a3b8"></i>
         <p class="mb-0 fw-semibold" style="color:#64748b">Ingresa un teléfono y presiona Iniciar</p>
-        <p style="font-size:.78rem;color:#94a3b8">Flujo completo real: Router → Contexto → Gemini → Tools → BD</p>`;
-            document.getElementById('simMessages').appendChild(d);
-            setSimStatus('Simulador inactivo', 'state-idle', 'circle', 'Inactivo');
+        <p style="font-size:.78rem;color:#94a3b8">Flujo real: Router → Contexto → Gemini → Tools → BD</p>`;
+            container.appendChild(d);
+            setSimStatus('Inactivo', 'state-idle', 'circle', 'Inactivo');
         }
 
         async function purgeSimData() {
@@ -793,42 +833,39 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             }
         }
 
-        // ── Turno del cliente bot ─────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════════
+        // TURNO DEL CLIENTE BOT
+        // Solo usa el último mensaje del hotel para generar la respuesta.
+        // NO acumula historial — el historial real vive en la BD.
+        // ═══════════════════════════════════════════════════════════════════
         async function triggerClientTurn(isFirst = false) {
             if (!STATE.running || STATE.busy) return;
             STATE.busy = true;
 
             showTyping('client');
 
-            // Construir historial como texto para el prompt del cliente
-            const historyText = STATE.history
-                .map(m => `${m.role === 'user' ? 'Tú (cliente)' : 'Hotel'}: ${m.text}`)
-                .join('\n');
-
             try {
                 const data = await simFetch({
-                    role       : 'client',
-                    is_first   : isFirst,
-                    history    : historyText,
-                    client_role: getClientRole(),
-                    phone      : getPhone(),
+                    role          : 'client',
+                    is_first      : isFirst,
+                    last_hotel_msg: STATE.lastHotelMsg,
+                    client_role   : getClientRole(),
+                    phone         : getPhone(),
                 });
 
                 removeTyping();
                 if (!STATE.running) { STATE.busy = false; return; }
 
                 if (!data.success) {
-                    addSystemMsg('⚠️ Error generando mensaje del cliente: ' + (data.message || 'sin detalle'), 'error');
+                    addSystemMsg('⚠️ Error generando mensaje del cliente: ' + (data.message || ''), 'warn');
                     STATE.busy = false;
-                    // No parar la simulación, solo saltar este turno
-                    // stopSimulation(); ← quitar esto
-                    setTimeout(() => triggerClientTurn(), 2000); // reintento
+                    // Reintento automático tras 2s en lugar de detener la simulación
+                    setTimeout(() => triggerClientTurn(isFirst), 2000);
                     return;
                 }
 
-                const clientText = data.text || data.simulated_user_msg || '';
+                const clientText = data.text || '';
                 addMessage('client', clientText);
-                STATE.history.push({ role: 'user', text: clientText });
                 STATE.turnCount++;
                 STATE.busy = false;
 
@@ -843,12 +880,14 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             }
         }
 
-        // ── Turno del hotel (flujo real) ──────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════════
+        // TURNO DEL HOTEL (FLUJO REAL)
+        // Inyecta el mensaje al WebhookService real y espera la respuesta en BD.
+        // ═══════════════════════════════════════════════════════════════════
         async function triggerHotelTurn(clientMessage) {
             if (!STATE.running || STATE.busy) return;
             STATE.busy = true;
-            stopCountdown(); // ← aquí sí tiene sentido
-
+            stopCountdown();
 
             showTyping('hotel');
             document.getElementById('btnNextBot').disabled = true;
@@ -866,23 +905,29 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                 if (!STATE.running) { STATE.busy = false; return; }
 
                 if (!data.success) {
-                    addSystemMsg('Error del asistente: ' + (data.message || ''), 'error');
+                    addSystemMsg('⚠️ ' + (data.message || 'Sin respuesta del sistema'), 'warn');
                     STATE.busy = false;
-                    stopSimulation();
+                    document.getElementById('btnNextBot').disabled = false;
+                    setSimStatus('Esperando...', 'state-waiting', 'hourglass-split', 'Esperando');
                     return;
                 }
 
                 const hotelText = data.text || data.system_bot_msg || '';
                 addMessage('hotel', hotelText, data.tool_calls || []);
-                STATE.history.push({ role: 'model', text: hotelText });
+
+                // Guardar SOLO el último mensaje del hotel para el siguiente turno del cliente
+                STATE.lastHotelMsg = hotelText;
                 STATE.turnCount++;
                 STATE.busy = false;
 
                 if (!STATE.running) return;
 
                 // Detectar fin natural de conversación
-                const endings = ['reserva creada', 'folio', 'hasta pronto', 'gracias por contactar',
-                    'nos vemos', 'confirmad', 'sim-', 'buen viaje'];
+                const endings = [
+                    'reserva creada', 'folio', 'hasta pronto',
+                    'gracias por contactar', 'nos vemos', 'confirmad',
+                    'sim-', 'buen viaje', 'que tengas'
+                ];
                 if (endings.some(w => hotelText.toLowerCase().includes(w)) || STATE.turnCount >= STATE.maxTurns) {
                     addSystemMsg('✅ Conversación finalizada · Usa 🗑 BD para limpiar');
                     setControlsEnabled(false);
@@ -891,11 +936,12 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
                     return;
                 }
 
-                // Esperar input manual 5s, si no → siguiente turno cliente
+                // Esperar 5s input manual, si no → siguiente turno del cliente bot
                 document.getElementById('btnNextBot').disabled = false;
-                setSimStatus('Esperando... o continúa solo', 'state-waiting', 'hourglass-split', 'Esperando');
+                setSimStatus('Esperando tu respuesta o continúa...', 'state-waiting', 'hourglass-split', 'Esperando');
+
                 startCountdown(() => {
-                    STATE.busy = false;
+                    STATE.busy = false; // reset por si acaso
                     setSimStatus('Simulación activa', 'state-running', 'circle-fill', 'Activo');
                     triggerClientTurn();
                 });
@@ -908,9 +954,12 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             }
         }
 
-        // ── Mensaje manual ────────────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════════
+        // MENSAJE MANUAL DEL USUARIO
+        // ═══════════════════════════════════════════════════════════════════
         function sendManual() {
             if (!STATE.running || STATE.busy) return;
+
             const input = document.getElementById('manualInput');
             const text  = input.value.trim();
             if (!text) return;
@@ -919,25 +968,33 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             input.value = '';
 
             addMessage('client', text);
-            STATE.history.push({ role: 'user', text });
             STATE.turnCount++;
             setSimStatus('Simulación activa', 'state-running', 'circle-fill', 'Activo');
 
             setTimeout(() => triggerHotelTurn(text), 600);
         }
 
-        // ── Event listeners ───────────────────────────────────────────────────────────
+        // Botón para forzar el turno del cliente cuando el countdown ya pasó
+        function forceClientTurn() {
+            stopCountdown();
+            STATE.busy = false;
+            triggerClientTurn();
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // EVENT LISTENERS
+        // ═══════════════════════════════════════════════════════════════════
         document.getElementById('manualInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendManual(); return; }
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendManual();
+                return;
+            }
+            // Cualquier tecla cancela el countdown
             if (STATE.waitingForInput && e.key.length === 1) {
                 stopCountdown();
                 setSimStatus('Simulación activa', 'state-running', 'circle-fill', 'Activo');
             }
-        });
-
-        document.getElementById('btnNextBot').addEventListener('click', function() {
-            stopCountdown();
-            triggerClientTurn();
         });
 
         document.getElementById('clientRole').addEventListener('change', function() {
@@ -948,14 +1005,18 @@ $modelVersion   = $prompt['model_version']      ?? 'gemini-2.5-flash';
             document.getElementById('phoneWrap').classList.remove('error');
         });
 
-        // ── Editor de prompt ──────────────────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════════
+        // EDITOR DE PROMPT
+        // ═══════════════════════════════════════════════════════════════════
         function updateCharCount() {
             const ta = document.getElementById('promptTextarea');
             document.getElementById('charCount').textContent = ta.value.length + ' caracteres';
         }
+
         function insertText(text) {
             const ta = document.getElementById('promptTextarea');
-            const s  = ta.selectionStart, e = ta.selectionEnd;
+            const s  = ta.selectionStart;
+            const e  = ta.selectionEnd;
             ta.value = ta.value.substring(0, s) + text + ta.value.substring(e);
             ta.selectionStart = ta.selectionEnd = s + text.length;
             ta.focus();
