@@ -18,7 +18,7 @@ class WhatsappModel extends Model
         'message_body', 'message_type', 'status', 'whatsapp_timestamp',
         'raw_data', 'openai_thread', 'estado', 'conversation_state',
         'appointment_id_relation', 'media_url', 'interactive_data',
-        'template_data', 'error_details', 'is_saas', 'tenant_id'
+        'template_data', 'error_details', 'is_saas', 'tenant_id','is_simulation'
     ];
 
     /**
@@ -43,29 +43,52 @@ class WhatsappModel extends Model
      * Guarda un mensaje genérico (entrante o saliente)
      * Reemplaza tu antigua función save_message
      */
+
+    /**
+     * Guarda un mensaje genérico (entrante o saliente) y gestiona el estado de la IA.
+     */
     public function saveMessage($data)
     {
-        // Si el WAMID tiene prefijo de simulación, marcar automáticamente
+        // 1. Detección automática de simulación por prefijo de WAMID
         if (isset($data['whatsapp_message_id']) &&
-            str_starts_with($data['whatsapp_message_id'], 'TEST_SIM_') ||
-            str_starts_with($data['whatsapp_message_id'] ?? '', 'wamid.SIM_')) {
+            (str_starts_with($data['whatsapp_message_id'], 'TEST_SIM_') ||
+                str_starts_with($data['whatsapp_message_id'], 'wamid.SIM_'))) {
             $data['is_simulation'] = 1;
         }
 
-        // Asegurar que los campos JSON sean strings
+        // 2. Normalización de campos JSON (asegurar que sean strings)
         foreach (['raw_data', 'interactive_data', 'template_data'] as $json_field) {
             if (isset($data[$json_field]) && !is_string($data[$json_field]) && $data[$json_field] !== null) {
                 $data[$json_field] = json_encode($data[$json_field]);
             }
         }
 
-        // Si whatsapp_timestamp viene numérico (epoch), convertirlo
+        // 3. Conversión de timestamp si viene en formato epoch
         if (isset($data['whatsapp_timestamp']) && is_numeric($data['whatsapp_timestamp'])) {
             $data['whatsapp_timestamp'] = date('Y-m-d H:i:s', $data['whatsapp_timestamp']);
         }
 
+        // 4. Inserción en la base de datos
         $this->insert($data);
-        return $this->getInsertID();
+        $insertedId = $this->getInsertID();
+
+        // 5. LÓGICA DE HANDOFF (IA -> HUMANO)
+        // Si el mensaje es saliente (outgoing) y NO es una simulación,
+        // significa que un humano respondió desde el panel. Desactivamos la IA.
+        if ($data['direction'] === 'outgoing' && (!isset($data['is_simulation']) || $data['is_simulation'] == 0)) {
+            $db = \Config\Database::connect();
+            $db->table('guests')
+                ->where('phone', $data['recipient_phone'])
+                ->where('tenant_id', $data['tenant_id'])
+                ->update([
+                    'ai_active'  => 0,
+                    'chat_state' => 'ACTIVE'
+                ]);
+
+            log_message('info', "[Handoff] IA desactivada para {$data['recipient_phone']} en tenant {$data['tenant_id']} por intervención humana manual.");
+        }
+
+        return $insertedId;
     }
 
 

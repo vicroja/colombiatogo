@@ -58,6 +58,16 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
     $routes->post('whatsapp/simulator/save',    'SimulatorController::savePrompt');
     $routes->post('whatsapp/simulator/turn',    'SimulatorController::simulateTurn');
 
+    // Módulo de Live Chat (WhatsApp Manual y Handoff)
+    $routes->get('whatsapp/chat',                         'ChatController::index');
+    $routes->get('whatsapp/chat/(:segment)',              'ChatController::index/$1');
+    $routes->post('whatsapp/chat/return_ai',              'ChatController::returnToAiAjax');
+    $routes->post('whatsapp/chat/close_chat',             'ChatController::closeChatAjax');
+    $routes->post('whatsapp/chat/get_new_messages',       'ChatController::getNewMessagesAjax');
+    $routes->post('whatsapp/ajax_search_sidebar_contacts','ChatController::ajaxSearchSidebarContacts');
+    $routes->post('whatsapp/send_custom_message',         'ChatController::sendCustomMessage');
+
+
     $routes->get('crm',                          'CrmController::index');
     $routes->get('crm/guest/(:num)',             'CrmController::show/$1');
     $routes->post('crm/guest/(:num)/note',       'CrmController::addNote/$1');

@@ -238,6 +238,23 @@ class WhatsappWebhookService
         $systemContext = build_guest_context_data($guest, $tenantId, $senderPhone);
 
 
+        // 4.5. ACTUALIZAR ESTADO Y VERIFICAR HANDOFF (IA vs HUMANO)
+        if ($guest) {
+            // A) Si el chat estaba cerrado o inactivo, lo despertamos porque el cliente acaba de hablar
+            if (isset($guest->chat_state) && $guest->chat_state !== 'ACTIVE') {
+                $this->db->table('guests')->where('id', $guest->id)->update(['chat_state' => 'ACTIVE']);
+                log_message('info', "[WebhookService] Chat reactivado (ACTIVE) para {$senderPhone}");
+            }
+
+            // B) Verificamos si la IA está desactivada (Handoff manual)
+            if (isset($guest->ai_active) && $guest->ai_active == 0) {
+                log_message('info', "[WebhookService] Modo Humano activo para {$senderPhone}. La IA ignorará el mensaje.");
+                // El mensaje entrante ya se guardó en el paso 2, así que el humano lo verá en su panel.
+                return;
+            }
+        }
+
+
         // 4.5. VERIFICAR SI LA IA ESTÁ PAUSADA (MODO HUMANO)
         // Buscamos el último estado de la conversación de este huésped
         $ultimoMensaje = $this->db->table('whatsapp_messages')
@@ -250,11 +267,9 @@ class WhatsappWebhookService
             ->get()
             ->getRow();
 
-        // Si el estado está marcado como 'PAUSED' o 'HUMAN', el bot no responde.
-        if ($ultimoMensaje && $ultimoMensaje->conversation_state === 'HUMAN_MODE') {
-            log_message('info', "[WebhookService] Modo Humano activo para {$senderPhone}. La IA no responderá.");
-            return; // Detenemos la ejecución aquí, el mensaje ya se guardó en la BD para que el humano lo lea.
-        }
+
+
+
 
         // 5. OBTENER PROMPT DEL TENANT (System Instruction)
         $promptConfig = $this->getAiPrompt($tenantId, 'assistant'); // 'assistant' es el profile_role por defecto
@@ -569,7 +584,16 @@ class WhatsappWebhookService
         $apiResponse = $this->whatsappModel->sendTextApi($adminPhone, $alerta, $this->isSaas, $this->currentTenantId);
 
         if ($apiResponse && isset($apiResponse['messages'][0]['id'])) {
-            // Éxito: Le decimos a Gemini que ya hicimos el trabajo para que tranquilice al cliente
+
+            // --- NUEVO: APAGAR IA AUTOMÁTICAMENTE ---
+            // Ponemos el chat en manos humanas y marcamos el estado para que resalte en el panel
+            $this->db->table('guests')
+                ->where('id', $guest->id)
+                ->update(['ai_active' => 0, 'chat_state' => 'OMITTED']);
+
+            log_message('info', "[WebhookService/Tool] Administrador notificado. IA auto-desactivada para {$telefonoHuesped}.");
+
+            // Éxito: Le decimos a Gemini que ya hicimos el trabajo para que tranquilice al cliente (será su último mensaje)
             return json_encode([
                 'success' => true,
                 'resultado' => 'El administrador fue notificado exitosamente.',
