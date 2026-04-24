@@ -224,6 +224,7 @@ $routes->get('admin/logs', 'Admin\LogViewer::index');
 $routes->cli('worker/start', 'Worker::start');
 $routes->cli('worker/watchdog', 'Worker::watchdog');
 $routes->cli('worker/processOutgoingQueue', 'Worker::processOutgoingQueue');
+$routes->cli('worker/processFollowUps', 'Worker::processFollowUps');
 
 // Por si alguna vez usas el Cli.php (Plan B)
 $routes->cli('cli/processIncomingQueue', 'Cli::processIncomingQueue');

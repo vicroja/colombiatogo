@@ -162,4 +162,148 @@ class Worker extends Controller
         echo "[" . date('Y-m-d H:i:s') . "] Lote procesado.\n";
     }
 
+    /**
+     * 4. RECUPERADOR AUTOMÁTICO DE CONVERSACIONES (Follow-ups con IA)
+     * Revisa chats inactivos (30m - 24h), evalúa el contexto con Gemini
+     * y decide si cerrarlos o enviar un mensaje de seguimiento.
+     * Comando: php public/index.php worker processFollowUps
+     */
+    public function processFollowUps()
+    {
+        echo "[" . date('Y-m-d H:i:s') . "] Iniciando Recuperador de Conversaciones...\n";
+
+        $db = \Config\Database::connect();
+        $whatsappModel = model('App\Models\WhatsappModel');
+        $geminiModel = model('App\Models\GeminiModel');
+
+        // 1. Buscar candidatos: Chats activos, IA encendida, último mensaje fue nuestro (outgoing)
+        // y ocurrió entre hace 30 minutos y 24 horas.
+        $sql = "
+            SELECT 
+                g.id as guest_id, g.phone, g.tenant_id, g.full_name,
+                last_m.created_at as last_time,
+                last_m.is_saas
+            FROM guests g
+            JOIN (
+                SELECT tenant_id, 
+                       IF(direction = 'incoming', sender_phone, recipient_phone) as phone_key, 
+                       MAX(id) as max_id
+                FROM whatsapp_messages 
+                GROUP BY tenant_id, phone_key
+            ) as lm ON lm.tenant_id = g.tenant_id AND lm.phone_key = g.phone
+            JOIN whatsapp_messages last_m ON last_m.id = lm.max_id
+            WHERE g.chat_state = 'ACTIVE'
+              AND g.ai_active = 1
+              AND last_m.direction = 'outgoing'
+              AND last_m.created_at <= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+              AND last_m.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+        ";
+
+        $candidatos = $db->query($sql)->getResult();
+
+        if (empty($candidatos)) {
+            echo "No hay conversaciones estancadas para evaluar.\n";
+            return;
+        }
+
+        echo "Se encontraron " . count($candidatos) . " conversaciones en pausa.\n";
+
+        foreach ($candidatos as $cliente) {
+            echo " -> Evaluando cliente {$cliente->phone} (Tenant: {$cliente->tenant_id})... ";
+
+            // 2. Extraer los últimos 5 mensajes para darle contexto a la IA
+            $ultimosMensajes = $db->table('whatsapp_messages')
+                ->where('tenant_id', $cliente->tenant_id)
+                ->groupStart()
+                ->where('sender_phone', $cliente->phone)
+                ->orWhere('recipient_phone', $cliente->phone)
+                ->groupEnd()
+                ->orderBy('id', 'DESC')
+                ->limit(5)
+                ->get()
+                ->getResult();
+
+            $ultimosMensajes = array_reverse($ultimosMensajes); // Orden cronológico para Gemini
+
+            $history = [];
+            foreach ($ultimosMensajes as $msg) {
+                $role = ($msg->direction === 'incoming') ? 'user' : 'model';
+                $history[] = [
+                    'role'  => $role,
+                    'parts' => [['text' => $msg->message_body]]
+                ];
+            }
+
+            // 3. Prompt estricto del sistema para esta tarea específica
+            $systemInstruction = "
+                Eres el gerente de ventas del hotel. Tu tarea es analizar los últimos mensajes de una conversación con el cliente '{$cliente->full_name}'.
+                Determina la acción a tomar:
+                - Si la conversación llegó a una conclusión natural (el cliente ya reservó, se despidió, dio las gracias finales o dijo expresamente que no le interesa), responde exactamente con: {\"action\": \"CLOSE\"}
+                - Si la conversación quedó abierta o en pausa (ej. le diste precios, información, o respondiste una duda y el cliente no volvió a contestar), redacta un mensaje de seguimiento muy corto (1 o 2 oraciones máximo), empático y sin sonar desesperado para incentivar la reserva. Responde con: {\"action\": \"FOLLOWUP\", \"message\": \"Tu mensaje de seguimiento aquí\"}
+                
+                IMPORTANTE: Tu respuesta debe ser ÚNICAMENTE un JSON válido.
+            ";
+
+            // 4. Llamar a Gemini
+            $respuestaIa = $geminiModel->generateChatResponse($history, $systemInstruction, 'gemini-2.5-flash');
+
+            if (isset($respuestaIa['error'])) {
+                echo "Error de IA: {$respuestaIa['error']}\n";
+                continue;
+            }
+
+            // Limpiar y Parsear JSON
+            $cleanJson = $geminiModel->cleanJsonResponse($respuestaIa['text']);
+            $decision = json_decode($cleanJson, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE || !isset($decision['action'])) {
+                echo "JSON inválido devuelto por IA.\n";
+                continue;
+            }
+
+            // 5. Ejecutar la decisión de la IA
+            if ($decision['action'] === 'CLOSE') {
+                $db->table('guests')->where('id', $cliente->guest_id)->update(['chat_state' => 'CLOSED']);
+                echo "CERRADA.\n";
+            }
+            elseif ($decision['action'] === 'FOLLOWUP' && !empty($decision['message'])) {
+                $mensajeSeguimiento = $decision['message'];
+
+                // Enviar vía WhatsApp API
+                $apiResponse = $whatsappModel->sendTextApi(
+                    $cliente->phone,
+                    $mensajeSeguimiento,
+                    (bool)$cliente->is_saas,
+                    $cliente->tenant_id
+                );
+
+                if (isset($apiResponse['messages'][0]['id'])) {
+                    $wamid = $apiResponse['messages'][0]['id'];
+
+                    // Guardar en base de datos con la etiqueta especial para debug
+                    $whatsappModel->saveMessage([
+                        'whatsapp_message_id' => $wamid,
+                        'direction'           => 'outgoing',
+                        'recipient_phone'     => $cliente->phone,
+                        'message_body'        => $mensajeSeguimiento,
+                        'message_type'        => 'text',
+                        'tenant_id'           => $cliente->tenant_id,
+                        'is_saas'             => $cliente->is_saas,
+                        'conversation_state'  => 'AUTO_FOLLOWUP', // <-- Etiqueta clave para debug
+                        'created_at'          => date('Y-m-d H:i:s')
+                    ]);
+
+                    // Cambiar estado a WAITING_USER para que este script no lo vuelva a impactar
+                    $db->table('guests')->where('id', $cliente->guest_id)->update(['chat_state' => 'WAITING_USER']);
+                    echo "SEGUIMIENTO ENVIADO.\n";
+                } else {
+                    echo "FALLO ENVÍO API Meta.\n";
+                }
+            } else {
+                echo "ACCIÓN DESCONOCIDA: {$decision['action']}\n";
+            }
+        }
+        echo "[" . date('Y-m-d H:i:s') . "] Ciclo de recuperador finalizado.\n";
+    }
+
 }

@@ -205,10 +205,20 @@ class WhatsappWebhookService
         $messageBody = '';
         if ($messageType === 'text') {
             $messageBody = $message['text']['body'];
-        } elseif ($messageType === 'interactive') {
-            // Manejo básico por si tocan un botón más adelante
-            $messageBody = $message['interactive']['button_reply']['title'] ??
-                $message['interactive']['list_reply']['title'] ?? 'Interacción';
+        }
+        // --- INICIO CORRECCIÓN: INTERCEPTOR DE AUDIO ---
+        elseif ($messageType === 'audio' || $messageType === 'voice') {
+            log_message('info', "[AudioInterceptor] Detectada nota de voz de {$senderPhone}. Transcribiendo...");
+
+            $messageBody = $this->handleAudioInterceptor($message, $tenantId, $isSaas);
+
+            // Si la transcripción fue exitosa, actualizamos el registro en la BD
+            if ($messageBody) {
+               //aun no se hace nada en este caso
+            } else {
+                $this->sendDirectReply($senderPhone, "Recibí tu audio, pero no logré transcribirlo correctamente. ¿Podrías escribírmelo?", $isSaas, $tenantId);
+                return;
+            }
         }
 
         $savedMessageId = $this->whatsappModel->saveMessage([
@@ -223,14 +233,26 @@ class WhatsappWebhookService
             'is_saas'           => $isSaas ? 1 : 0
         ]);
 
+        // 3. IDENTIFICAR O CREAR AL GUEST (Multi-tenant estricto)
+        $guest = $this->getOrCreateGuest($senderPhone, $contactName, $tenantId);
+
+        // --- INICIO CORRECCIÓN: INTERCEPTOR DE IMÁGENES ---
+        if ($messageType === 'image') {
+            if($guest){
+                $this->handleImageReceipt($message, $guest, $tenantId, $isSaas);
+                return; // Detenemos el flujo conversacional normal
+            }
+            return; //no era un guest y mandó una imagen, todo: si un tenant manda algo implementar funcionalidad
+        }
+
+
         // Si mandan imagen/audio y aún no lo soportamos
         if ($messageType !== 'text' && $messageType !== 'interactive') {
             $this->sendDirectReply($senderPhone, "Por el momento solo puedo leer mensajes de texto. ¿En qué te puedo ayudar?", $isSaas, $tenantId);
             return;
         }
 
-        // 3. IDENTIFICAR O CREAR AL GUEST (Multi-tenant estricto)
-        $guest = $this->getOrCreateGuest($senderPhone, $contactName, $tenantId);
+
 
         // 4. CONSTRUIR CONTEXTO (Placeholder para Helpers)
         // Aquí llamas a tu helper que busca citas, historial, etc., del tenant actual
@@ -677,5 +699,144 @@ class WhatsappWebhookService
             'enviadas'    => $enviadas,
             'instruccion' => "Se enviaron {$enviadas} foto(s) al cliente. Ahora pregúntale qué le pareció o si quiere reservar."
         ]);
+    }
+
+    /**
+     * Procesa una imagen entrante, descarga, aplica OCR y registra el pago si es un comprobante válido.
+     */
+    private function handleImageReceipt(array $message, object $guest, int $tenantId, bool $isSaas)
+    {
+        $senderPhone = $message['from'];
+        $mediaId = $message['image']['id'];
+
+        log_message('info', "[WebhookService/Pagos] Interceptada imagen de {$senderPhone}. Evaluando comprobante...");
+
+        // 1. Obtener Token del Tenant para descargar
+        $tenant = $this->db->table('tenants')->where('id', $tenantId)->get()->getRow();
+        $settings = json_decode($tenant->settings_json ?? '{}', true);
+
+        $accessToken = $isSaas ? getenv('SAAS_WA_ACCESS_TOKEN') : ($settings['whatsapp_token'] ?? '');
+        $bankAccounts = $settings['bank_accounts'] ?? []; // Array con cuentas válidas del hotel
+
+        if (empty($accessToken)) {
+            log_message('error', "[WebhookService/Pagos] Tenant {$tenantId} sin token para descargar imagen.");
+            return;
+        }
+
+        // 2. Descargar la imagen
+        $mediaFile = $this->whatsappModel->downloadMediaFromMeta($mediaId, $accessToken);
+
+        if (!$mediaFile) {
+            $this->sendDirectReply($senderPhone, "Recibí una imagen, pero hubo un error técnico al descargarla. Por favor intenta de nuevo en unos minutos.", $isSaas, $tenantId);
+            return;
+        }
+
+        // 3. Analizar con Gemini Vision
+        $base64Image = base64_encode($mediaFile['data']);
+        $ocrResult = $this->geminiModel->analyzeReceiptImage($base64Image, $mediaFile['mime_type'], $bankAccounts);
+
+        if (!$ocrResult['success'] || empty($ocrResult['data'])) {
+            $this->sendDirectReply($senderPhone, "Disculpa, no pude leer correctamente la imagen.", $isSaas, $tenantId);
+            return;
+        }
+
+        $ocrData = $ocrResult['data'];
+
+        // 4. Lógica de Decisión
+        if (!($ocrData['is_receipt'] ?? false)) {
+            // No es un comprobante (es una foto normal)
+            $this->sendDirectReply($senderPhone, "¡Qué buena foto! 📸 Recuerda que soy el asistente virtual del hotel. ¿En qué te puedo ayudar con tu estadía?", $isSaas, $tenantId);
+            return;
+        }
+
+        // Es un comprobante, ¿es a una cuenta válida?
+        if (!empty($bankAccounts) && !($ocrData['is_valid_account'] ?? false)) {
+            $this->sendDirectReply($senderPhone, "Recibí tu comprobante, pero la cuenta de destino no coincide con las cuentas oficiales del hotel. Por favor, comunícate con un asesor humano para verificar.", $isSaas, $tenantId);
+            return;
+        }
+
+        $amount = (float) ($ocrData['amount'] ?? 0);
+
+        if ($amount <= 0) {
+            $this->sendDirectReply($senderPhone, "Detecté tu comprobante, pero no logré leer el monto pagado de forma clara. En un momento un asesor lo verificará manualmente.", $isSaas, $tenantId);
+            return;
+        }
+
+        // 5. Buscar Reserva Activa
+        $reserva = $this->db->table('reservations')
+            ->where('guest_id', $guest->id)
+            ->where('tenant_id', $tenantId)
+            ->whereIn('status', ['pending', 'confirmed', 'checked_in'])
+            ->orderBy('id', 'DESC')
+            ->get()->getRow();
+
+        // --- NUEVO: GUARDADO FÍSICO DEL ARCHIVO ---
+        $uploadPath = FCPATH . "uploads/tenants/{$tenantId}/payments/";
+        if (!is_dir($uploadPath)) {
+            mkdir($uploadPath, 0777, true);
+        }
+
+        // Generamos un nombre único para evitar colisiones
+        $fileName = "receipt_" . time() . "_" . uniqid() . ".jpg";
+        $fullPath = $uploadPath . $fileName;
+        $dbPath   = "uploads/tenants/{$tenantId}/payments/" . $fileName;
+
+        file_put_contents($fullPath, $mediaFile['data']);
+        log_message('info', "[WebhookService/Pagos] Archivo guardado físicamente en: {$dbPath}");
+        // ------------------------------------------
+
+        // 6. Registrar el Pago en la BD (Ahora con attachment_path)
+        $this->db->table('payments')->insert([
+            'tenant_id'      => $tenantId,
+            'reservation_id' => $reserva->id,
+            'amount'         => $amount,
+            'payment_method' => 'bank_transfer',
+            'reference'      => $ocrData['reference'] ?? 'Sin referencia',
+            'bank_name'      => $ocrData['bank_name'] ?? 'No detectado',
+            'receipt_date'   => $ocrData['date'] ?? date('Y-m-d'),
+            'ocr_raw_data'   => json_encode($ocrData),
+            'attachment_path' => $dbPath, // <-- Guardamos la referencia para el administrador
+            'created_at'     => date('Y-m-d H:i:s'),
+            'updated_at'     => date('Y-m-d H:i:s')
+        ]);
+
+        // 7. Actualizar estado de la reserva si estaba en pending
+        if ($reserva->status === 'pending') {
+            $this->db->table('reservations')->where('id', $reserva->id)->update(['status' => 'confirmed']);
+            $estadoAviso = "¡Excelente! Hemos registrado tu pago por $".number_format($amount, 0)." y **tu reserva ha sido confirmada** exitosamente. 🎉";
+        } else {
+            $estadoAviso = "¡Gracias! Hemos registrado un abono adicional por $".number_format($amount, 0)." a tu reserva actual.";
+        }
+
+        log_message('info', "[WebhookService/Pagos] Pago de {$amount} registrado con éxito para Reserva {$reserva->id} (Guest: {$senderPhone})");
+
+        // 8. Responder al cliente
+        $this->sendDirectReply($senderPhone, $estadoAviso . "\n\nReferencia procesada: " . ($ocrData['reference'] ?? 'OK') . "\n¡Te esperamos pronto!", $isSaas, $tenantId);
+    }
+    /**
+     * Descarga y transcribe una nota de voz entrante.
+     */
+    private function handleAudioInterceptor(array $message, int $tenantId, bool $isSaas): ?string
+    {
+        $mediaId = $message['audio']['id'] ?? $message['voice']['id'];
+
+        // 1. Obtener credenciales del Tenant
+        $tenant = $this->db->table('tenants')->where('id', $tenantId)->get()->getRow();
+        $settings = json_decode($tenant->settings_json ?? '{}', true);
+        $accessToken = $isSaas ? getenv('SAAS_WA_ACCESS_TOKEN') : ($settings['whatsapp_token'] ?? '');
+
+        // 2. Descargar el archivo binario (Usando el método de WhatsappModel)
+        $mediaFile = $this->whatsappModel->downloadMediaFromMeta($mediaId, $accessToken);
+
+        if (!$mediaFile) return null;
+
+        // 3. Llamar a Gemini para la transcripción
+        $result = $this->geminiModel->transcribeAudio(
+            $mediaFile['data'], // Binario raw
+            $mediaFile['mime_type'],
+            "voice_note_{$mediaId}"
+        );
+
+        return ($result['status'] === 'success') ? $result['message'] : null;
     }
 }

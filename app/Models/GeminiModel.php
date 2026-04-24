@@ -414,4 +414,59 @@ class GeminiModel extends Model
 
         return ['success' => true, 'logos' => $results];
     }
+
+    /**
+     * 6. OCR FINANCIERO (Comprobantes de Pago)
+     * Analiza una imagen, verifica si es un recibo y extrae sus datos.
+     */
+    public function analyzeReceiptImage(string $base64Image, string $mimeType, array $tenantBankAccounts = []): array
+    {
+        $cuentasContext = empty($tenantBankAccounts) ? "No hay cuentas configuradas." : json_encode($tenantBankAccounts);
+
+        $promptText = "Eres el analista financiero de un hotel. Revisa la imagen adjunta. " .
+            "1. Determina si es un comprobante de transferencia bancaria, pago por app (Nequi/Daviplata) o consignación. " .
+            "2. Si es un comprobante, extrae el valor pagado, la fecha, el número de aprobación/referencia, y el banco/cuenta destino. " .
+            "3. Estas son las cuentas válidas del hotel: {$cuentasContext}. " .
+            "Verifica si la cuenta destino en el comprobante coincide con alguna de nuestras cuentas válidas. " .
+            "Devuelve ÚNICAMENTE un JSON estricto con esta estructura: " .
+            "{\"is_receipt\": true/false, \"amount\": 0.00, \"bank_name\": \"Nombre del banco origen/destino\", \"reference\": \"Num referencia\", \"date\": \"YYYY-MM-DD\", \"is_valid_account\": true/false}";
+
+        $payload = [
+            'contents' => [
+                [
+                    'role' => 'user',
+                    'parts' => [
+                        ['text' => $promptText],
+                        [
+                            'inlineData' => [
+                                'mimeType' => $mimeType,
+                                'data' => $base64Image
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            'generationConfig' => [
+                'temperature' => 0.1, // Muy baja para evitar alucinaciones en OCR
+                'responseMimeType' => 'application/json'
+            ]
+        ];
+
+        // Usamos gemini-2.5-flash porque es el mejor modelo multimodal rápido
+        $response = $this->executeRequest($payload, 'gemini-2.5-flash');
+
+        if ($response['status'] === 'success') {
+            $cleanJson = $this->cleanJsonResponse($response['message']);
+            $decoded = json_decode($cleanJson, true);
+
+            if (json_last_error() === JSON_ERROR_NONE) {
+                log_message('info', "[GeminiModel/OCR] Análisis completado. is_receipt: " . ($decoded['is_receipt'] ? 'true' : 'false'));
+                return ['success' => true, 'data' => $decoded];
+            }
+        }
+
+        log_message('error', "[GeminiModel/OCR] Error procesando imagen o JSON inválido.");
+        return ['success' => false, 'message' => 'No se pudo procesar la imagen con OCR.'];
+    }
+
 }

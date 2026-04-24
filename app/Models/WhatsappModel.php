@@ -328,4 +328,53 @@ class WhatsappModel extends Model
             ->get()
             ->getRow();
     }
+
+    /**
+     * Descarga un archivo multimedia desde la API de Meta.
+     */
+    public function downloadMediaFromMeta(string $mediaId, string $accessToken): ?array
+    {
+        $client = \Config\Services::curlrequest();
+
+        try {
+            // 1. Obtener la URL temporal del Media ID
+            $response = $client->get("https://graph.facebook.com/v19.0/{$mediaId}", [
+                'headers' => ['Authorization' => 'Bearer ' . $accessToken],
+                'http_errors' => false,
+                'timeout' => 15
+            ]);
+
+            $data = json_decode($response->getBody(), true);
+
+            if (empty($data['url'])) {
+                log_message('error', "[WhatsAppModel/Media] No se pudo obtener URL para el media_id: {$mediaId}");
+                return null;
+            }
+
+            $mediaUrl = $data['url'];
+            $mimeType = $data['mime_type'];
+
+            // 2. Descargar el archivo binario usando la URL obtenida
+            $fileResponse = $client->get($mediaUrl, [
+                'headers' => ['Authorization' => 'Bearer ' . $accessToken],
+                'http_errors' => false,
+                'timeout' => 30
+            ]);
+
+            if ($fileResponse->getStatusCode() == 200) {
+                return [
+                    'mime_type' => $mimeType,
+                    'data'      => $fileResponse->getBody()
+                ];
+            }
+
+            log_message('error', "[WhatsAppModel/Media] Error HTTP al descargar binario: " . $fileResponse->getStatusCode());
+
+        } catch (\Exception $e) {
+            log_message('error', '[WhatsAppModel/Media] Excepción descargando media: ' . $e->getMessage());
+        }
+
+        return null;
+    }
+
 }
