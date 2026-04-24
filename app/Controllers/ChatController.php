@@ -226,4 +226,93 @@ class ChatController extends BaseController
 
         return $this->response->setJSON(['success' => true, 'html' => $html]);
     }
+
+    /**
+     * AJAX: Enviar un mensaje manual desde la interfaz de Chat.
+     * Al guardar, el modelo se encargará de hacer el Handoff (apagar la IA).
+     */
+    public function sendCustomMessage(): ResponseInterface
+    {
+        $phone = $this->request->getPost('destination_phone_modal');
+        $text  = $this->request->getPost('text_message');
+        $type  = $this->request->getPost('message_type'); // 'text' o 'template'
+
+        if (!$phone || empty($text)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Faltan datos obligatorios para el envío.']);
+        }
+
+        log_message('info', "[ChatController] Intentando enviar mensaje manual a {$phone} (Tenant: {$this->tenantId})");
+
+        // Determinar si este tenant usa credenciales SaaS globales o propias
+        $tenantModel = new TenantModel();
+        $tenant = $tenantModel->find($this->tenantId);
+        $settings = json_decode($tenant['settings_json'] ?? '{}', true);
+
+        // Si no tiene token propio, asumimos que va por la línea global SaaS
+        $isSaas = empty($settings['whatsapp_token']);
+
+        if ($type === 'text') {
+            // Llamada a la API de Meta a través del modelo
+            $apiResponse = $this->whatsappModel->sendTextApi($phone, $text, $isSaas, $this->tenantId);
+
+            if (isset($apiResponse['messages'][0]['id'])) {
+                $wamid = $apiResponse['messages'][0]['id'];
+
+                // Guardar en la base de datos local.
+                // IMPORTANTE: Al ser direction = outgoing, el WhatsappModel detectará
+                // que es un mensaje manual y ejecutará el UPDATE a ai_active = 0 automáticamente.
+                $this->whatsappModel->saveMessage([
+                    'whatsapp_message_id' => $wamid,
+                    'direction'           => 'outgoing',
+                    'recipient_phone'     => $phone,
+                    'message_body'        => $text,
+                    'message_type'        => 'text',
+                    'tenant_id'           => $this->tenantId,
+                    'is_saas'             => $isSaas ? 1 : 0,
+                    'created_at'          => date('Y-m-d H:i:s')
+                ]);
+
+                return $this->response->setJSON(['success' => true, 'message' => 'Mensaje enviado correctamente.']);
+            }
+
+            log_message('error', "[ChatController] Fallo Meta API al enviar a {$phone}: " . json_encode($apiResponse));
+            return $this->response->setJSON(['success' => false, 'message' => 'Error de la API de Meta al enviar el mensaje.']);
+        }
+
+        // Si se implementa envío de plantillas de reactivación, la lógica iría aquí
+        if ($type === 'template') {
+            // Ejemplo rápido para la plantilla de reactivación
+            $templateName = $this->request->getPost('manual_template_name');
+            $components = [
+                [
+                    'type' => 'body',
+                    'parameters' => [
+                        ['type' => 'text', 'text' => $this->request->getPost('template_variables[body][1]')],
+                        ['type' => 'text', 'text' => $this->request->getPost('template_variables[body][2]')],
+                        ['type' => 'text', 'text' => $this->request->getPost('template_variables[body][3]')]
+                    ]
+                ]
+            ];
+
+            $apiResponse = $this->whatsappModel->sendTemplateApi($phone, $templateName, 'es', $components, $isSaas, $this->tenantId);
+
+            if (isset($apiResponse['messages'][0]['id'])) {
+                // Al enviar plantilla también pausamos IA
+                $this->whatsappModel->saveMessage([
+                    'whatsapp_message_id' => $apiResponse['messages'][0]['id'],
+                    'direction'           => 'outgoing',
+                    'recipient_phone'     => $phone,
+                    'message_body'        => "[Plantilla de Reactivación Enviada]",
+                    'message_type'        => 'template',
+                    'tenant_id'           => $this->tenantId,
+                    'is_saas'             => $isSaas ? 1 : 0,
+                    'created_at'          => date('Y-m-d H:i:s')
+                ]);
+                return $this->response->setJSON(['success' => true]);
+            }
+            return $this->response->setJSON(['success' => false, 'message' => 'Fallo al enviar plantilla.']);
+        }
+
+        return $this->response->setJSON(['success' => false, 'message' => 'Tipo de mensaje no soportado.']);
+    }
 }
