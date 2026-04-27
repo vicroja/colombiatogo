@@ -75,13 +75,14 @@ class WhatsappModel extends Model
         // 5. LÓGICA DE HANDOFF (IA -> HUMANO)
         // Si el mensaje es saliente (outgoing) y NO es una simulación,
         // significa que un humano respondió desde el panel. Desactivamos la IA.
+        //TODO GEMINI/CLAUDE ESTO PARECE ESTAR MAL
         if ($data['direction'] === 'outgoing' && (!isset($data['is_simulation']) || $data['is_simulation'] == 0)) {
             $db = \Config\Database::connect();
             $db->table('guests')
                 ->where('phone', $data['recipient_phone'])
                 ->where('tenant_id', $data['tenant_id'])
                 ->update([
-                    'ai_active'  => 0,
+                    'ai_active'  => 1,
                     'chat_state' => 'ACTIVE'
                 ]);
 
