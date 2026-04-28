@@ -3,7 +3,8 @@
 
 namespace App\Models;
 
-class TourScheduleModel extends BaseMultiTenantModel
+use CodeIgniter\Model;
+class TourScheduleModel extends Model
 {
     protected $table         = 'tour_schedules';
     protected $primaryKey    = 'id';

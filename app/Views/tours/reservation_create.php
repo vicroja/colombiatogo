@@ -94,10 +94,7 @@
                             <select name="agent_id" class="form-select">
                                 <option value="">Sin agente</option>
                                 <?php
-                                $agentModel = new \App\Models\CommissionAgentModel();
-                                $agents = $agentModel->where('tenant_id', session()->get('tenant_id'))
-                                    ->where('is_active', 1)->findAll();
-                                foreach ($agents as $agent): ?>
+                                foreach ($agents as $agent):?>
                                     <option value="<?= $agent['id'] ?>">
                                         <?= esc($agent['name']) ?>
                                         (<?= $agent['commission_type'] === 'percentage' ? $agent['commission_value'].'%' : '$'.$agent['commission_value'] ?>)

@@ -216,6 +216,7 @@ class TourController extends BaseController
         $tourModel     = new TourModel();
         $scheduleModel = new TourScheduleModel();
         $guestModel    = new GuestModel();
+        $agentModel = new \App\Models\CommissionAgentModel();
 
         $tour = $tourModel->where('tenant_id', $this->tenantId)->find($tourId);
         if (!$tour) {
@@ -226,6 +227,9 @@ class TourController extends BaseController
             'tour'      => $tour,
             'schedules' => $scheduleModel->getUpcomingByTour($tourId),
             'guests'    => $guestModel->where('tenant_id', $this->tenantId)->findAll(),
+            'agents'    => $agentModel->where('tenant_id', $this->tenantId)  // ← agregar
+            ->where('is_active', 1)
+                ->findAll(),
         ]);
     }
 
@@ -344,6 +348,7 @@ class TourController extends BaseController
             $paymentModel->insert([
                 'tenant_id'      => $this->tenantId,
                 'reservation_id' => $tourResId,
+                'entity_type'    => 'tour_reservation',   // ← faltaba
                 'amount'         => $initialPayment,
                 'payment_method' => $paymentMethod,
                 'reference'      => 'Abono inicial tour',
@@ -503,6 +508,7 @@ class TourController extends BaseController
         $paymentModel->insert([
             'tenant_id'      => $this->tenantId,
             'reservation_id' => $id,
+            'entity_type'    => 'tour_reservation',   // ← faltaba
             'amount'         => $amount,
             'payment_method' => $this->request->getPost('payment_method'),
             'reference'      => $this->request->getPost('reference'),
