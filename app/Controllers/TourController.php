@@ -553,4 +553,56 @@ class TourController extends BaseController
         log_message('info', "[TourController::addPayment] Pago de $" . number_format($amount, 2) . " registrado para tour_reservation #{$id}.");
         return redirect()->back()->with('success', 'Pago registrado correctamente.');
     }
+
+
+    /**
+     * Cambia el estado de un schedule.
+     * Al pasar a 'completed' dispara el cálculo automático del pago al guía.
+     */
+    public function updateScheduleStatus(int $scheduleId)
+    {
+        $scheduleModel = new TourScheduleModel();
+        $calculator    = new \App\Services\GuidePaymentCalculatorService();
+
+        $schedule = $scheduleModel
+            ->select('tour_schedules.*, tours.tenant_id')
+            ->join('tours', 'tours.id = tour_schedules.tour_id')
+            ->where('tour_schedules.id', $scheduleId)
+            ->first();
+
+        if (!$schedule || (int)$schedule['tenant_id'] !== $this->tenantId) {
+            return redirect()->back()->with('error', 'Salida no encontrada.');
+        }
+
+        $newStatus = $this->request->getPost('new_status');
+
+        $allowed = [
+            'scheduled'   => ['in_progress', 'cancelled'],
+            'in_progress' => ['completed',   'cancelled'],
+            'completed'   => [],
+            'cancelled'   => [],
+        ];
+
+        if (!in_array($newStatus, $allowed[$schedule['status']] ?? [])) {
+            return redirect()->back()->with('error', "Transición no válida: {$schedule['status']} → {$newStatus}.");
+        }
+
+        $scheduleModel->update($scheduleId, ['status' => $newStatus]);
+
+        // Al completar: calcular pago al guía automáticamente
+        if ($newStatus === 'completed') {
+            $result = $calculator->calculateAndStore($scheduleId, $this->tenantId);
+
+            if ($result['success'] && $result['amount'] > 0) {
+                log_message('info', "[TourController] Pago al guía generado: $" .
+                    number_format($result['amount'], 2) . " para schedule #{$scheduleId}.");
+
+                return redirect()->back()->with('success',
+                    'Salida completada. Pago al guía de $' .
+                    number_format($result['amount'], 2) . ' generado automáticamente.');
+            }
+        }
+
+        return redirect()->back()->with('success', 'Estado de la salida actualizado.');
+    }
 }

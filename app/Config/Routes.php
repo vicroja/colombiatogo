@@ -227,6 +227,31 @@ $routes->group('tours', ['filter' => 'tenant_auth'], function ($routes) {
 
     // --- Manifiesto ---
     $routes->get('manifest/(:num)',          'TourController::manifest/$1');
+
+    $routes->post('schedule/(:num)/status', 'TourController::updateScheduleStatus/$1');
+
+});
+
+$routes->group('guides', ['filter' => 'tenant_auth'], function ($routes) {
+
+    // CRUD
+    $routes->get('/',                          'GuideController::index');
+    $routes->get('create',                     'GuideController::create');
+    $routes->post('store',                     'GuideController::store');
+    $routes->get('(:num)/edit',                'GuideController::edit/$1');
+    $routes->post('(:num)/update',             'GuideController::update/$1');
+    $routes->post('(:num)/toggle-status',      'GuideController::toggleStatus/$1');
+
+    // Historial y pagos por guía
+    $routes->get('(:num)/history',             'GuideController::history/$1');
+    $routes->get('(:num)/payments',            'GuideController::payments/$1');
+
+    // Vista global de pagos pendientes
+    $routes->get('payments',                   'GuideController::allPendingPayments');
+
+    // Acciones sobre pagos
+    $routes->post('payment/(:num)/mark-paid',  'GuideController::markPaid/$1');
+    $routes->post('payment/(:num)/edit',       'GuideController::editPayment/$1');
 });
 
 // Por esto (Sintaxis limpia y moderna):
