@@ -36,6 +36,7 @@ class TourController extends BaseController
     public function index(): string
     {
         $tourModel = new TourModel();
+        log_message('debug', '[Tours::index] sesión completa: ' . json_encode(session()->get()));
 
         // DEBUG TEMPORAL — eliminar después de confirmar
         log_message('debug', '[Tours::index] tenant_id sesión: ' . $this->tenantId);
@@ -44,7 +45,6 @@ class TourController extends BaseController
         $tours = $tourModel->getActiveTours($this->tenantId);
 
         log_message('debug', '[Tours::index] tours encontrados: ' . count($tours));
-        log_message('debug', '[Tours::index] sesión completa: ' . json_encode(session()->get()));
 
         return view('tours/index', array_merge($this->viewData, [
             'tours' => $tours,
