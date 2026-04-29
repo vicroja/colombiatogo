@@ -24,20 +24,13 @@ use CodeIgniter\HTTP\RedirectResponse;
 class WizardController extends BaseController
 {
     // ── Definición de pasos ───────────────────────────────────────────────
-    private const STEPS = [
-        1 => ['title' => 'Identidad del Hotel',  'icon' => 'bi-building',        'required' => true],
-        2 => ['title' => 'Fotos',                'icon' => 'bi-images',          'required' => false],
-        3 => ['title' => 'Primera Habitación',   'icon' => 'bi-door-open',       'required' => true],
-        4 => ['title' => 'Plan Tarifario',       'icon' => 'bi-currency-dollar', 'required' => true],
-        5 => ['title' => 'Asistente IA',         'icon' => 'bi-robot',           'required' => false],
-        6 => ['title' => 'Producto / Servicio',  'icon' => 'bi-box-seam',        'required' => false],
-        7 => ['title' => 'WhatsApp Business',    'icon' => 'bi-whatsapp',        'required' => false],
-        8 => ['title' => 'Vista Previa',         'icon' => 'bi-eye',             'required' => false],
-    ];
+
 
     private int   $tenantId;
     private array $tenant;
     private array $settings;
+
+    private array $steps = [];
 
     // ── Modelos ───────────────────────────────────────────────────────────
     private \App\Models\TenantModel            $tenantModel;
@@ -90,6 +83,8 @@ class WizardController extends BaseController
 
         $this->tenant   = $this->tenantModel->find($this->tenantId) ?? [];
         $this->settings = json_decode($this->tenant['settings_json'] ?? '{}', true) ?? [];
+        $this->steps = $this->buildSteps();
+
     }
 
     // =========================================================================
@@ -112,7 +107,7 @@ class WizardController extends BaseController
     // =========================================================================
     public function step(int $stepNumber): string|RedirectResponse
     {
-        if (!isset(self::STEPS[$stepNumber])) {
+        if (!isset($this->steps[$stepNumber])) {
             return redirect()->to('/onboarding');
         }
 
@@ -130,7 +125,7 @@ class WizardController extends BaseController
         }
 
         $data = [
-            'steps'       => self::STEPS,
+            'steps'       => $this->steps,
             'currentStep' => $stepNumber,
             'tenant'      => $this->tenant,
             'settings'    => $this->settings,  // FIX #5: disponible en todas las vistas
@@ -146,21 +141,24 @@ class WizardController extends BaseController
     // =========================================================================
     public function saveStep(int $stepNumber): RedirectResponse
     {
-        if (!isset(self::STEPS[$stepNumber])) {
+        if (!isset($this->steps[$stepNumber])) {
             return redirect()->to('/onboarding');
         }
 
         log_message('info', "[Onboarding] Guardando paso {$stepNumber} para tenant {$this->tenantId}");
 
         $result = match($stepNumber) {
-            1 => $this->saveStep1(),
-            2 => $this->saveStep2(),
-            3 => $this->saveStep3(),
-            4 => $this->saveStep4(),
-            5 => $this->saveStep5(),
-            6 => $this->saveStep6(),
-            7 => $this->saveStep7(),
-            8 => $this->saveStep8(),
+            1  => $this->saveStep1(),
+            2  => $this->saveStep2Profile(),   // nuevo paso de perfil
+            3  => $this->saveStep3Media(),     // era paso 2
+            4  => $this->saveStep4Unit(),      // era paso 3
+            5  => $this->saveStep5Rates(),     // era paso 4
+            6  => $this->saveStep6Tour(),      // nuevo
+            7  => $this->saveStep7TourSchedule(), // nuevo
+            8  => $this->saveStep8AiPrompt(),  // era paso 5
+            9  => $this->saveStep9Product(),   // era paso 6
+            10 => $this->saveStep10Whatsapp(), // era paso 7
+            11 => $this->saveStep11Preview(),  // era paso 8
             default => ['success' => false, 'message' => 'Paso inválido']
         };
 
@@ -174,12 +172,12 @@ class WizardController extends BaseController
         $this->markStepCompleted($stepNumber);
         $nextStep = $stepNumber + 1;
 
-        if ($nextStep > count(self::STEPS)) {
+        if ($nextStep > count($this->steps)) {
             return redirect()->to('/onboarding/complete');
         }
 
         return redirect()->to("/onboarding/step/{$nextStep}")
-            ->with('success', '✅ ' . self::STEPS[$stepNumber]['title'] . ' guardado correctamente.');
+            ->with('success', '✅ ' . $this->steps[$stepNumber]['title'] . ' guardado correctamente.');
     }
 
     // =========================================================================
@@ -215,7 +213,7 @@ class WizardController extends BaseController
 
         return view('onboarding/complete', [
             'tenant'  => $this->tenant,
-            'steps'   => self::STEPS,
+            'steps'   => $this->steps,
             'summary' => $this->buildSummary(),
         ]);
     }
@@ -275,7 +273,7 @@ class WizardController extends BaseController
     /**
      * Paso 2: Subida de logo y fotos
      */
-    private function saveStep2(): array
+    private function saveStep3Media(): array
     {
         $logo = $this->request->getFile('logo');
 
@@ -320,7 +318,7 @@ class WizardController extends BaseController
     }
 
 
-    private function saveStep3(): array
+    private function saveStep4Unit(): array
     {
         $rules = [
             'unit_name'      => 'required|max_length[50]',
@@ -468,7 +466,7 @@ class WizardController extends BaseController
     /**
      * Paso 4: Plan tarifario base
      */
-    private function saveStep4(): array
+    private function saveStep5Rates(): array
     {
         $rules = [
             'plan_name'       => 'required|max_length[100]',
@@ -521,7 +519,7 @@ class WizardController extends BaseController
      *   2. crear_reserva            — bloquea la cabaña y crea el registro
      *   3. notificar_administrador  — escala la conversación a un humano
      */
-    private function saveStep5(): array
+    private function saveStep8AiPrompt(): array
     {
         $systemInstruction = trim($this->request->getPost('system_instruction') ?? '');
 
@@ -642,7 +640,7 @@ class WizardController extends BaseController
     /**
      * Paso 6: Primer producto o servicio
      */
-    private function saveStep6(): array
+    private function saveStep9Product(): array
     {
         $rules = [
             'product_name'  => 'required|max_length[150]',
@@ -676,7 +674,7 @@ class WizardController extends BaseController
     /**
      * Paso 7: WhatsApp — manejado por JS + /whatsapp/save_config
      */
-    private function saveStep7(): array
+    private function saveStep10Whatsapp(): array
     {
         return ['success' => true];
     }
@@ -684,7 +682,7 @@ class WizardController extends BaseController
     /**
      * Paso 8: Vista previa y publicación del sitio web
      */
-    private function saveStep8(): array
+    private function saveStep11Preview(): array
     {
         $existing = $this->websiteModel->first();
 
@@ -701,6 +699,133 @@ class WizardController extends BaseController
             $this->websiteModel->createForTenant($websiteData);
         }
 
+        return ['success' => true];
+    }
+
+    /**
+     * Paso 2: Perfil del negocio.
+     * Guarda has_accommodation y has_tours en settings_json.
+     * Esto determina qué pasos se mostrarán en el resto del wizard.
+     */
+    private function saveStep2Profile(): array
+    {
+        $hasAccommodation = $this->request->getPost('has_accommodation') === '1';
+        $hasTours         = $this->request->getPost('has_tours')         === '1';
+
+        // Validar que al menos un perfil esté seleccionado
+        if (!$hasAccommodation && !$hasTours) {
+            return [
+                'success' => false,
+                'message' => 'Debes seleccionar al menos un perfil: Alojamiento o Tours.',
+            ];
+        }
+
+        // Guardar en settings_json — buildSteps() los leerá en el próximo request
+        $this->updateSettings([
+            'has_accommodation' => $hasAccommodation,
+            'has_tours'         => $hasTours,
+        ]);
+
+        // Invalidar caché de tenant_settings en sesión para que el menú
+        // se reconstruya con los nuevos flags en el próximo request
+        session()->remove('tenant_settings');
+
+        log_message('info', "[Onboarding/Paso2] Tenant {$this->tenantId} — " .
+            "has_accommodation: " . ($hasAccommodation ? 'true' : 'false') . ", " .
+            "has_tours: " . ($hasTours ? 'true' : 'false'));
+
+        return ['success' => true];
+    }
+
+    /**
+     * Paso 6: Primer tour (solo si has_tours = true).
+     * Crea el registro base del tour usando TourModel.
+     */
+    private function saveStep6Tour(): array
+    {
+        // Si el tenant no tiene tours, saltar silenciosamente
+        if (!($this->settings['has_tours'] ?? false)) {
+            return ['success' => true];
+        }
+
+        $rules = [
+            'tour_name'    => 'required|max_length[150]',
+            'price_adult'  => 'required|decimal|greater_than[0]',
+            'duration_minutes' => 'required|integer|greater_than[0]',
+        ];
+
+        if (!$this->validate($rules)) {
+            return ['success' => false, 'message' => implode(' ', $this->validator->getErrors())];
+        }
+
+        $tourModel = new \App\Models\TourModel();
+
+        $tourId = $tourModel->insert([
+            'tenant_id'        => $this->tenantId,
+            'name'             => $this->request->getPost('tour_name'),
+            'description'      => $this->request->getPost('tour_description'),
+            'duration_minutes' => (int) $this->request->getPost('duration_minutes'),
+            'meeting_point'    => $this->request->getPost('meeting_point'),
+            'min_pax'          => (int) ($this->request->getPost('min_pax') ?? 1),
+            'price_adult'      => (float) $this->request->getPost('price_adult'),
+            'price_child'      => (float) ($this->request->getPost('price_child') ?? 0),
+            'difficulty_level' => $this->request->getPost('difficulty_level') ?? 'easy',
+            'is_active'        => 1,
+        ]);
+
+        if (!$tourId) {
+            log_message('error', "[Onboarding/Paso6] Error creando tour para tenant {$this->tenantId}");
+            return ['success' => false, 'message' => 'Error al crear el tour.'];
+        }
+
+        // Guardar el tour_id en settings para usarlo en el paso 7
+        $this->updateSettings(['onboarding_tour_id' => $tourId]);
+
+        log_message('info', "[Onboarding/Paso6] Tour #{$tourId} creado para tenant {$this->tenantId}");
+        return ['success' => true];
+    }
+
+    /**
+     * Paso 7: Primera salida del tour (solo si has_tours = true).
+     */
+    private function saveStep7TourSchedule(): array
+    {
+        if (!($this->settings['has_tours'] ?? false)) {
+            return ['success' => true];
+        }
+
+        $tourId = $this->settings['onboarding_tour_id'] ?? null;
+
+        if (!$tourId) {
+            return ['success' => false, 'message' => 'No se encontró el tour creado en el paso anterior.'];
+        }
+
+        $rules = [
+            'start_datetime' => 'required',
+            'max_pax'        => 'required|integer|greater_than[0]',
+        ];
+
+        if (!$this->validate($rules)) {
+            return ['success' => false, 'message' => implode(' ', $this->validator->getErrors())];
+        }
+
+        $scheduleModel = new \App\Models\TourScheduleModel();
+
+        $scheduleId = $scheduleModel->insert([
+            'tour_id'        => $tourId,
+            'start_datetime' => $this->request->getPost('start_datetime'),
+            'max_pax'        => (int) $this->request->getPost('max_pax'),
+            'current_pax'    => 0,
+            'status'         => 'scheduled',
+            'notes'          => $this->request->getPost('notes'),
+        ]);
+
+        if (!$scheduleId) {
+            log_message('error', "[Onboarding/Paso7] Error creando schedule para tour {$tourId}");
+            return ['success' => false, 'message' => 'Error al crear la salida del tour.'];
+        }
+
+        log_message('info', "[Onboarding/Paso7] Schedule #{$scheduleId} creado para tour {$tourId}");
         return ['success' => true];
     }
 
@@ -837,40 +962,52 @@ class WizardController extends BaseController
     // HELPERS PRIVADOS
     // =========================================================================
 
+
+    // Reemplazar getStepData() completo:
     private function getStepData(int $step): array
     {
-        return match($step) {
-            1 => [
+        // Obtenemos la vista del paso actual para saber qué datos cargar
+        $view = $this->steps[$step]['view'] ?? '';
+
+        return match($view) {
+            'identity' => [
                 'tenant' => $this->tenant,
             ],
-            2 => [
-                'logo'   => $this->tenant['logo_path'] ?? null,
-                'photos' => $this->mediaModel
-                    ->where('entity_type', 'tenant')
-                    ->findAll(),
+            'profile' => [
+                'has_accommodation' => (bool)($this->settings['has_accommodation'] ?? true),
+                'has_tours'         => (bool)($this->settings['has_tours']         ?? false),
             ],
-            3 => [
+            'media' => [
+                'logo'   => $this->tenant['logo_path'] ?? null,
+                'photos' => $this->mediaModel->where('entity_type', 'tenant')->findAll(),
+            ],
+            'unit' => [
                 'bed_types' => $this->bedTypeModel->getForTenant($this->tenantId),
                 'amenities' => $this->amenityModel->getForTenant($this->tenantId),
             ],
-            4 => [
+            'rates' => [
                 'unit_name' => $this->unitModel
                         ->find($this->settings['onboarding_unit_id'] ?? 0)['name'] ?? 'tu unidad',
                 'tenant'    => $this->tenant,
             ],
-            5 => [
-                'existing_prompt' => $this->aiPromptModel
-                    ->where('profile_role', 'assistant')
-                    ->first(),
-            ],
-            6 => [
+            'tour_basic' => [
                 'tenant' => $this->tenant,
             ],
-            7 => [
+            'tour_schedule' => [
+                'tour' => (new \App\Models\TourModel())
+                    ->find($this->settings['onboarding_tour_id'] ?? 0),
+            ],
+            'ai_prompt' => [
+                'existing_prompt' => $this->aiPromptModel
+                    ->where('profile_role', 'assistant')->first(),
+            ],
+            'product' => [
+                'tenant' => $this->tenant,
+            ],
+            'whatsapp' => [
                 'whatsapp_configured' => !empty($this->settings['whatsapp_phone_number_id']),
             ],
-            // FIX #5: $settings incluido para step8_preview.php
-            8 => [
+            'preview' => [
                 'website'  => $this->websiteModel->first(),
                 'unit'     => $this->unitModel->find($this->settings['onboarding_unit_id'] ?? 0),
                 'settings' => $this->settings,
@@ -888,7 +1025,7 @@ class WizardController extends BaseController
         $completed = $this->settings['onboarding_completed_steps'] ?? [];
 
         for ($i = 1; $i < $requestedStep; $i++) {
-            if (self::STEPS[$i]['required'] && !in_array($i, $completed)) {
+            if ($this->steps[$i]['required'] && !in_array($i, $completed)) {
                 return redirect()->to("/onboarding/step/{$i}")
                     ->with('warning', 'Por favor completa este paso antes de continuar.');
             }
@@ -936,5 +1073,105 @@ class WizardController extends BaseController
                 ->first(),
             'has_wa'   => !empty($this->settings['whatsapp_phone_number_id']),
         ];
+    }
+
+    /**
+     * Construye dinámicamente el array de pasos según el perfil del tenant.
+     * has_accommodation y has_tours vienen de settings_json.
+     * Se llama una sola vez en initController().
+     */
+    private function buildSteps(): array
+    {
+        $hasAccommodation = (bool)($this->settings['has_accommodation'] ?? true);
+        $hasTours         = (bool)($this->settings['has_tours']         ?? false);
+
+        $steps = [];
+
+        // Paso 1: siempre presente
+        $steps[1] = [
+            'title'    => 'Identidad',
+            'icon'     => 'bi-building',
+            'required' => true,
+            'view'     => 'identity',
+        ];
+
+        // Paso 2: perfil del negocio — siempre presente, define el resto
+        $steps[2] = [
+            'title'    => 'Perfil del Negocio',
+            'icon'     => 'bi-toggles',
+            'required' => true,
+            'view'     => 'profile',
+        ];
+
+        // Paso 3: fotos — siempre presente, opcional
+        $steps[3] = [
+            'title'    => 'Fotos',
+            'icon'     => 'bi-images',
+            'required' => false,
+            'view'     => 'media',
+        ];
+
+        // Pasos exclusivos de alojamiento
+        if ($hasAccommodation) {
+            $steps[4] = [
+                'title'    => 'Primera Habitación',
+                'icon'     => 'bi-door-open',
+                'required' => true,
+                'view'     => 'unit',
+            ];
+            $steps[5] = [
+                'title'    => 'Plan Tarifario',
+                'icon'     => 'bi-currency-dollar',
+                'required' => true,
+                'view'     => 'rates',
+            ];
+        }
+
+        // Pasos exclusivos de tours
+        if ($hasTours) {
+            $steps[6] = [
+                'title'    => 'Primer Tour',
+                'icon'     => 'bi-compass',
+                'required' => true,
+                'view'     => 'tour_basic',
+            ];
+            $steps[7] = [
+                'title'    => 'Primera Salida',
+                'icon'     => 'bi-calendar-event',
+                'required' => true,
+                'view'     => 'tour_schedule',
+            ];
+        }
+
+        // Pasos finales: siempre presentes
+        $steps[8] = [
+            'title'    => 'Asistente IA',
+            'icon'     => 'bi-robot',
+            'required' => false,
+            'view'     => 'ai_prompt',
+        ];
+        $steps[9] = [
+            'title'    => 'Producto / Servicio',
+            'icon'     => 'bi-box-seam',
+            'required' => false,
+            'view'     => 'product',
+        ];
+        $steps[10] = [
+            'title'    => 'WhatsApp Business',
+            'icon'     => 'bi-whatsapp',
+            'required' => false,
+            'view'     => 'whatsapp',
+        ];
+        $steps[11] = [
+            'title'    => 'Vista Previa',
+            'icon'     => 'bi-eye',
+            'required' => false,
+            'view'     => 'preview',
+        ];
+
+        // Ordenar por clave para garantizar secuencia correcta
+        ksort($steps);
+
+        return $steps;
     }
 }

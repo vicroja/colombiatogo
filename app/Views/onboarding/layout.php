@@ -571,17 +571,10 @@ $isLocked    = function(int $s) use ($steps, $completed): bool {
 
         <!-- Cuerpo del paso (incluye la vista del paso actual) -->
         <div class="content-body">
-            <?= view("onboarding/steps/step{$currentStep}_" . match($currentStep) {
-                    1 => 'identity',
-                    2 => 'media',
-                    3 => 'unit',
-                    4 => 'rates',
-                    5 => 'ai_prompt',
-                    6 => 'product',
-                    7 => 'whatsapp',
-                    8 => 'preview',
-                    default => 'identity'
-                }, $stepData + ['tenant' => $tenant, 'currentStep' => $currentStep, 'settings' => $settings]) ?>
+            <?= view(
+                "onboarding/steps/step_{$steps[$currentStep]['view']}",
+                $stepData + ['tenant' => $tenant, 'currentStep' => $currentStep, 'settings' => $settings]
+            ) ?>
         </div>
 
     </main>

@@ -37,11 +37,17 @@ class TourController extends BaseController
     {
         $tourModel = new TourModel();
 
+        // DEBUG TEMPORAL — eliminar después de confirmar
+        log_message('debug', '[Tours::index] tenant_id sesión: ' . $this->tenantId);
+        log_message('debug', '[Tours::index] has_tours: ' . ($this->hasTours ? 'true' : 'false'));
+
         $tours = $tourModel->getActiveTours($this->tenantId);
 
-        return view('tours/index', [
+        log_message('debug', '[Tours::index] tours encontrados: ' . count($tours));
+
+        return view('tours/index', array_merge($this->viewData, [
             'tours' => $tours,
-        ]);
+        ]));
     }
 
     /**
