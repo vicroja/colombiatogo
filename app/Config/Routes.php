@@ -54,29 +54,6 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
 
 
 
-
-        // --- CRUD de Tours ---
-        $routes->get('/',                        'TourController::index');
-        $routes->get('create',                   'TourController::create');
-        $routes->post('store',                   'TourController::store');
-        $routes->get('(:num)/edit',              'TourController::edit/$1');
-        $routes->post('(:num)/update',           'TourController::update/$1');
-
-        // --- Schedules (Salidas) ---
-        $routes->get('(:num)/schedules',         'TourController::schedules/$1');
-        $routes->post('(:num)/schedules/store',  'TourController::storeSchedule/$1');
-
-        // --- Reservas de Tours ---
-        $routes->get('(:num)/reserve',           'TourController::createReservation/$1');
-        $routes->post('reservation/store',       'TourController::storeReservation');
-        $routes->get('reservation/(:num)',       'TourController::showReservation/$1');
-        $routes->post('reservation/(:num)/status',   'TourController::updateReservationStatus/$1');
-        $routes->post('reservation/(:num)/payment',  'TourController::addPayment/$1');
-
-        // --- Manifiesto ---
-        $routes->get('manifest/(:num)',          'TourController::manifest/$1');
-
-
     // Simulador de asistente IA
     $routes->get('whatsapp/simulator',          'SimulatorController::index');
     $routes->post('whatsapp/simulator/save',    'SimulatorController::savePrompt');
@@ -226,6 +203,30 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
     $routes->get('website/preview',                'WebsiteController::preview');
 
 
+});
+
+$routes->group('tours', ['filter' => 'tenant_auth'], function ($routes) {
+
+    // --- CRUD de Tours ---
+    $routes->get('/',                        'TourController::index');
+    $routes->get('create',                   'TourController::create');
+    $routes->post('store',                   'TourController::store');
+    $routes->get('(:num)/edit',              'TourController::edit/$1');
+    $routes->post('(:num)/update',           'TourController::update/$1');
+
+    // --- Schedules (Salidas) ---
+    $routes->get('(:num)/schedules',         'TourController::schedules/$1');
+    $routes->post('(:num)/schedules/store',  'TourController::storeSchedule/$1');
+
+    // --- Reservas de Tours ---
+    $routes->get('(:num)/reserve',           'TourController::createReservation/$1');
+    $routes->post('reservation/store',       'TourController::storeReservation');
+    $routes->get('reservation/(:num)',       'TourController::showReservation/$1');
+    $routes->post('reservation/(:num)/status',   'TourController::updateReservationStatus/$1');
+    $routes->post('reservation/(:num)/payment',  'TourController::addPayment/$1');
+
+    // --- Manifiesto ---
+    $routes->get('manifest/(:num)',          'TourController::manifest/$1');
 });
 
 // Por esto (Sintaxis limpia y moderna):
