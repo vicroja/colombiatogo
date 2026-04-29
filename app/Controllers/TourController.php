@@ -15,14 +15,43 @@ use App\Services\TourPriceCalculatorService;
 
 class TourController extends BaseController
 {
-    // tenant_id del usuario autenticado, disponible en todos los métodos
-    private int $tenantId;
+    // Reemplazar por esto al inicio de la clase:
+    private int   $tenantId         = 0;
+    private bool  $hasAccommodation = true;
+    private bool  $hasTours         = false;
+    private array $viewData         = [];
 
-    public function __construct()
-    {
-        // Asumimos que el tenant_id viene de la sesión,
-        // igual que en ReservationController
-        $this->tenantId = (int) session()->get('tenant_id');
+    public function initController(
+        \CodeIgniter\HTTP\RequestInterface  $request,
+        \CodeIgniter\HTTP\ResponseInterface $response,
+        \Psr\Log\LoggerInterface            $logger
+    ): void {
+        parent::initController($request, $response, $logger);
+
+        // La sesión solo está disponible DESPUÉS de parent::initController()
+        // active_tenant_id es la clave correcta confirmada en el log
+        $this->tenantId = (int) session('active_tenant_id');
+
+        if ($this->tenantId > 0) {
+            $tenantModel = new \App\Models\TenantModel();
+            $tenant      = $tenantModel->find($this->tenantId);
+            $settings    = json_decode($tenant['settings_json'] ?? '{}', true) ?? [];
+
+            $this->hasAccommodation = (bool)($settings['has_accommodation'] ?? true);
+            $this->hasTours         = (bool)($settings['has_tours']         ?? false);
+
+            $this->viewData = [
+                'has_accommodation' => $this->hasAccommodation,
+                'has_tours'         => $this->hasTours,
+                'tenant'            => $tenant,
+            ];
+
+            log_message('info', "[TourController] tenant={$this->tenantId} " .
+                "has_accommodation=" . ($this->hasAccommodation ? 'si' : 'no') . " " .
+                "has_tours="         . ($this->hasTours         ? 'si' : 'no'));
+        } else {
+            log_message('warning', '[TourController] active_tenant_id no encontrado en sesión.');
+        }
     }
 
     // =========================================================================
