@@ -44,6 +44,7 @@ class TourController extends BaseController
         $tours = $tourModel->getActiveTours($this->tenantId);
 
         log_message('debug', '[Tours::index] tours encontrados: ' . count($tours));
+        log_message('debug', '[Tours::index] sesión completa: ' . json_encode(session()->get()));
 
         return view('tours/index', array_merge($this->viewData, [
             'tours' => $tours,
