@@ -53,6 +53,19 @@
                         <i class="bi bi-people"></i> Whatsapp
                     </a>
                 </li>
+
+                <li class="nav-item nav-section-title">
+                    <small class="text-uppercase text-muted px-3">Tours</small>
+                </li>
+
+                <li class="nav-item">
+                    <a href="<?= base_url('/tours') ?>"
+                       class="nav-link <?= str_contains(current_url(), '/tours') ? 'active' : '' ?>">
+                        <i class="bi bi-compass"></i>
+                        <span>Tours y Actividades</span>
+                    </a>
+                </li>
+
             </ul>
 
             <div class="d-flex text-white align-items-center">
