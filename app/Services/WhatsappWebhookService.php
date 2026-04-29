@@ -12,6 +12,9 @@ class WhatsappWebhookService
     protected $currentSenderPhone;
     protected $isSaas;
 
+    protected $currentGuest = null; // ← agregar esta línea
+
+
     public function __construct()
     {
         // Instancias nativas de CI4
@@ -235,6 +238,7 @@ class WhatsappWebhookService
 
         // 3. IDENTIFICAR O CREAR AL GUEST (Multi-tenant estricto)
         $guest = $this->getOrCreateGuest($senderPhone, $contactName, $tenantId);
+        $this->currentGuest = $guest; // ← agregar esta línea
 
         // --- INICIO CORRECCIÓN: INTERCEPTOR DE IMÁGENES ---
         if ($messageType === 'image') {
@@ -482,8 +486,14 @@ class WhatsappWebhookService
             if (isset($iaDecision['final_response'])) {
                 $history[] = [
                     'role'  => 'model',
-                    'parts' => [['text' => $iaDecision['final_response']]] // ← solo el texto legible
+                    'parts' => [['text' => $iaDecision['final_response']]]
                 ];
+
+                // Procesar metadata si existe — actualiza funnel_stage y estado en BD
+                if (!empty($iaDecision['metadata']) && !empty($this->currentGuest)) {
+                    $this->processMetadata($iaDecision['metadata'], $this->currentGuest);
+                }
+
                 return $iaDecision['final_response'];
             }
 
@@ -838,5 +848,200 @@ class WhatsappWebhookService
         );
 
         return ($result['status'] === 'success') ? $result['message'] : null;
+    }
+
+
+    // Agregar al final de WhatsappWebhookService, antes del cierre de la clase
+
+    /**
+     * Procesa el metadata devuelto por Gemini en cada final_response.
+     * Actualiza funnel_stage y conversation_context_json en la tabla guests.
+     * También persiste datos del huésped si Gemini los detectó en la conversación.
+     *
+     * @param array  $metadata  El objeto metadata del JSON de Gemini
+     * @param object $guest     El objeto guest actual
+     */
+    private function processMetadata(array $metadata, object $guest): void
+    {
+        $updates = [];
+
+        // 1. Actualizar etapa del funnel si cambió
+        $validStages = ['cold', 'interested', 'evaluating', 'objecting', 'ready_close', 'post_booking'];
+        if (!empty($metadata['funnel_stage']) && in_array($metadata['funnel_stage'], $validStages)) {
+            $updates['funnel_stage'] = $metadata['funnel_stage'];
+        }
+
+        // 2. Persistir el estado de conversación actualizado
+        if (!empty($metadata['actualizar_estado'])) {
+            $contextoActual = json_decode($guest->conversation_context_json ?? '{}', true) ?? [];
+            $contextoNuevo  = array_merge($contextoActual, $metadata['actualizar_estado']);
+            $updates['conversation_context_json'] = json_encode($contextoNuevo);
+        }
+
+        // 3. Actualizar datos del huésped si Gemini detectó información nueva
+        if (!empty($metadata['datos_huesped'])) {
+            $datosNuevos = $metadata['datos_huesped'];
+
+            // Solo actualizar campos que estaban vacíos — no sobreescribir datos existentes
+            if (!empty($datosNuevos['nombre']) && empty($guest->full_name)) {
+                $updates['full_name'] = $datosNuevos['nombre'];
+            }
+            if (!empty($datosNuevos['documento']) && empty($guest->document)) {
+                $updates['document'] = $datosNuevos['documento'];
+            }
+        }
+
+        if (!empty($updates)) {
+            $this->db->table('guests')->where('id', $guest->id)->update($updates);
+
+            log_message('info', "[WebhookService] Metadata procesado para guest {$guest->id}: " .
+                json_encode($updates));
+        }
+    }
+
+    /**
+     * Tool: consultar tours disponibles.
+     * Se agrega al WebhookService para ser llamada por WhatsappToolExecutor.
+     */
+    public function toolConsultarToursDisponibles(array $args): string
+    {
+        $fechaDesde  = $args['fecha_desde'] ?? date('Y-m-d');
+        $fechaHasta  = $args['fecha_hasta'] ?? null;
+        $numPersonas = (int)($args['num_personas'] ?? 1);
+
+        $query = "
+        SELECT
+            ts.id AS schedule_id,
+            t.id  AS tour_id,
+            t.name AS tour_nombre,
+            t.description,
+            t.duration_minutes,
+            t.meeting_point,
+            t.difficulty_level,
+            ts.start_datetime,
+            ts.max_pax,
+            ts.current_pax,
+            (ts.max_pax - ts.current_pax) AS cupos_disponibles,
+            COALESCE(ts.price_adult_override, t.price_adult) AS precio_adulto,
+            COALESCE(ts.price_child_override, t.price_child) AS precio_nino
+        FROM tour_schedules ts
+        JOIN tours t ON t.id = ts.tour_id
+        WHERE t.tenant_id = ?
+          AND t.is_active = 1
+          AND ts.status = 'scheduled'
+          AND ts.start_datetime >= ?
+          AND (ts.max_pax - ts.current_pax) >= ?
+    ";
+
+        $params = [$this->currentTenantId, $fechaDesde . ' 00:00:00', $numPersonas];
+
+        if ($fechaHasta) {
+            $query .= " AND ts.start_datetime <= ?";
+            $params[] = $fechaHasta . ' 23:59:59';
+        }
+
+        $query .= " ORDER BY ts.start_datetime ASC LIMIT 10";
+
+        $salidas = $this->db->query($query, $params)->getResult();
+
+        if (empty($salidas)) {
+            return json_encode([
+                'mensaje'    => 'No hay tours disponibles para esas fechas y cantidad de personas.',
+                'sugerencia' => 'Pregúntale si tiene flexibilidad de fechas o si quiere ver otras opciones.',
+            ]);
+        }
+
+        $resultados = array_map(fn($s) => [
+            'schedule_id'      => (int)$s->schedule_id,
+            'tour_id'          => (int)$s->tour_id,
+            'nombre'           => $s->tour_nombre,
+            'descripcion'      => $s->description,
+            'duracion_minutos' => (int)$s->duration_minutes,
+            'punto_encuentro'  => $s->meeting_point,
+            'dificultad'       => $s->difficulty_level,
+            'fecha_salida'     => $s->start_datetime,
+            'cupos_disponibles'=> (int)$s->cupos_disponibles,
+            'precio_adulto'    => (float)$s->precio_adulto,
+            'precio_nino'      => (float)$s->precio_nino,
+            'precio_total_ejemplo' => "Para {$numPersonas} adultos: " .
+                number_format((float)$s->precio_adulto * $numPersonas, 0, ',', '.'),
+        ], $salidas);
+
+        return json_encode([
+            'mensaje'  => 'Tours disponibles encontrados.',
+            'salidas'  => $resultados,
+        ]);
+    }
+
+    /**
+     * Tool: reservar un tour desde WhatsApp.
+     */
+    public function toolReservarTour(array $args): string
+    {
+        $scheduleId    = (int)($args['schedule_id']            ?? 0);
+        $numAdults     = (int)($args['num_adults']             ?? 1);
+        $numChildren   = (int)($args['num_children']           ?? 0);
+        $precioTotal   = (float)($args['precio_total_acordado'] ?? 0);
+        $nombreCliente = $args['nombre_cliente']               ?? 'Cliente WhatsApp';
+        $pickupLocation= $args['pickup_location']              ?? null;
+
+        if (!$scheduleId || $precioTotal <= 0) {
+            return json_encode(['error' => 'Faltan datos clave para crear la reserva de tour.']);
+        }
+
+        $scheduleModel = new \App\Models\TourScheduleModel();
+        $totalPax      = $numAdults + $numChildren;
+
+        // Verificar disponibilidad en tiempo real (previene race conditions)
+        if (!$scheduleModel->checkAvailability($scheduleId, $totalPax)) {
+            return json_encode([
+                'error' => 'Lo siento, los cupos se llenaron mientras conversábamos. Llama a consultar_tours_disponibles para ver alternativas.',
+            ]);
+        }
+
+        // Obtener o crear el guest
+        $guest = $this->getOrCreateGuest($this->currentSenderPhone, $nombreCliente, $this->currentTenantId);
+
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        // Crear la reserva de tour
+        $tourResModel = new \App\Models\TourReservationModel();
+        $tourResId = $tourResModel->insert([
+            'tenant_id'           => $this->currentTenantId,
+            'schedule_id'         => $scheduleId,
+            'guest_id'            => $guest->id,
+            'num_adults'          => $numAdults,
+            'num_children'        => $numChildren,
+            'total_price'         => $precioTotal,
+            'pickup_location'     => $pickupLocation,
+            'status'              => 'confirmed',
+            'price_snapshot_json' => json_encode([
+                'origen'       => 'whatsapp',
+                'precio_adulto'=> $precioTotal / max($numAdults, 1),
+                'num_adults'   => $numAdults,
+                'num_children' => $numChildren,
+                'total'        => $precioTotal,
+            ]),
+        ]);
+
+        // Actualizar cupos del schedule
+        $scheduleModel->adjustPax($scheduleId, $totalPax);
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            log_message('error', "[WebhookService/toolReservarTour] Transacción fallida para schedule {$scheduleId}.");
+            return json_encode(['error' => 'Error en la base de datos. Por favor intenta de nuevo.']);
+        }
+
+        log_message('info', "[WebhookService/toolReservarTour] Tour reservado #{$tourResId} para guest {$guest->id}.");
+
+        return json_encode([
+            'success'        => true,
+            'reservation_id' => $tourResId,
+            'mensaje'        => 'Tour reservado exitosamente en estado confirmado.',
+            'instruccion'    => 'Dile al cliente que su tour está confirmado y envíale los datos del punto de encuentro y hora de salida. Luego infórmale los medios de pago disponibles.',
+        ]);
     }
 }
