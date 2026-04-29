@@ -54,7 +54,6 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
 
 
 
-    $routes->group('tours', ['filter' => 'auth'], function ($routes) {
 
         // --- CRUD de Tours ---
         $routes->get('/',                        'TourController::index');
@@ -76,7 +75,6 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
 
         // --- Manifiesto ---
         $routes->get('manifest/(:num)',          'TourController::manifest/$1');
-    });
 
 
     // Simulador de asistente IA
