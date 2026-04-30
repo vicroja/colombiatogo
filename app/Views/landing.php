@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Tentii — El PMS nacido en la era de la IA. Gestiona alojamiento + tours + WhatsApp en una sola plataforma. Sin comisiones por reserva. Desde USD 20/mes.">
-    <meta name="keywords" content="PMS hoteles, software glamping, software cabañas, PMS tours, WhatsApp IA hotel, alternativa Asksuite, alternativa WeSpeak, channel manager Latam">
-    <meta property="og:title" content="Tentii — PMS con IA para hoteles boutique, glamping, cabañas y tours">
-    <meta property="og:description" content="No es un chatbot pegado a un PMS viejo. Es un PMS construido desde cero con IA. Reservas + tours + WhatsApp en uno. Sin comisiones.">
+    <meta name="description" content="GuestHandle — PMS con IA para hoteles. WhatsApp 24/7, reservas automáticas, precios dinámicos y channel manager. Conectado en menos de 10 minutos.">
+    <meta name="keywords" content="PMS hotelero, software hotel Colombia, WhatsApp hotel automatico, inteligencia artificial hotel, channel manager hotel">
+    <meta property="og:title" content="GuestHandle — Tu hotel vende mientras duermes">
+    <meta property="og:description" content="PMS + IA en WhatsApp 24/7. Reservas automáticas, precios inteligentes y cero consultas sin respuesta. Primer mes gratis.">
     <meta property="og:type" content="website">
-    <title>Tentii — PMS con IA para alojamientos y tours</title>
+    <title>GuestHandle — PMS + IA + WhatsApp 24/7 para Hoteles</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
 
     <style>
         /* ────────────────────────────────────────────────────────────────
@@ -21,128 +21,100 @@
         *{margin:0;padding:0;box-sizing:border-box}
 
         :root{
-            /* Tentii palette — earthy + modern */
-            --terra        : #C2410C;   /* terracota — acento principal */
-            --terra-dark   : #9A3412;
-            --terra-light  : #FFF7ED;
-            --terra-mid    : #FED7AA;
-
-            --moss         : #166534;   /* verde profundo */
-            --moss-dark    : #14532D;
-            --moss-light   : #F0FDF4;
-            --moss-mid     : #4ADE80;
-
-            --sand         : #FAF7F2;   /* fondo cálido */
-            --sand-dark    : #F4EFE7;
-            --bone         : #FCFAF5;
-
-            --ink          : #0C0A09;
-            --ink-soft     : #1C1917;
-            --slate-700    : #44403C;
-            --slate-500    : #78716C;
-            --slate-400    : #A8A29E;
-            --slate-200    : #E7E5E4;
-            --slate-100    : #F5F5F4;
-
-            --wa           : #25D366;
-            --wa-dark      : #128C7E;
-            --wa-light     : #DCFCE7;
-
-            --amber        : #F59E0B;
-            --amber-light  : #FEF3C7;
-
-            --display      : 'Fraunces', Georgia, serif;
-            --sans         : 'Inter', system-ui, sans-serif;
-
-            --r            : 8px;
-            --r2           : 14px;
-            --r3           : 22px;
-
-            --shadow-sm    : 0 1px 3px rgba(12,10,9,.05), 0 1px 2px rgba(12,10,9,.04);
-            --shadow-md    : 0 4px 18px rgba(12,10,9,.07), 0 2px 6px rgba(12,10,9,.04);
-            --shadow-lg    : 0 20px 50px -12px rgba(12,10,9,.18), 0 8px 16px -8px rgba(12,10,9,.08);
+            --wa          : #25D366;
+            --wa-dark     : #128C7E;
+            --wa-light    : #DCFCE7;
+            --blue        : #185FA5;
+            --blue-light  : #E6F1FB;
+            --blue-mid    : #378ADD;
+            --blue-dark   : #0C447C;
+            --teal        : #0F6E56;
+            --teal-light  : #E1F5EE;
+            --teal-mid    : #1D9E75;
+            --navy        : #0F172A;
+            --amber-light : #FEF9C3;
+            --amber       : #F59E0B;
+            --gray-50     : #F8FAFC;
+            --gray-100    : #F1F5F9;
+            --gray-200    : #E2E8F0;
+            --gray-400    : #94A3B8;
+            --gray-500    : #64748B;
+            --gray-700    : #334155;
+            --gray-900    : #0F172A;
+            --white       : #FFFFFF;
+            --serif       : 'Sora', sans-serif;
+            --sans        : 'Plus Jakarta Sans', sans-serif;
+            --r           : 10px;
+            --r2          : 16px;
+            --r3          : 24px;
+            --shadow-sm   : 0 1px 3px rgba(15,23,42,.06), 0 1px 2px rgba(15,23,42,.04);
+            --shadow-md   : 0 4px 16px rgba(15,23,42,.08), 0 2px 6px rgba(15,23,42,.05);
         }
 
         html{scroll-behavior:smooth}
 
         body{
-            background  : var(--bone);
-            color       : var(--ink-soft);
+            background  : var(--white);
+            color       : var(--gray-900);
             font-family : var(--sans);
             font-size   : 16px;
             line-height : 1.65;
             overflow-x  : hidden;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
         }
 
         a{text-decoration:none;color:inherit}
         img{display:block;max-width:100%}
 
-        /* Subtle grain texture overlay */
-        body::before{
-            content: '';
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 1000;
-            opacity: .025;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-        }
-
         /* ────────────────────────────────────────────────────────────────
-           NAV
+           NAVEGACIÓN
         ──────────────────────────────────────────────────────────────── */
         nav{
-            background      : rgba(252,250,245,0.85);
-            border-bottom   : 1px solid var(--slate-200);
+            background      : rgba(255,255,255,0.97);
+            border-bottom   : 1px solid var(--gray-100);
             padding         : 0 clamp(1.25rem,4vw,2.5rem);
             display         : flex;
             justify-content : space-between;
             align-items     : center;
-            height          : 68px;
+            height          : 64px;
             position        : sticky;
             top             : 0;
             z-index         : 200;
-            backdrop-filter : blur(14px);
-            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter : blur(12px);
         }
 
         .nav-logo{
-            font-family    : var(--display);
-            font-size      : 1.45rem;
-            font-weight    : 600;
-            color          : var(--ink);
-            letter-spacing : -0.025em;
+            font-family    : var(--serif);
+            font-size      : 1.25rem;
+            font-weight    : 700;
+            color          : var(--navy);
+            letter-spacing : -0.02em;
             display        : flex;
-            align-items    : baseline;
-            gap            : .15rem;
-            font-style     : italic;
+            align-items    : center;
+            gap            : .45rem;
         }
 
         .nav-logo-dot{
-            width         : 7px;
-            height        : 7px;
-            background    : var(--terra);
+            width         : 8px;
+            height        : 8px;
+            background    : var(--wa);
             border-radius : 50%;
             display       : inline-block;
-            transform     : translateY(-2px);
         }
 
         .nav-links{
             display     : flex;
             align-items : center;
-            gap         : 2.25rem;
+            gap         : 2rem;
         }
 
         .nav-links a{
             font-size  : .85rem;
-            color      : var(--slate-500);
+            color      : var(--gray-500);
             font-weight: 400;
             transition : color .15s;
         }
 
-        .nav-links a:hover{color:var(--ink)}
+        .nav-links a:hover{color:var(--navy)}
 
         .nav-actions{
             display     : flex;
@@ -152,21 +124,22 @@
 
         .btn-login{
             font-size    : .85rem;
-            color        : var(--ink);
+            color        : var(--blue);
             font-weight  : 500;
-            padding      : .5rem 1rem;
+            padding      : .45rem 1rem;
+            border       : 1.5px solid var(--blue-light);
             border-radius: var(--r);
             transition   : all .15s;
         }
 
-        .btn-login:hover{background:var(--slate-100)}
+        .btn-login:hover{background:var(--blue-light)}
 
         .btn-nav-cta{
             font-size     : .85rem;
-            background    : var(--ink);
-            color         : var(--bone);
-            font-weight   : 500;
-            padding       : .55rem 1.15rem;
+            background    : var(--wa);
+            color         : var(--white);
+            font-weight   : 600;
+            padding       : .5rem 1.1rem;
             border-radius : var(--r);
             transition    : all .15s;
             border        : none;
@@ -174,18 +147,15 @@
             display       : inline-block;
         }
 
-        .btn-nav-cta:hover{background:var(--terra)}
-
-        @media(max-width: 820px){
-            .nav-links{display:none}
-        }
+        .btn-nav-cta:hover{background:var(--wa-dark)}
 
         /* ────────────────────────────────────────────────────────────────
            HERO
         ──────────────────────────────────────────────────────────────── */
         .hero{
             padding    : clamp(4rem,8vw,7rem) clamp(1.25rem,4vw,2.5rem) clamp(3.5rem,7vw,6rem);
-            background : var(--bone);
+            text-align : center;
+            background : var(--white);
             position   : relative;
             overflow   : hidden;
         }
@@ -193,735 +163,283 @@
         .hero::before{
             content   : '';
             position  : absolute;
-            top       : -200px;
-            right     : -150px;
-            width     : 600px;
-            height    : 600px;
-            background: radial-gradient(circle, rgba(194,65,12,.08) 0%, transparent 60%);
+            top       : 0;
+            left      : 0;
+            right     : 0;
+            height    : 380px;
+            background: radial-gradient(ellipse 80% 60% at 50% -10%, #E8F8F0 0%, transparent 70%);
             pointer-events: none;
             z-index   : 0;
         }
 
-        .hero::after{
-            content   : '';
-            position  : absolute;
-            bottom    : -300px;
-            left      : -200px;
-            width     : 700px;
-            height    : 700px;
-            background: radial-gradient(circle, rgba(22,101,52,.06) 0%, transparent 60%);
-            pointer-events: none;
-            z-index   : 0;
-        }
-
-        .hero-inner{
-            max-width: 1100px;
-            margin   : 0 auto;
-            position : relative;
-            z-index  : 1;
-            display  : grid;
-            grid-template-columns: 1.1fr .9fr;
-            gap      : 4rem;
-            align-items: center;
-        }
-
-        @media(max-width: 900px){
-            .hero-inner{grid-template-columns: 1fr; gap: 3rem; text-align:center}
-        }
+        .hero > *{position:relative;z-index:1}
 
         .hero-badge{
             display       : inline-flex;
             align-items   : center;
             gap           : .5rem;
-            background    : var(--terra-light);
-            color         : var(--terra-dark);
-            font-size     : .72rem;
+            background    : var(--wa-light);
+            color         : var(--wa-dark);
+            font-size     : .75rem;
             font-weight   : 600;
-            letter-spacing: .06em;
-            text-transform: uppercase;
-            padding       : .4rem 1rem;
+            letter-spacing: .04em;
+            padding       : .35rem 1rem;
             border-radius : 99px;
-            margin-bottom : 1.5rem;
-            border        : 1px solid var(--terra-mid);
+            margin-bottom : 1.75rem;
+            border        : 1px solid #BBF7D0;
         }
 
         .hero-badge-dot{
             width         : 6px;
             height        : 6px;
-            background    : var(--terra);
+            background    : var(--wa);
             border-radius : 50%;
-            animation     : pulse 2.5s infinite;
         }
 
         .hero h1{
-            font-family    : var(--display);
-            font-size      : clamp(2.25rem, 5.5vw, 4.1rem);
-            font-weight    : 500;
-            color          : var(--ink);
-            line-height    : 1.02;
-            margin-bottom  : 1.5rem;
-            letter-spacing : -0.035em;
+            font-family    : var(--serif);
+            font-size      : clamp(2.1rem,5.5vw,3.8rem);
+            font-weight    : 700;
+            color          : var(--navy);
+            line-height    : 1.1;
+            margin-bottom  : 1.25rem;
+            letter-spacing : -0.03em;
+            max-width      : 800px;
+            margin-left    : auto;
+            margin-right   : auto;
         }
 
-        .hero h1 em{
-            font-style: italic;
-            font-weight: 400;
-            color: var(--terra);
-        }
-
-        .hero h1 .underline{
-            position: relative;
-            white-space: nowrap;
-        }
-
-        .hero h1 .underline::after{
-            content: '';
-            position: absolute;
-            left: 0; right: 0; bottom: 4px;
-            height: 6px;
-            background: var(--moss-mid);
-            opacity: .4;
-            z-index: -1;
-            border-radius: 4px;
-        }
+        .hero h1 .txt-wa{color:var(--wa-dark)}
 
         .hero-sub{
-            font-size     : 1.075rem;
-            color         : var(--slate-500);
+            font-size     : 1.05rem;
+            color         : var(--gray-500);
             max-width     : 540px;
-            margin-bottom : 2rem;
+            margin        : 0 auto 2.25rem;
             font-weight   : 400;
-            line-height   : 1.7;
-        }
-
-        @media(max-width: 900px){
-            .hero-sub{margin-left:auto;margin-right:auto}
+            line-height   : 1.75;
         }
 
         .hero-btns{
             display         : flex;
             gap             : .75rem;
+            justify-content : center;
             flex-wrap       : wrap;
-            margin-bottom   : 1.5rem;
-        }
-
-        @media(max-width: 900px){
-            .hero-btns{justify-content:center}
+            margin-bottom   : 1.25rem;
         }
 
         .btn-primary{
-            background    : var(--ink);
-            color         : var(--bone);
-            padding       : .9rem 1.85rem;
-            border-radius : var(--r);
-            font-weight   : 600;
-            font-size     : .92rem;
+            background    : var(--wa);
+            color         : var(--white);
+            padding       : .85rem 2rem;
+            border-radius : var(--r2);
+            font-weight   : 700;
+            font-size     : .95rem;
             border        : none;
             cursor        : pointer;
             transition    : all .2s;
-            display       : inline-flex;
-            align-items   : center;
-            gap           : .5rem;
+            display       : inline-block;
             font-family   : var(--sans);
         }
 
         .btn-primary:hover{
-            background : var(--terra);
+            background : var(--wa-dark);
             transform  : translateY(-1px);
-            box-shadow : var(--shadow-md);
         }
-
-        .btn-primary .arrow{
-            transition: transform .2s;
-        }
-
-        .btn-primary:hover .arrow{transform: translateX(3px)}
 
         .btn-secondary{
-            background    : transparent;
-            color         : var(--ink);
-            padding       : .9rem 1.6rem;
-            border-radius : var(--r);
+            background    : var(--white);
+            color         : var(--gray-700);
+            padding       : .85rem 1.75rem;
+            border-radius : var(--r2);
             font-weight   : 500;
-            font-size     : .92rem;
-            border        : 1.5px solid var(--slate-200);
+            font-size     : .95rem;
+            border        : 1.5px solid var(--gray-200);
             cursor        : pointer;
             transition    : all .2s;
-            display       : inline-flex;
-            align-items   : center;
-            gap           : .5rem;
+            display       : inline-block;
         }
 
-        .btn-secondary:hover{border-color: var(--ink); background: var(--bone)}
+        .btn-secondary:hover{border-color:var(--wa);color:var(--wa-dark)}
 
         .hero-note{
-            font-size : .8rem;
-            color     : var(--slate-400);
-            display   : flex;
-            align-items: center;
-            gap        : .9rem;
+            font-size : .78rem;
+            color     : var(--gray-400);
+        }
+
+        .hero-note strong{color:var(--wa-dark);font-weight:600}
+
+        /* ── Stats strip ── */
+        .stats-strip{
+            display    : flex;
             flex-wrap  : wrap;
+            justify-content: center;
+            gap        : 0;
+            border-top : 1px solid var(--gray-100);
+            border-bottom: 1px solid var(--gray-100);
+            background : var(--gray-50);
         }
 
-        @media(max-width: 900px){
-            .hero-note{justify-content:center}
+        .stat-item{
+            flex        : 1 1 180px;
+            text-align  : center;
+            padding     : 1.5rem 1.25rem;
+            border-right: 1px solid var(--gray-100);
         }
 
-        .hero-note .sep{color: var(--slate-200)}
-        .hero-note strong{color: var(--ink-soft); font-weight: 500}
+        .stat-item:last-child{border-right:none}
 
-        /* Hero visual — split mockup */
-        .hero-visual{
-            position: relative;
+        .stat-n{
+            font-family    : var(--serif);
+            font-size      : 1.9rem;
+            font-weight    : 700;
+            color          : var(--navy);
+            line-height    : 1;
+            margin-bottom  : .3rem;
         }
 
-        .hv-card{
-            background    : white;
-            border-radius : var(--r2);
-            box-shadow    : var(--shadow-lg);
-            border        : 1px solid var(--slate-200);
-            overflow      : hidden;
-            position      : relative;
-        }
+        .stat-n span{color:var(--wa-dark)}
 
-        .hv-card.dashboard{
-            transform     : rotate(-1.5deg);
-            position      : relative;
-            z-index       : 2;
-        }
-
-        .hv-card.whatsapp{
-            position      : absolute;
-            bottom        : -40px;
-            right         : -30px;
-            width         : 60%;
-            transform     : rotate(4deg);
-            z-index       : 3;
-        }
-
-        @media(max-width: 900px){
-            .hv-card.whatsapp{
-                position: relative;
-                width   : 80%;
-                margin  : -50px auto 0;
-                right   : auto;
-                bottom  : auto;
-            }
-        }
-
-        .hv-dash-header{
-            background    : var(--ink);
-            padding       : .8rem 1.1rem;
-            display       : flex;
-            align-items   : center;
-            gap           : .6rem;
-        }
-
-        .hv-dash-dots{display:flex;gap:.3rem}
-        .hv-dash-dots span{
-            width:10px;height:10px;border-radius:50%;
-            background: rgba(255,255,255,.2);
-        }
-        .hv-dash-dots span:first-child{background:#FF5F56}
-        .hv-dash-dots span:nth-child(2){background:#FFBD2E}
-        .hv-dash-dots span:nth-child(3){background:#27C93F}
-
-        .hv-dash-title{
-            color: rgba(255,255,255,.5);
-            font-size: .7rem;
-            margin-left: .4rem;
-            font-family: var(--sans);
-        }
-
-        .hv-dash-body{
-            padding: 1.25rem;
-            background: var(--sand);
-        }
-
-        .hv-stats{
-            display: grid;
-            grid-template-columns: repeat(3,1fr);
-            gap: .65rem;
-            margin-bottom: 1.1rem;
-        }
-
-        .hv-stat{
-            background: white;
-            border-radius: var(--r);
-            padding: .7rem .8rem;
-            border: 1px solid var(--slate-200);
-        }
-
-        .hv-stat-l{
-            font-size: .6rem;
-            color: var(--slate-500);
-            text-transform: uppercase;
-            letter-spacing: .07em;
-            margin-bottom: .15rem;
-        }
-
-        .hv-stat-n{
-            font-family: var(--display);
-            font-size: 1.15rem;
-            font-weight: 600;
-            color: var(--ink);
-        }
-
-        .hv-stat-n .up{color: var(--moss); font-size: .7rem; margin-left: .25rem}
-
-        .hv-cal{
-            background: white;
-            border-radius: var(--r);
-            border: 1px solid var(--slate-200);
-            padding: .75rem;
-        }
-
-        .hv-cal-h{
-            font-size: .65rem;
-            font-weight: 600;
-            color: var(--ink);
-            margin-bottom: .55rem;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .hv-cal-h span{color: var(--slate-500); font-weight: 400}
-
-        .hv-cal-grid{
-            display: grid;
-            grid-template-columns: 60px repeat(7, 1fr);
-            gap: 2px;
-        }
-
-        .hv-cal-cell{
-            font-size: .55rem;
-            padding: .25rem .15rem;
-            border-radius: 3px;
-            color: var(--slate-500);
-            text-align: center;
-            background: var(--slate-100);
-        }
-
-        .hv-cal-cell.label{
-            background: transparent;
-            text-align: left;
-            color: var(--ink);
-            font-weight: 500;
-            padding-left: 0;
-        }
-
-        .hv-cal-cell.booked{ background: var(--terra); color: white }
-        .hv-cal-cell.confirmed{ background: var(--moss); color: white }
-        .hv-cal-cell.maint{ background: var(--amber); color: white }
-        .hv-cal-cell.free{ background: var(--moss-light); color: var(--moss-dark) }
-
-        /* Mini WhatsApp */
-        .hv-wa-header{
-            background: #128C7E;
-            padding: .55rem .75rem;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: .55rem;
-        }
-
-        .hv-wa-avatar{
-            width: 28px;height:28px;border-radius:50%;
-            background: var(--terra-light);
-            display:flex;align-items:center;justify-content:center;
-            font-size: .65rem;font-weight:700;color:var(--terra-dark);
-        }
-
-        .hv-wa-name{font-size:.72rem;font-weight:600;line-height:1.1}
-        .hv-wa-status{font-size:.6rem;opacity:.85}
-
-        .hv-wa-body{
-            background: #ECE5DD;
-            padding: .65rem;
-            display: flex;
-            flex-direction: column;
-            gap: .35rem;
-            min-height: 130px;
-        }
-
-        .hv-wa-msg{
-            font-size: .7rem;
-            line-height: 1.35;
-            padding: .4rem .55rem;
-            border-radius: 6px;
-            max-width: 82%;
-        }
-
-        .hv-wa-msg.in{
-            background: white;
-            align-self: flex-start;
-            border-radius: 0 6px 6px 6px;
-        }
-
-        .hv-wa-msg.out{
-            background: #D9FDD3;
-            align-self: flex-end;
-            border-radius: 6px 6px 0 6px;
-        }
-
-        /* ────────────────────────────────────────────────────────────────
-           SOCIAL PROOF STRIP
-        ──────────────────────────────────────────────────────────────── */
-        .proof-strip{
-            border-top    : 1px solid var(--slate-200);
-            border-bottom : 1px solid var(--slate-200);
-            background    : var(--sand);
-            padding       : 2rem clamp(1.25rem,4vw,2.5rem);
-        }
-
-        .proof-inner{
-            max-width: 1100px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 2rem;
-            flex-wrap: wrap;
-        }
-
-        .proof-label{
-            font-size: .7rem;
-            color: var(--slate-500);
-            text-transform: uppercase;
-            letter-spacing: .12em;
-            font-weight: 500;
-        }
-
-        .proof-types{
-            display: flex;
-            gap: 1.75rem;
-            flex-wrap: wrap;
-        }
-
-        .proof-type{
-            display: flex;
-            align-items: center;
-            gap: .5rem;
-            font-size: .85rem;
-            color: var(--ink);
-            font-weight: 500;
-            font-family: var(--display);
-            font-style: italic;
-        }
-
-        .proof-type-icon{
-            width: 22px; height: 22px;
-            display: flex; align-items: center; justify-content: center;
-            background: var(--terra-light);
-            border-radius: 50%;
-            color: var(--terra-dark);
+        .stat-l{
+            font-size   : .75rem;
+            color       : var(--gray-500);
+            font-weight : 400;
         }
 
         /* ────────────────────────────────────────────────────────────────
            SECTION COMMONS
         ──────────────────────────────────────────────────────────────── */
-        section{padding:clamp(4rem,8vw,7rem) clamp(1.25rem,4vw,2.5rem)}
+        section{padding:clamp(3.5rem,7vw,6rem) clamp(1.25rem,4vw,2.5rem)}
 
         .container{max-width:1100px;margin:0 auto}
 
         .eyebrow{
             font-size      : .7rem;
-            font-weight    : 600;
-            letter-spacing : .15em;
+            font-weight    : 700;
+            letter-spacing : .14em;
             text-transform : uppercase;
-            color          : var(--terra);
-            margin-bottom  : .8rem;
-            display        : inline-flex;
-            align-items    : center;
-            gap            : .5rem;
+            color          : var(--wa-dark);
+            margin-bottom  : .6rem;
         }
 
-        .eyebrow.moss{color:var(--moss)}
-        .eyebrow.amber{color:#B45309}
-
-        .eyebrow::before{
-            content: '';
-            width: 18px; height: 1px;
-            background: currentColor;
-        }
+        .eyebrow.blue{color:var(--blue)}
 
         .section-h{
-            font-family    : var(--display);
-            font-size      : clamp(1.85rem,3.5vw,2.85rem);
-            font-weight    : 500;
-            color          : var(--ink);
-            line-height    : 1.1;
+            font-family    : var(--serif);
+            font-size      : clamp(1.65rem,3.2vw,2.5rem);
+            font-weight    : 700;
+            color          : var(--navy);
+            line-height    : 1.2;
             letter-spacing : -0.025em;
-            margin-bottom  : .85rem;
-        }
-
-        .section-h em{
-            font-style: italic;
-            color: var(--terra);
-            font-weight: 400;
+            margin-bottom  : .75rem;
         }
 
         .section-p{
-            font-size   : 1rem;
-            color       : var(--slate-500);
-            max-width   : 580px;
-            line-height : 1.7;
+            font-size   : .975rem;
+            color       : var(--gray-500);
+            max-width   : 520px;
+            line-height : 1.75;
         }
 
         /* ────────────────────────────────────────────────────────────────
-           PAIN POINTS — el dolor del hotelero
+           PAIN POINTS
         ──────────────────────────────────────────────────────────────── */
-        .pain-section{
-            background: var(--bone);
-            position: relative;
-        }
-
-        .pain-head{
-            text-align: center;
-            margin-bottom: 3.5rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .pain-head .section-p{margin: 0 auto}
+        .pain-section{background:var(--white)}
 
         .pain-grid{
             display               : grid;
-            grid-template-columns : repeat(auto-fit, minmax(280px,1fr));
+            grid-template-columns : repeat(auto-fit, minmax(300px,1fr));
             gap                   : 1rem;
+            margin-top            : 2.75rem;
         }
 
         .pain-card{
-            background    : white;
-            border        : 1px solid var(--slate-200);
+            background    : var(--gray-50);
+            border        : 1px solid var(--gray-100);
             border-radius : var(--r2);
-            padding       : 1.75rem 1.5rem;
-            transition    : all .25s;
-            position      : relative;
+            padding       : 1.5rem;
+            display       : flex;
+            gap           : 1rem;
+            align-items   : flex-start;
         }
 
-        .pain-card:hover{
-            border-color: var(--terra-mid);
-            transform   : translateY(-3px);
-            box-shadow  : var(--shadow-md);
-        }
-
-        .pain-card-icon{
-            width: 38px; height: 38px;
-            border-radius: 10px;
-            background: var(--terra-light);
-            color: var(--terra-dark);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-            margin-bottom: 1rem;
+        .pain-icon{
+            font-size      : 1.4rem;
+            line-height    : 1;
+            flex-shrink    : 0;
+            margin-top     : .1rem;
         }
 
         .pain-card h3{
-            font-family   : var(--display);
-            font-size     : 1.1rem;
+            font-size     : .9rem;
             font-weight   : 600;
-            color         : var(--ink);
-            margin-bottom : .55rem;
-            line-height   : 1.3;
+            color         : var(--navy);
+            margin-bottom : .3rem;
+            font-family   : var(--serif);
         }
 
         .pain-card p{
-            font-size  : .88rem;
-            color      : var(--slate-500);
-            line-height: 1.65;
-        }
-
-        .pain-card .quote{
-            font-style: italic;
-            color: var(--slate-700);
-            border-left: 2px solid var(--terra);
-            padding-left: .85rem;
-            margin-top: .85rem;
-            font-size: .82rem;
-            font-family: var(--display);
+            font-size  : .82rem;
+            color      : var(--gray-500);
+            line-height: 1.6;
         }
 
         /* ────────────────────────────────────────────────────────────────
-           SOLUTION OVERVIEW — qué hace Tentii
+           WHATSAPP AI — demo
         ──────────────────────────────────────────────────────────────── */
-        .solution{
-            background: var(--ink);
-            color: var(--bone);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .solution::before{
-            content: '';
-            position: absolute;
-            top: -300px; left: 50%;
-            transform: translateX(-50%);
-            width: 800px; height: 800px;
-            background: radial-gradient(circle, rgba(194,65,12,.18) 0%, transparent 60%);
-            pointer-events: none;
-        }
-
-        .solution-inner{
-            max-width: 1100px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 1;
-        }
-
-        .solution-head{
-            text-align: center;
-            margin-bottom: 4rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .solution-head .eyebrow{color: var(--terra-mid)}
-        .solution-head .eyebrow::before{background: var(--terra-mid)}
-        .solution-head .section-h{color: var(--bone); max-width: 750px}
-        .solution-head .section-h em{color: var(--terra-mid)}
-        .solution-head .section-p{color: rgba(252,250,245,.65); margin: 0 auto}
-
-        .pillars{
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1px;
-            background: rgba(255,255,255,.08);
-            border: 1px solid rgba(255,255,255,.08);
-            border-radius: var(--r2);
-            overflow: hidden;
-        }
-
-        @media(max-width: 800px){
-            .pillars{grid-template-columns: 1fr}
-        }
-
-        .pillar{
-            background: var(--ink);
-            padding: 2.25rem 2rem;
-            transition: background .25s;
-            position: relative;
-        }
-
-        .pillar:hover{background: var(--ink-soft)}
-
-        .pillar-num{
-            font-family: var(--display);
-            font-style: italic;
-            font-size: .85rem;
-            color: var(--terra-mid);
-            margin-bottom: .85rem;
-            font-weight: 500;
-        }
-
-        .pillar h3{
-            font-family: var(--display);
-            font-size: 1.45rem;
-            font-weight: 500;
-            margin-bottom: .85rem;
-            color: var(--bone);
-            line-height: 1.2;
-            letter-spacing: -0.015em;
-        }
-
-        .pillar p{
-            font-size: .92rem;
-            color: rgba(252,250,245,.65);
-            line-height: 1.7;
-            margin-bottom: 1.1rem;
-        }
-
-        .pillar-feats{
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: .45rem;
-        }
-
-        .pillar-feats li{
-            font-size: .82rem;
-            color: rgba(252,250,245,.85);
-            display: flex;
-            align-items: flex-start;
-            gap: .6rem;
-            padding-left: 0;
-        }
-
-        .pillar-feats li::before{
-            content: '';
-            width: 14px; height: 1px;
-            background: var(--terra-mid);
-            margin-top: .65rem;
-            flex-shrink: 0;
-        }
-
-        /* ────────────────────────────────────────────────────────────────
-           WHATSAPP DEMO
-        ──────────────────────────────────────────────────────────────── */
-        .wa-section{
-            background: var(--sand);
-        }
+        .wa-section{background:var(--gray-50)}
 
         .wa-grid{
             display               : grid;
             grid-template-columns : 1fr 1fr;
             gap                   : 4rem;
             align-items           : center;
-        }
-
-        @media(max-width: 900px){
-            .wa-grid{grid-template-columns: 1fr; gap: 3rem}
+            margin-top            : 2.75rem;
         }
 
         .wa-feat-list{
             display        : flex;
             flex-direction : column;
-            gap            : 1.1rem;
-            margin         : 2rem 0;
+            gap            : .85rem;
+            margin         : 1.75rem 0;
         }
 
         .wa-feat{
             display     : flex;
             align-items : flex-start;
-            gap         : .9rem;
+            gap         : .75rem;
+            font-size   : .875rem;
+            color       : var(--gray-700);
         }
 
-        .wa-feat-icon{
-            width          : 32px;
-            height         : 32px;
-            background     : var(--moss-light);
-            color          : var(--moss);
-            border-radius  : 9px;
+        .wa-check{
+            width          : 20px;
+            height         : 20px;
+            background     : var(--wa);
+            border-radius  : 50%;
             display        : flex;
             align-items    : center;
             justify-content: center;
             flex-shrink    : 0;
-            font-size      : .9rem;
+            margin-top     : .1rem;
         }
 
-        .wa-feat-text strong{
-            display       : block;
-            font-size     : .92rem;
-            font-weight   : 600;
-            color         : var(--ink);
-            margin-bottom : .15rem;
+        .wa-check::after{
+            content    : '';
+            width      : 6px;
+            height     : 4px;
+            border-left: 1.5px solid #fff;
+            border-bottom:1.5px solid #fff;
+            transform  : rotate(-45deg) translateY(-1px);
+            display    : block;
         }
 
-        .wa-feat-text span{
-            font-size: .85rem;
-            color    : var(--slate-500);
-            line-height: 1.55;
-        }
-
-        /* Chat mockup grande */
+        /* Chat mockup */
         .chat-phone{
-            background    : var(--bone);
-            border-radius : 28px;
-            box-shadow    : var(--shadow-lg);
-            border        : 8px solid var(--ink);
+            background    : var(--white);
+            border-radius : var(--r3);
+            box-shadow    : var(--shadow-md);
+            border        : 1px solid var(--gray-100);
             overflow      : hidden;
             max-width     : 380px;
             margin        : 0 auto;
@@ -929,7 +447,7 @@
 
         .chat-ph-header{
             background    : #075E54;
-            padding       : .9rem 1.25rem;
+            padding       : .85rem 1.25rem;
             display       : flex;
             align-items   : center;
             gap           : .75rem;
@@ -938,23 +456,21 @@
         .chat-avatar{
             width          : 40px;
             height         : 40px;
-            background     : var(--terra-light);
+            background     : var(--wa-light);
             border-radius  : 50%;
             display        : flex;
             align-items    : center;
             justify-content: center;
-            font-size      : .8rem;
+            font-size      : .75rem;
             font-weight    : 700;
-            color          : var(--terra-dark);
+            color          : var(--wa-dark);
             flex-shrink    : 0;
-            font-family    : var(--display);
         }
 
         .chat-name{
-            font-size   : .92rem;
+            font-size   : .9rem;
             font-weight : 600;
-            color       : white;
-            line-height : 1.1;
+            color       : var(--white);
         }
 
         .chat-status{
@@ -963,7 +479,6 @@
             display     : flex;
             align-items : center;
             gap         : .3rem;
-            margin-top  : .15rem;
         }
 
         .status-dot{
@@ -981,13 +496,11 @@
 
         .chat-body{
             background : #ECE5DD;
-            padding    : 1.1rem;
+            padding    : 1rem;
             display    : flex;
             flex-direction: column;
-            gap        : .55rem;
-            min-height : 360px;
-            max-height : 440px;
-            overflow   : hidden;
+            gap        : .6rem;
+            min-height : 280px;
         }
 
         .msg-wrap{display:flex;flex-direction:column}
@@ -995,17 +508,16 @@
         .msg-wrap.left{align-items:flex-start}
 
         .msg-bubble{
-            max-width     : 82%;
-            padding       : .55rem .8rem;
+            max-width     : 85%;
+            padding       : .55rem .85rem;
             border-radius : 8px;
-            font-size     : .82rem;
-            line-height   : 1.5;
-            box-shadow    : 0 1px 1px rgba(0,0,0,.06);
+            font-size     : .81rem;
+            line-height   : 1.55;
         }
 
         .msg-bubble.in{
-            background    : white;
-            color         : #111;
+            background    : var(--white);
+            color         : var(--gray-900);
             border-radius : 0 8px 8px 8px;
         }
 
@@ -1014,35 +526,6 @@
             color         : #111;
             border-radius : 8px 8px 0 8px;
         }
-
-        .msg-bubble.voice{
-            display: flex; align-items: center; gap: .55rem;
-            min-width: 180px;
-        }
-
-        .voice-play{
-            width: 26px; height: 26px;
-            background: var(--wa-dark);
-            border-radius: 50%;
-            color: white;
-            display: flex; align-items: center; justify-content: center;
-            font-size: .7rem;
-        }
-
-        .voice-wave{
-            flex: 1;
-            display: flex; align-items: center; gap: 2px;
-            height: 18px;
-        }
-
-        .voice-wave span{
-            flex: 1;
-            background: var(--wa-dark);
-            border-radius: 2px;
-            opacity: .6;
-        }
-
-        .voice-time{font-size: .65rem; color: var(--slate-500)}
 
         .msg-meta{
             font-size  : .65rem;
@@ -1061,8 +544,8 @@
             display     : flex;
             align-items : center;
             gap         : .3rem;
-            padding     : .55rem .85rem;
-            background  : white;
+            padding     : .5rem .85rem;
+            background  : var(--white);
             border-radius: 0 8px 8px 8px;
             width       : 56px;
         }
@@ -1070,7 +553,7 @@
         .typing-dot{
             width      : 6px;
             height     : 6px;
-            background : var(--slate-400);
+            background : #94A3B8;
             border-radius:50%;
             animation  : typing .9s infinite;
         }
@@ -1084,25 +567,25 @@
         }
 
         .chat-footer-bar{
-            background  : var(--bone);
+            background  : var(--white);
             padding     : .65rem 1rem;
             display     : flex;
             align-items : center;
             gap         : .5rem;
-            border-top  : 1px solid var(--slate-200);
+            border-top  : 1px solid var(--gray-100);
         }
 
         .chat-input-fake{
             flex          : 1;
-            background    : var(--slate-100);
-            border        : 1px solid var(--slate-200);
+            background    : var(--gray-50);
+            border        : 1px solid var(--gray-200);
             border-radius : 99px;
-            height        : 32px;
+            height        : 34px;
         }
 
         .chat-send{
-            width          : 32px;
-            height         : 32px;
+            width          : 34px;
+            height         : 34px;
             background     : var(--wa);
             border-radius  : 50%;
             display        : flex;
@@ -1112,1232 +595,1422 @@
 
         .chat-send svg{width:16px;height:16px;fill:#fff}
 
-        /* ────────────────────────────────────────────────────────────────
-           COMPARISON — vs WeSpeak / Asksuite
-        ──────────────────────────────────────────────────────────────── */
-        .compare-section{
-            background: var(--bone);
-        }
-
-        .compare-head{
-            margin-bottom: 3rem;
-            display: grid;
-            grid-template-columns: auto 1fr;
-            gap: 3rem;
-            align-items: end;
-        }
-
-        @media(max-width: 800px){
-            .compare-head{grid-template-columns: 1fr; gap: 1rem}
-        }
-
-        .compare-head .section-p{margin: 0; max-width: 480px}
-
-        .compare-table-wrap{
-            background: white;
-            border: 1px solid var(--slate-200);
-            border-radius: var(--r2);
-            overflow: hidden;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .compare-table{
-            width: 100%;
-            border-collapse: collapse;
-            font-size: .9rem;
-        }
-
-        .compare-table thead th{
-            text-align: left;
-            padding: 1.1rem 1.25rem;
-            font-size: .78rem;
-            font-weight: 600;
-            color: var(--slate-500);
-            text-transform: uppercase;
-            letter-spacing: .05em;
-            border-bottom: 1px solid var(--slate-200);
-            background: var(--sand);
-        }
-
-        .compare-table thead th.tentii-col{
-            background: var(--ink);
-            color: var(--bone);
-            font-family: var(--display);
-            font-style: italic;
-            font-size: .95rem;
-            text-transform: none;
-            letter-spacing: -0.01em;
-            font-weight: 600;
-        }
-
-        .compare-table td{
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid var(--slate-100);
-            color: var(--ink-soft);
-            vertical-align: middle;
-        }
-
-        .compare-table tr:last-child td{border-bottom: none}
-
-        .compare-table td.feature{
-            font-weight: 500;
-            color: var(--ink);
-            font-size: .88rem;
-            width: 35%;
-        }
-
-        .compare-table td.tentii-col{
-            background: rgba(194,65,12,.04);
-            font-weight: 500;
-        }
-
-        .check-yes{
-            color: var(--moss);
-            font-weight: 700;
-        }
-
-        .check-no{
-            color: var(--slate-400);
-            font-weight: 400;
-        }
-
-        .check-partial{
-            color: var(--amber);
-            font-weight: 500;
-        }
-
-        .check-text{
-            font-size: .8rem;
-            color: var(--slate-500);
-        }
-
-        .compare-note{
-            font-size: .75rem;
-            color: var(--slate-400);
-            text-align: center;
-            margin-top: 1.25rem;
-            font-style: italic;
-            font-family: var(--display);
+        .chat-badge{
+            background    : var(--wa-light);
+            color         : var(--wa-dark);
+            font-size     : .7rem;
+            font-weight   : 600;
+            text-align    : center;
+            padding       : .45rem 1rem;
+            border-top    : 1px solid #BBF7D0;
         }
 
         /* ────────────────────────────────────────────────────────────────
-           DIFFERENTIATORS — ¿Por qué Tentii?
+           PMS MÓDULOS
         ──────────────────────────────────────────────────────────────── */
-        .diff-section{
-            background: var(--moss-dark);
-            color: var(--bone);
-            position: relative;
-            overflow: hidden;
+        .pms-section{background:var(--white)}
+
+        .pms-grid{
+            display               : grid;
+            grid-template-columns : repeat(auto-fit, minmax(300px,1fr));
+            gap                   : 1.25rem;
+            margin-top            : 2.75rem;
         }
 
-        .diff-section::before{
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-image:
-                    linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            pointer-events: none;
+        .pms-card{
+            border        : 1px solid var(--gray-100);
+            border-radius : var(--r2);
+            padding       : 1.75rem;
+            background    : var(--white);
+            transition    : border-color .2s, transform .2s, box-shadow .2s;
+            position      : relative;
+            overflow      : hidden;
         }
 
-        .diff-inner{
-            max-width: 1100px;
-            margin: 0 auto;
-            position: relative;
+        .pms-card::before{
+            content   : '';
+            position  : absolute;
+            top       : 0;
+            left      : 0;
+            width     : 3px;
+            height    : 100%;
+            background: var(--wa);
+            transform : scaleY(0);
+            transition: transform .2s;
+            transform-origin: bottom;
         }
 
-        .diff-head{
-            text-align: center;
-            margin-bottom: 3.5rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        .pms-card:hover{
+            border-color : var(--gray-200);
+            transform    : translateY(-2px);
+            box-shadow   : var(--shadow-md);
         }
 
-        .diff-head .eyebrow{color: var(--terra-mid)}
-        .diff-head .eyebrow::before{background: var(--terra-mid)}
-        .diff-head .section-h{color: var(--bone)}
-        .diff-head .section-h em{color: var(--terra-mid); font-style: italic}
-        .diff-head .section-p{color: rgba(252,250,245,.7); margin: 0 auto}
+        .pms-card:hover::before{transform:scaleY(1)}
 
-        .diff-grid{
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1.25rem;
+        .pms-icon{
+            width          : 44px;
+            height         : 44px;
+            border-radius  : var(--r);
+            display        : flex;
+            align-items    : center;
+            justify-content: center;
+            font-size      : 1.2rem;
+            margin-bottom  : 1rem;
         }
 
-        @media(max-width: 800px){
-            .diff-grid{grid-template-columns: 1fr}
+        .pms-icon.g{background:var(--wa-light)}
+        .pms-icon.b{background:var(--blue-light)}
+        .pms-icon.t{background:var(--teal-light)}
+        .pms-icon.a{background:#FEF3C7}
+
+        .pms-card h3{
+            font-size     : .975rem;
+            font-weight   : 600;
+            color         : var(--navy);
+            margin-bottom : .4rem;
+            font-family   : var(--serif);
         }
 
-        .diff-card{
-            background: rgba(255,255,255,.04);
-            border: 1px solid rgba(255,255,255,.08);
-            border-radius: var(--r2);
-            padding: 1.85rem 1.5rem;
-            backdrop-filter: blur(8px);
-        }
-
-        .diff-card-num{
-            font-family: var(--display);
-            font-style: italic;
-            font-size: 2.5rem;
-            font-weight: 400;
-            color: var(--terra-mid);
-            line-height: 1;
-            margin-bottom: 1rem;
-            opacity: .7;
-        }
-
-        .diff-card h3{
-            font-family: var(--display);
-            font-size: 1.25rem;
-            font-weight: 500;
-            color: var(--bone);
-            margin-bottom: .75rem;
-            line-height: 1.25;
-        }
-
-        .diff-card p{
-            font-size: .88rem;
-            color: rgba(252,250,245,.65);
+        .pms-card p{
+            font-size  : .83rem;
+            color      : var(--gray-500);
             line-height: 1.65;
         }
 
+        .pms-tag{
+            display       : inline-block;
+            margin-top    : .75rem;
+            font-size     : .68rem;
+            font-weight   : 600;
+            padding       : .2rem .65rem;
+            border-radius : 4px;
+        }
+
+        .pms-tag.g{background:var(--wa-light);color:var(--wa-dark)}
+        .pms-tag.b{background:var(--blue-light);color:var(--blue-dark)}
+        .pms-tag.t{background:var(--teal-light);color:var(--teal)}
+        .pms-tag.a{background:#FEF3C7;color:#92400E}
+
         /* ────────────────────────────────────────────────────────────────
-           SECTORS — ¿Para quién?
+           ONBOARDING — 3 PASOS
         ──────────────────────────────────────────────────────────────── */
-        .sectors-section{background: var(--bone)}
+        .onboard-section{background:var(--navy);color:var(--white)}
 
-        .sectors-head{
-            text-align: center;
-            margin-bottom: 3rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        .onboard-section .eyebrow{color:#9FE1CB}
+
+        .onboard-section .section-h{color:var(--white)}
+
+        .onboard-section .section-p{color:#85B7EB}
+
+        .steps-row{
+            display               : grid;
+            grid-template-columns : repeat(auto-fit, minmax(260px,1fr));
+            gap                   : 1.5rem;
+            margin-top            : 2.75rem;
+            position              : relative;
         }
 
-        .sectors-head .section-p{margin: 0 auto}
-
-        .sectors-grid{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1rem;
+        .step-card{
+            background    : rgba(255,255,255,.05);
+            border        : 1px solid rgba(255,255,255,.1);
+            border-radius : var(--r2);
+            padding       : 2rem 1.75rem;
         }
 
-        .sector-card{
-            background: white;
-            border: 1px solid var(--slate-200);
-            border-radius: var(--r2);
-            padding: 1.5rem;
-            text-align: left;
-            transition: all .25s;
-            position: relative;
-            overflow: hidden;
+        .step-num{
+            font-family    : var(--serif);
+            font-size      : 3.5rem;
+            font-weight    : 700;
+            color          : rgba(255,255,255,.08);
+            line-height    : 1;
+            margin-bottom  : 1rem;
         }
 
-        .sector-card:hover{
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-md);
-            border-color: var(--terra-mid);
+        .step-title{
+            font-size     : 1rem;
+            font-weight   : 600;
+            color         : var(--white);
+            margin-bottom : .4rem;
+            font-family   : var(--serif);
         }
 
-        .sector-card::before{
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 3px;
-            background: var(--terra);
-            transform: scaleX(0);
-            transform-origin: left;
-            transition: transform .3s;
+        .step-sub{
+            font-size  : .83rem;
+            color      : #94A3B8;
+            line-height: 1.65;
         }
 
-        .sector-card:hover::before{transform: scaleX(1)}
-
-        .sector-icon{
-            font-size: 1.6rem;
-            margin-bottom: .85rem;
-            display: block;
+        .step-time{
+            display      : inline-block;
+            margin-top   : 1rem;
+            font-size    : .7rem;
+            font-weight  : 700;
+            background   : rgba(37,211,102,.15);
+            color        : #9FE1CB;
+            padding      : .25rem .75rem;
+            border-radius: 4px;
+            letter-spacing:.04em;
         }
 
-        .sector-card h3{
-            font-family: var(--display);
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--ink);
-            margin-bottom: .4rem;
+        .guarantees{
+            display         : flex;
+            flex-wrap       : wrap;
+            justify-content : center;
+            gap             : 1.5rem;
+            margin-top      : 3rem;
+            padding-top     : 2.5rem;
+            border-top      : 1px solid rgba(255,255,255,.08);
         }
 
-        .sector-card p{
-            font-size: .82rem;
-            color: var(--slate-500);
+        .guar-item{
+            display     : flex;
+            align-items : center;
+            gap         : .5rem;
+            font-size   : .82rem;
+            color       : #94A3B8;
+        }
+
+        .guar-icon{font-size:1rem}
+
+        /* ────────────────────────────────────────────────────────────────
+           CONVERSACIONES (inbox)
+        ──────────────────────────────────────────────────────────────── */
+        .inbox-section{background:var(--gray-50)}
+
+        .inbox-grid{
+            display               : grid;
+            grid-template-columns : 1fr 1.1fr;
+            gap                   : 4rem;
+            align-items           : center;
+            margin-top            : 2.75rem;
+        }
+
+        .inbox-features{
+            display        : flex;
+            flex-direction : column;
+            gap            : 1rem;
+        }
+
+        .inbox-feat{
+            display       : flex;
+            align-items   : flex-start;
+            gap           : .9rem;
+            padding       : 1rem 1.25rem;
+            background    : var(--white);
+            border        : 1px solid var(--gray-100);
+            border-radius : var(--r2);
+            transition    : border-color .2s;
+        }
+
+        .inbox-feat:hover{border-color:var(--blue-mid)}
+
+        .inbox-feat-icon{
+            font-size   : 1.1rem;
+            flex-shrink : 0;
+            margin-top  : .1rem;
+        }
+
+        .inbox-feat h4{
+            font-size     : .88rem;
+            font-weight   : 600;
+            color         : var(--navy);
+            margin-bottom : .2rem;
+        }
+
+        .inbox-feat p{
+            font-size  : .8rem;
+            color      : var(--gray-500);
             line-height: 1.55;
+        }
+
+        /* Inbox mockup */
+        .inbox-mock{
+            background    : var(--white);
+            border        : 1px solid var(--gray-100);
+            border-radius : var(--r2);
+            overflow      : hidden;
+            box-shadow    : var(--shadow-md);
+        }
+
+        .inbox-mock-header{
+            padding     : .9rem 1.25rem;
+            border-bottom: 1px solid var(--gray-100);
+            display     : flex;
+            align-items : center;
+            justify-content: space-between;
+        }
+
+        .inbox-mock-title{
+            font-size  : .85rem;
+            font-weight: 600;
+            color      : var(--navy);
+        }
+
+        .inbox-badge{
+            background    : var(--wa);
+            color         : var(--white);
+            font-size     : .65rem;
+            font-weight   : 700;
+            padding       : .15rem .55rem;
+            border-radius : 99px;
+        }
+
+        .inbox-row{
+            padding       : .85rem 1.25rem;
+            border-bottom : 1px solid var(--gray-50);
+            display       : flex;
+            align-items   : center;
+            gap           : .85rem;
+            cursor        : default;
+            transition    : background .1s;
+        }
+
+        .inbox-row:hover{background:var(--gray-50)}
+
+        .inbox-row.active{background:var(--blue-light)}
+
+        .inbox-av{
+            width          : 36px;
+            height         : 36px;
+            border-radius  : 50%;
+            display        : flex;
+            align-items    : center;
+            justify-content: center;
+            font-size      : .72rem;
+            font-weight    : 700;
+            flex-shrink    : 0;
+        }
+
+        .inbox-row-body{flex:1;min-width:0}
+
+        .inbox-row-name{
+            font-size     : .82rem;
+            font-weight   : 600;
+            color         : var(--navy);
+            margin-bottom : .1rem;
+        }
+
+        .inbox-row-preview{
+            font-size : .74rem;
+            color     : var(--gray-400);
+            white-space: nowrap;
+            overflow  : hidden;
+            text-overflow: ellipsis;
+        }
+
+        .inbox-row-meta{
+            display        : flex;
+            flex-direction : column;
+            align-items    : flex-end;
+            gap            : .3rem;
+        }
+
+        .inbox-row-time{font-size:.65rem;color:var(--gray-400)}
+
+        .inbox-tag{
+            font-size    : .62rem;
+            font-weight  : 700;
+            padding      : .15rem .45rem;
+            border-radius: 4px;
+            white-space  : nowrap;
+        }
+
+        .tag-wa{background:#DCFCE7;color:#166534}
+        .tag-ai{background:var(--blue-light);color:var(--blue-dark)}
+        .tag-human{background:#FEF3C7;color:#92400E}
+
+        /* ────────────────────────────────────────────────────────────────
+           REVENUE
+        ──────────────────────────────────────────────────────────────── */
+        .revenue-section{background:var(--white)}
+
+        .revenue-grid{
+            display               : grid;
+            grid-template-columns : repeat(auto-fit, minmax(300px,1fr));
+            gap                   : 1.25rem;
+            margin-top            : 2.75rem;
+        }
+
+        .rev-card{
+            border        : 1px solid var(--gray-100);
+            border-radius : var(--r2);
+            padding       : 1.75rem;
+            background    : var(--white);
+        }
+
+        .rev-card-head{
+            display       : flex;
+            align-items   : center;
+            gap           : .75rem;
+            margin-bottom : 1.25rem;
+        }
+
+        .rev-icon{
+            width          : 40px;
+            height         : 40px;
+            border-radius  : var(--r);
+            display        : flex;
+            align-items    : center;
+            justify-content: center;
+            font-size      : 1.1rem;
+        }
+
+        .rev-icon.red{background:#FEF2F2}
+        .rev-icon.g{background:var(--wa-light)}
+
+        .rev-before{
+            font-size     : .78rem;
+            color         : var(--gray-500);
+            padding       : .6rem .9rem;
+            background    : var(--gray-50);
+            border-radius : var(--r);
+            margin-bottom : .75rem;
+            line-height   : 1.55;
+        }
+
+        .rev-before strong{color:#DC2626}
+
+        .rev-after{
+            font-size     : .78rem;
+            color         : var(--gray-700);
+            padding       : .6rem .9rem;
+            background    : #F0FDF4;
+            border-radius : var(--r);
+            border        : 1px solid #BBF7D0;
+            line-height   : 1.55;
+        }
+
+        .rev-after strong{color:var(--wa-dark)}
+
+        /* ────────────────────────────────────────────────────────────────
+           INTEGRACIONES
+        ──────────────────────────────────────────────────────────────── */
+        .integrations-section{background:var(--gray-50)}
+
+        .int-grid{
+            display         : flex;
+            flex-wrap       : wrap;
+            gap             : .75rem;
+            margin-top      : 2rem;
+            justify-content : center;
+        }
+
+        .int-pill{
+            display       : flex;
+            align-items   : center;
+            gap           : .5rem;
+            background    : var(--white);
+            border        : 1px solid var(--gray-100);
+            border-radius : 99px;
+            padding       : .55rem 1.1rem;
+            font-size     : .82rem;
+            font-weight   : 500;
+            color         : var(--gray-700);
+            transition    : border-color .2s;
+        }
+
+        .int-pill:hover{border-color:var(--wa)}
+
+        .int-dot{
+            width         : 8px;
+            height        : 8px;
+            border-radius : 50%;
+        }
+
+        /* ────────────────────────────────────────────────────────────────
+           TESTIMONIOS
+        ──────────────────────────────────────────────────────────────── */
+        .testimonials-section{background:var(--white)}
+
+        .testimonials-grid{
+            display               : grid;
+            grid-template-columns : repeat(auto-fit, minmax(300px,1fr));
+            gap                   : 1.25rem;
+            margin-top            : 2.75rem;
+        }
+
+        .tcard{
+            border        : 1px solid var(--gray-100);
+            border-radius : var(--r2);
+            padding       : 1.75rem;
+            background    : var(--white);
+            display       : flex;
+            flex-direction: column;
+            gap           : 1.25rem;
+        }
+
+        .tcard-metrics{
+            display : flex;
+            gap     : .75rem;
+        }
+
+        .metric-pill{
+            flex          : 1;
+            text-align    : center;
+            background    : var(--gray-50);
+            border-radius : var(--r);
+            padding       : .6rem .5rem;
+        }
+
+        .metric-pill .mn{
+            font-family  : var(--serif);
+            font-size    : 1.35rem;
+            font-weight  : 700;
+            color        : var(--navy);
+            display      : block;
+            line-height  : 1;
+        }
+
+        .metric-pill .mn span{color:var(--wa-dark)}
+
+        .metric-pill .ml{
+            font-size : .65rem;
+            color     : var(--gray-500);
+        }
+
+        .tcard-quote{
+            font-size     : .875rem;
+            color         : var(--gray-700);
+            line-height   : 1.7;
+            font-style    : italic;
+        }
+
+        .tcard-author{
+            display     : flex;
+            align-items : center;
+            gap         : .75rem;
+        }
+
+        .author-av{
+            width          : 38px;
+            height         : 38px;
+            border-radius  : 50%;
+            background     : var(--blue-light);
+            display        : flex;
+            align-items    : center;
+            justify-content: center;
+            font-size      : .72rem;
+            font-weight    : 700;
+            color          : var(--blue-dark);
+            flex-shrink    : 0;
+        }
+
+        .author-name{
+            font-size  : .84rem;
+            font-weight: 600;
+            color      : var(--navy);
+        }
+
+        .author-role{
+            font-size : .74rem;
+            color     : var(--gray-400);
         }
 
         /* ────────────────────────────────────────────────────────────────
            PRICING
         ──────────────────────────────────────────────────────────────── */
-        .pricing-section{
-            background: linear-gradient(180deg, var(--sand) 0%, var(--bone) 100%);
-        }
-
-        .pricing-head{
-            text-align: center;
-            margin-bottom: 3rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .pricing-head .section-p{margin: 0 auto}
+        .pricing-section{background:var(--gray-50)}
 
         .pricing-grid{
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1.5rem;
-            max-width: 900px;
-            margin: 0 auto;
+            display               : grid;
+            grid-template-columns : repeat(auto-fit, minmax(270px,1fr));
+            gap                   : 1.25rem;
+            margin-top            : 2.75rem;
+            max-width             : 900px;
+            margin-left           : auto;
+            margin-right          : auto;
         }
 
-        @media(max-width: 720px){
-            .pricing-grid{grid-template-columns: 1fr}
+        .pcard{
+            background    : var(--white);
+            border        : 1px solid var(--gray-200);
+            border-radius : var(--r2);
+            padding       : 2rem;
+            position      : relative;
         }
 
-        .price-card{
-            background: white;
-            border: 1px solid var(--slate-200);
-            border-radius: var(--r3);
-            padding: 2.25rem 2rem;
-            position: relative;
-            transition: all .25s;
-            display: flex;
-            flex-direction: column;
+        .pcard.featured{
+            border : 2px solid var(--wa);
         }
 
-        .price-card.featured{
-            background: var(--ink);
-            color: var(--bone);
-            border-color: var(--ink);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .price-tag{
-            position: absolute;
-            top: -12px;
-            right: 24px;
-            background: var(--terra);
-            color: white;
-            padding: .25rem .8rem;
-            border-radius: 99px;
-            font-size: .7rem;
-            font-weight: 600;
-            letter-spacing: .04em;
+        .p-badge{
+            position      : absolute;
+            top           : -13px;
+            left          : 50%;
+            transform     : translateX(-50%);
+            background    : var(--wa);
+            color         : var(--white);
+            font-size     : .67rem;
+            font-weight   : 700;
+            padding       : .25rem 1rem;
+            border-radius : 99px;
+            letter-spacing: .06em;
             text-transform: uppercase;
+            white-space   : nowrap;
         }
 
-        .price-name{
-            font-family: var(--display);
-            font-size: 1.3rem;
-            font-weight: 600;
-            color: var(--ink);
-            margin-bottom: .35rem;
+        .p-name{
+            font-size      : .7rem;
+            font-weight    : 700;
+            letter-spacing : .1em;
+            text-transform : uppercase;
+            color          : var(--wa-dark);
+            margin-bottom  : .5rem;
         }
 
-        .price-card.featured .price-name{color: var(--bone)}
+        .p-name.blue{color:var(--blue)}
 
-        .price-desc{
-            font-size: .85rem;
-            color: var(--slate-500);
-            margin-bottom: 1.5rem;
-            line-height: 1.5;
+        .p-price{
+            font-family : var(--serif);
+            font-size   : 2.4rem;
+            font-weight : 700;
+            color       : var(--navy);
+            line-height : 1;
         }
 
-        .price-card.featured .price-desc{color: rgba(252,250,245,.65)}
-
-        .price-amount{
-            display: flex;
-            align-items: baseline;
-            gap: .35rem;
-            margin-bottom: .25rem;
+        .p-price sup{
+            font-size      : .95rem;
+            vertical-align : super;
+            font-family    : var(--sans);
+            font-weight    : 400;
+            color          : var(--gray-500);
         }
 
-        .price-amount .currency{
-            font-size: 1.1rem;
-            color: var(--slate-500);
-            font-weight: 500;
+        .p-period{
+            font-size     : .78rem;
+            color         : var(--gray-400);
+            margin        : .4rem 0 1.5rem;
         }
 
-        .price-card.featured .price-amount .currency{color: rgba(252,250,245,.65)}
-
-        .price-amount .number{
-            font-family: var(--display);
-            font-size: 3.25rem;
-            font-weight: 600;
-            color: var(--ink);
-            line-height: 1;
-            letter-spacing: -0.025em;
+        .p-list{
+            list-style    : none;
+            margin-bottom : 1.75rem;
         }
 
-        .price-card.featured .price-amount .number{color: var(--terra-mid)}
-
-        .price-amount .period{
-            font-size: .9rem;
-            color: var(--slate-500);
+        .p-list li{
+            font-size     : .84rem;
+            color         : var(--gray-700);
+            padding       : .4rem 0;
+            display       : flex;
+            align-items   : center;
+            gap           : .6rem;
+            border-bottom : 1px solid var(--gray-50);
         }
 
-        .price-card.featured .price-amount .period{color: rgba(252,250,245,.65)}
-
-        .price-note{
-            font-size: .75rem;
-            color: var(--slate-400);
-            margin-bottom: 1.85rem;
-            font-style: italic;
-            font-family: var(--display);
+        .p-list li::before{
+            content       : '';
+            width         : 5px;
+            height        : 5px;
+            background    : var(--wa);
+            border-radius : 50%;
+            flex-shrink   : 0;
         }
 
-        .price-card.featured .price-note{color: rgba(252,250,245,.55)}
-
-        .price-feats{
-            list-style: none;
-            margin-bottom: 2rem;
-            display: flex;
-            flex-direction: column;
-            gap: .65rem;
-            flex: 1;
+        .btn-plan{
+            display       : block;
+            text-align    : center;
+            padding       : .8rem;
+            border-radius : var(--r2);
+            font-size     : .875rem;
+            font-weight   : 700;
+            cursor        : pointer;
+            border        : none;
+            transition    : all .2s;
+            font-family   : var(--sans);
         }
 
-        .price-feats li{
-            font-size: .87rem;
-            color: var(--ink-soft);
-            display: flex;
-            align-items: flex-start;
-            gap: .65rem;
-            line-height: 1.5;
-        }
-
-        .price-card.featured .price-feats li{color: rgba(252,250,245,.85)}
-
-        .price-feats li::before{
-            content: '✓';
-            color: var(--moss);
-            font-weight: 700;
-            flex-shrink: 0;
-        }
-
-        .price-card.featured .price-feats li::before{color: var(--terra-mid)}
-
-        .price-feats li.muted{color: var(--slate-400); font-style: italic}
-        .price-feats li.muted::before{content: '−'; color: var(--slate-400)}
-
-        .price-btn{
-            width: 100%;
-            padding: .85rem 1.5rem;
-            border-radius: var(--r);
-            font-weight: 600;
-            font-size: .9rem;
-            border: 1.5px solid var(--ink);
-            background: white;
-            color: var(--ink);
-            cursor: pointer;
-            transition: all .2s;
-            text-align: center;
-            display: block;
-            font-family: var(--sans);
-        }
-
-        .price-btn:hover{background: var(--ink); color: var(--bone)}
-
-        .price-card.featured .price-btn{
-            background: var(--terra);
-            color: white;
-            border-color: var(--terra);
-        }
-
-        .price-card.featured .price-btn:hover{background: var(--terra-dark); border-color: var(--terra-dark)}
-
-        /* ────────────────────────────────────────────────────────────────
-           FAQ
-        ──────────────────────────────────────────────────────────────── */
-        .faq-section{background: var(--bone)}
-
-        .faq-grid{
-            max-width: 760px;
-            margin: 0 auto;
-        }
-
-        .faq-head{
-            text-align: center;
-            margin-bottom: 2.75rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        details.faq-item{
-            border-bottom: 1px solid var(--slate-200);
-            padding: 1.25rem 0;
-        }
-
-        details.faq-item summary{
-            cursor: pointer;
-            font-family: var(--display);
-            font-weight: 500;
-            font-size: 1.05rem;
-            color: var(--ink);
-            list-style: none;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 1rem;
-            line-height: 1.4;
-        }
-
-        details.faq-item summary::-webkit-details-marker{display:none}
-
-        details.faq-item summary::after{
-            content: '+';
-            font-size: 1.4rem;
-            color: var(--terra);
-            transition: transform .25s;
-            font-family: var(--sans);
-            font-weight: 300;
-            flex-shrink: 0;
-        }
-
-        details.faq-item[open] summary::after{transform: rotate(45deg)}
-
-        details.faq-item p{
-            margin-top: .85rem;
-            font-size: .92rem;
-            color: var(--slate-500);
-            line-height: 1.7;
-        }
+        .btn-plan.primary{background:var(--wa);color:var(--white)}
+        .btn-plan.primary:hover{background:var(--wa-dark)}
+        .btn-plan.outline{background:var(--white);color:var(--wa-dark);border:1.5px solid var(--wa)}
+        .btn-plan.outline:hover{background:var(--wa-light)}
 
         /* ────────────────────────────────────────────────────────────────
            REGISTRO
         ──────────────────────────────────────────────────────────────── */
-        .register-section{
-            background: var(--ink);
-            color: var(--bone);
-            position: relative;
-            overflow: hidden;
+        .register-section{background:var(--white)}
+
+        .register-grid{
+            display               : grid;
+            grid-template-columns : 1fr 1.1fr;
+            gap                   : 4rem;
+            align-items           : start;
+            max-width             : 1020px;
+            margin                : 0 auto;
         }
 
-        .register-section::before{
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%,-50%);
-            width: 800px; height: 800px;
-            background: radial-gradient(circle, rgba(194,65,12,.15) 0%, transparent 60%);
-            pointer-events: none;
-        }
-
-        .reg-grid{
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 4rem;
-            max-width: 1100px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 1;
-            align-items: start;
-        }
-
-        @media(max-width: 880px){
-            .reg-grid{grid-template-columns: 1fr; gap: 2.5rem}
-        }
-
-        .reg-left .eyebrow{color: var(--terra-mid)}
-        .reg-left .eyebrow::before{background: var(--terra-mid)}
-        .reg-left h2{
-            font-family: var(--display);
-            font-size: clamp(1.8rem, 3vw, 2.5rem);
-            font-weight: 500;
-            color: var(--bone);
-            line-height: 1.1;
-            letter-spacing: -0.025em;
-            margin-bottom: 1.25rem;
-        }
-
-        .reg-left h2 em{font-style: italic; color: var(--terra-mid)}
-
-        .reg-left p{
-            color: rgba(252,250,245,.7);
-            font-size: 1rem;
-            line-height: 1.65;
-            margin-bottom: 1.75rem;
-        }
-
-        .reg-bullets{
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: .85rem;
-        }
-
-        .reg-bullets li{
-            font-size: .9rem;
-            color: rgba(252,250,245,.85);
-            display: flex;
-            align-items: flex-start;
-            gap: .7rem;
-        }
-
-        .reg-bullets li::before{
-            content: '';
-            width: 18px; height: 18px;
-            background: var(--terra);
-            border-radius: 50%;
-            flex-shrink: 0;
-            margin-top: .15rem;
-            position: relative;
-        }
-
-        .reg-form-card{
-            background: var(--bone);
-            color: var(--ink);
-            border-radius: var(--r3);
-            padding: 2.25rem;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .reg-form-card h3{
-            font-family: var(--display);
-            font-size: 1.4rem;
-            font-weight: 600;
-            color: var(--ink);
-            margin-bottom: .35rem;
-        }
-
-        .reg-form-card .reg-sub{
-            font-size: .85rem;
-            color: var(--slate-500);
-            margin-bottom: 1.75rem;
-        }
-
-        .form-row{
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: .75rem;
+        .reg-left-step{
+            display     : flex;
+            align-items : flex-start;
+            gap         : .85rem;
             margin-bottom: .85rem;
         }
 
-        @media(max-width: 480px){
-            .form-row{grid-template-columns: 1fr}
+        .reg-step-circle{
+            width          : 32px;
+            height         : 32px;
+            background     : var(--wa-light);
+            border-radius  : 50%;
+            display        : flex;
+            align-items    : center;
+            justify-content: center;
+            font-size      : .78rem;
+            font-weight    : 700;
+            color          : var(--wa-dark);
+            flex-shrink    : 0;
         }
 
-        .form-group{margin-bottom: .85rem}
-
-        .form-group label{
-            display: block;
-            font-size: .75rem;
-            font-weight: 500;
-            color: var(--slate-700);
-            margin-bottom: .35rem;
-            letter-spacing: .02em;
+        .reg-step-text{
+            font-size  : .875rem;
+            color      : var(--gray-500);
+            padding-top: .45rem;
         }
 
-        .form-group input{
-            width: 100%;
-            padding: .7rem .85rem;
-            border: 1.5px solid var(--slate-200);
-            border-radius: var(--r);
-            font-size: .9rem;
-            font-family: var(--sans);
-            background: white;
-            color: var(--ink);
-            transition: border-color .15s, box-shadow .15s;
+        .rform{
+            background    : var(--gray-50);
+            border        : 1px solid var(--gray-100);
+            border-radius : var(--r3);
+            padding       : 2.25rem;
         }
 
-        .form-group input:focus{
-            outline: none;
-            border-color: var(--terra);
-            box-shadow: 0 0 0 3px rgba(194,65,12,.1);
+        .rform-title{
+            font-family   : var(--serif);
+            font-size     : 1.35rem;
+            font-weight   : 700;
+            color         : var(--navy);
+            margin-bottom : .2rem;
         }
 
-        .terms-row{
-            display: flex;
-            align-items: flex-start;
-            gap: .55rem;
-            margin: 1rem 0 1.4rem;
-            font-size: .8rem;
-            color: var(--slate-500);
-            line-height: 1.5;
+        .rform-sub{
+            font-size     : .82rem;
+            color         : var(--gray-400);
+            margin-bottom : 1.75rem;
+            display       : flex;
+            align-items   : center;
+            gap           : .4rem;
         }
 
-        .terms-row input[type=checkbox]{
-            width: 16px;height:16px;
-            margin-top: .15rem;
-            accent-color: var(--terra);
+        .fg{margin-bottom:1rem}
+
+        .fg label{
+            display        : block;
+            font-size      : .7rem;
+            font-weight    : 700;
+            color          : var(--gray-500);
+            letter-spacing : .07em;
+            text-transform : uppercase;
+            margin-bottom  : .35rem;
         }
 
-        .terms-row a{color: var(--terra); text-decoration: underline}
+        .fg input,
+        .fg select{
+            width          : 100%;
+            background     : var(--white);
+            border         : 1.5px solid var(--gray-200);
+            border-radius  : var(--r);
+            color          : var(--gray-900);
+            padding        : .65rem .9rem;
+            font-family    : var(--sans);
+            font-size      : .875rem;
+            outline        : none;
+            transition     : border-color .2s;
+            -webkit-appearance: none;
+            appearance     : none;
+        }
+
+        .fg input::placeholder{color:var(--gray-400)}
+        .fg input:focus,
+        .fg select:focus{border-color:var(--wa)}
+
+        .fg-row{
+            display               : grid;
+            grid-template-columns : 1fr 1fr;
+            gap                   : .75rem;
+        }
+
+        .fcheck{
+            display     : flex;
+            align-items : flex-start;
+            gap         : .6rem;
+            margin      : 1rem 0;
+        }
+
+        .fcheck input[type="checkbox"]{
+            width      : 15px;
+            height     : 15px;
+            min-width  : 15px;
+            margin-top : .2rem;
+            accent-color: var(--wa);
+            cursor     : pointer;
+        }
+
+        .fcheck label{
+            font-size     : .78rem;
+            color         : var(--gray-500);
+            cursor        : pointer;
+            text-transform: none;
+            letter-spacing: 0;
+            line-height   : 1.55;
+        }
+
+        .fcheck a{color:var(--blue);font-weight:500}
+
+        .btn-reg{
+            width         : 100%;
+            background    : var(--wa);
+            color         : var(--white);
+            border        : none;
+            padding       : .9rem;
+            border-radius : var(--r2);
+            font-size     : .95rem;
+            font-weight   : 700;
+            cursor        : pointer;
+            font-family   : var(--sans);
+            transition    : all .2s;
+        }
+
+        .btn-reg:hover{background:var(--wa-dark);transform:translateY(-1px)}
+        .btn-reg:disabled{opacity:.6;cursor:not-allowed;transform:none}
+
+        .form-note{
+            text-align : center;
+            font-size  : .72rem;
+            color      : var(--gray-400);
+            margin-top : .75rem;
+        }
+
+        .login-link{
+            text-align : center;
+            margin-top : 1rem;
+            font-size  : .82rem;
+            color      : var(--gray-500);
+        }
+
+        .login-link a{color:var(--blue);font-weight:600}
 
         .form-error{
-            display: none;
-            background: #FEE2E2;
-            color: #991B1B;
-            border: 1px solid #FCA5A5;
-            padding: .65rem .9rem;
-            border-radius: var(--r);
-            font-size: .82rem;
-            margin-bottom: 1rem;
+            background    : #FEF2F2;
+            color         : #991B1B;
+            border        : 1px solid #FECACA;
+            border-radius : var(--r);
+            padding       : .65rem .9rem;
+            font-size     : .82rem;
+            margin-bottom : 1rem;
+            display       : none;
         }
-
-        .btn-submit{
-            width: 100%;
-            padding: .95rem 1.5rem;
-            background: var(--ink);
-            color: var(--bone);
-            border: none;
-            border-radius: var(--r);
-            font-weight: 600;
-            font-size: .95rem;
-            cursor: pointer;
-            transition: background .2s;
-            font-family: var(--sans);
-        }
-
-        .btn-submit:hover{background: var(--terra)}
-        .btn-submit:disabled{opacity:.6; cursor: not-allowed}
-
-        .form-footer{
-            font-size: .75rem;
-            color: var(--slate-400);
-            text-align: center;
-            margin-top: 1rem;
-        }
-
-        .form-footer a{color: var(--terra); font-weight: 500}
 
         .success-wrap{
-            display: none;
-            text-align: center;
-            padding: 1.5rem 0;
+            display    : none;
+            text-align : center;
+            padding    : 2.5rem 1rem;
         }
 
         .success-icon{
-            width: 64px; height: 64px;
-            background: var(--moss-light);
-            color: var(--moss);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
+            width          : 56px;
+            height         : 56px;
+            background     : var(--wa-light);
+            border-radius  : 50%;
+            display        : flex;
+            align-items    : center;
             justify-content: center;
-            margin: 0 auto 1.25rem;
-            font-size: 1.75rem;
+            margin         : 0 auto 1rem;
+            color          : var(--wa-dark);
+            font-size      : 1.5rem;
         }
 
         .success-wrap h3{
-            font-family: var(--display);
-            font-size: 1.4rem;
-            color: var(--ink);
-            margin-bottom: .65rem;
+            font-family   : var(--serif);
+            font-size     : 1.3rem;
+            color         : var(--navy);
+            margin-bottom : .5rem;
         }
 
         .success-wrap p{
-            font-size: .9rem;
-            color: var(--slate-500);
-            line-height: 1.6;
+            font-size  : .85rem;
+            color      : var(--gray-500);
+            margin-bottom: 1.5rem;
         }
 
+        .btn-goto{
+            display       : inline-block;
+            background    : var(--wa);
+            color         : var(--white);
+            padding       : .75rem 1.75rem;
+            border-radius : var(--r2);
+            font-weight   : 700;
+            font-size     : .9rem;
+            transition    : background .2s;
+        }
+
+        .btn-goto:hover{background:var(--wa-dark)}
+
         /* ────────────────────────────────────────────────────────────────
-           FINAL CTA
+           CTA FINAL
         ──────────────────────────────────────────────────────────────── */
         .final-cta{
-            background: var(--bone);
-            text-align: center;
-            padding-top: clamp(4rem, 7vw, 6rem);
-            padding-bottom: clamp(4rem, 7vw, 6rem);
+            background   : linear-gradient(135deg, #0F172A 0%, #064E3B 100%);
+            padding      : clamp(4rem,8vw,7rem) clamp(1.25rem,4vw,2.5rem);
+            text-align   : center;
+            color        : var(--white);
         }
 
         .final-cta h2{
-            font-family: var(--display);
-            font-size: clamp(1.85rem, 3.5vw, 3rem);
-            font-weight: 500;
-            color: var(--ink);
-            line-height: 1.1;
-            letter-spacing: -0.025em;
-            max-width: 720px;
-            margin: 0 auto 1.25rem;
-        }
-
-        .final-cta h2 em{
-            font-style: italic;
-            color: var(--terra);
+            font-family    : var(--serif);
+            font-size      : clamp(1.75rem,3.5vw,2.8rem);
+            font-weight    : 700;
+            color          : var(--white);
+            margin-bottom  : 1rem;
+            letter-spacing : -0.025em;
+            max-width      : 700px;
+            margin-left    : auto;
+            margin-right   : auto;
         }
 
         .final-cta p{
-            color: var(--slate-500);
-            font-size: 1.05rem;
-            max-width: 520px;
-            margin: 0 auto 2rem;
-            line-height: 1.65;
+            font-size     : 1rem;
+            color         : #94A3B8;
+            margin-bottom : 2.25rem;
+            max-width     : 480px;
+            margin-left   : auto;
+            margin-right  : auto;
         }
 
         .final-btns{
-            display: flex;
-            justify-content: center;
-            gap: .75rem;
-            flex-wrap: wrap;
-            margin-bottom: 1.25rem;
+            display         : flex;
+            justify-content : center;
+            flex-wrap       : wrap;
+            gap             : .75rem;
+            margin-bottom   : 1.5rem;
         }
 
         .final-note{
-            font-size: .8rem;
-            color: var(--slate-400);
+            font-size : .78rem;
+            color     : #475569;
         }
-
-        .final-note .sep{color: var(--slate-200)}
-        .final-note strong{color: var(--ink-soft); font-weight: 500}
 
         /* ────────────────────────────────────────────────────────────────
            FOOTER
         ──────────────────────────────────────────────────────────────── */
         footer{
-            background: var(--ink);
-            color: rgba(252,250,245,.55);
-            padding: 2.5rem clamp(1.25rem,4vw,2.5rem);
-            display: flex;
+            background : var(--navy);
+            padding    : 2.5rem clamp(1.25rem,4vw,2.5rem);
+            display    : flex;
+            flex-wrap  : wrap;
             justify-content: space-between;
             align-items: center;
-            gap: 2rem;
-            flex-wrap: wrap;
-            font-size: .82rem;
+            gap        : 1rem;
         }
 
         .footer-logo{
-            font-family: var(--display);
-            font-style: italic;
-            font-size: 1.15rem;
-            font-weight: 600;
-            color: var(--bone);
-            display: flex;
-            align-items: baseline;
-            gap: .15rem;
+            font-family   : var(--serif);
+            font-size     : 1.15rem;
+            font-weight   : 700;
+            color         : var(--white);
+            display       : flex;
+            align-items   : center;
+            gap           : .4rem;
         }
 
         .footer-logo-dot{
-            width: 6px; height: 6px;
-            background: var(--terra);
-            border-radius: 50%;
-            transform: translateY(-1px);
+            width         : 7px;
+            height        : 7px;
+            background    : var(--wa);
+            border-radius : 50%;
         }
 
         .footer-links{
-            display: flex;
-            gap: 1.5rem;
+            display : flex;
+            gap     : 1.5rem;
         }
 
-        .footer-links a:hover{color: var(--bone)}
-
-        /* WhatsApp flotante */
-        .wa-float{
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            width: 56px; height: 56px;
-            background: var(--wa);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 8px 24px rgba(37,211,102,.4);
-            z-index: 100;
-            transition: transform .2s;
+        .footer-links a{
+            font-size  : .8rem;
+            color      : #475569;
+            transition : color .15s;
         }
 
-        .wa-float:hover{transform: scale(1.05)}
+        .footer-links a:hover{color:var(--gray-400)}
 
-        .wa-float svg{width: 28px; height: 28px}
+        .footer-right{
+            font-size  : .75rem;
+            color      : #334155;
+        }
+
+        .footer-right a{color:#4B8FCA}
 
         /* ────────────────────────────────────────────────────────────────
-           REVEAL ANIMATION
+           WHATSAPP FLOAT
+        ──────────────────────────────────────────────────────────────── */
+        .wa-float{
+            position      : fixed;
+            bottom        : 1.75rem;
+            right         : 1.75rem;
+            z-index       : 999;
+            width         : 52px;
+            height        : 52px;
+            background    : var(--wa);
+            border-radius : 50%;
+            display       : flex;
+            align-items   : center;
+            justify-content: center;
+            box-shadow    : 0 4px 16px rgba(37,211,102,.35);
+            transition    : transform .2s;
+        }
+
+        .wa-float:hover{transform:scale(1.08)}
+
+        .wa-float svg{width:26px;height:26px;fill:#fff}
+
+        /* ────────────────────────────────────────────────────────────────
+           REVEAL
         ──────────────────────────────────────────────────────────────── */
         .reveal{
-            opacity: 0;
-            transform: translateY(18px);
-            transition: opacity .7s ease, transform .7s ease;
+            opacity   : 0;
+            transform : translateY(20px);
+            transition: opacity .55s ease, transform .55s ease;
         }
 
         .reveal.visible{
-            opacity: 1;
-            transform: translateY(0);
+            opacity   : 1;
+            transform : none;
+        }
+
+        /* ────────────────────────────────────────────────────────────────
+           RESPONSIVE
+        ──────────────────────────────────────────────────────────────── */
+        @media(max-width:860px){
+            .wa-grid,
+            .inbox-grid,
+            .register-grid{grid-template-columns:1fr}
+            .nav-links{display:none}
+            .wa-grid > *:first-child{order:2}
+            .wa-grid > *:last-child{order:1}
+        }
+
+        @media(max-width:640px){
+            .hero h1{font-size:2rem}
+            .stat-item{flex:1 1 140px}
+            .fg-row{grid-template-columns:1fr}
+            footer{flex-direction:column;text-align:center}
+            .hero-btns{flex-direction:column;align-items:center}
+            .btn-primary,.btn-secondary{width:100%;max-width:300px;text-align:center}
         }
     </style>
 </head>
 <body>
 
 <!-- ══════════════════════════════════════════════════════════
-     NAV
+     NAVEGACIÓN
 ══════════════════════════════════════════════════════════ -->
 <nav>
-    <a href="#" class="nav-logo">
-        Tentii<span class="nav-logo-dot"></span>
-    </a>
+    <div class="nav-logo">
+        <div class="nav-logo-dot"></div>
+        GuestHandle
+    </div>
 
     <div class="nav-links">
-        <a href="#producto">Producto</a>
-        <a href="#comparacion">Comparación</a>
-        <a href="#sectores">Para quién</a>
+        <a href="#whatsapp-ia">WhatsApp IA</a>
+        <a href="#pms">PMS</a>
         <a href="#precios">Precios</a>
-        <a href="#faq">FAQ</a>
     </div>
 
     <div class="nav-actions">
-        <a href="/login" class="btn-login">Entrar</a>
-        <a href="#registro" class="btn-nav-cta">Probar gratis</a>
+        <a href="/login" class="btn-login">Iniciar sesión</a>
+        <a href="#registro" class="btn-nav-cta">Empezar gratis</a>
     </div>
 </nav>
 
 <!-- ══════════════════════════════════════════════════════════
      HERO
 ══════════════════════════════════════════════════════════ -->
-<section class="hero">
-    <div class="hero-inner">
-        <div class="hero-text reveal">
-            <span class="hero-badge">
-                <span class="hero-badge-dot"></span>
-                PMS nativo en la era de la IA
-            </span>
-
-            <h1>
-                El sistema que <em>sí</em> entiende cómo opera tu <span class="underline">alojamiento</span> hoy.
-            </h1>
-
-            <p class="hero-sub">
-                Tentii es el PMS construido desde cero con IA en el corazón. Gestiona reservas, tarifas, tours, pagos y un asistente en WhatsApp que vende por ti — todo en una sola plataforma. Sin chatbots pegados con cinta. Sin comisiones por reserva.
-            </p>
-
-            <div class="hero-btns">
-                <a href="#registro" class="btn-primary">
-                    Empezar gratis
-                    <span class="arrow">→</span>
-                </a>
-                <a href="#producto" class="btn-secondary">Ver cómo funciona</a>
-            </div>
-
-            <div class="hero-note">
-                <span><strong>14 días gratis</strong></span>
-                <span class="sep">·</span>
-                <span>Sin tarjeta</span>
-                <span class="sep">·</span>
-                <span>Setup en menos de un día</span>
-            </div>
-        </div>
-
-        <div class="hero-visual reveal">
-            <!-- Dashboard mockup -->
-            <div class="hv-card dashboard">
-                <div class="hv-dash-header">
-                    <div class="hv-dash-dots"><span></span><span></span><span></span></div>
-                    <div class="hv-dash-title">tentii.app · Glamping Vista Verde</div>
-                </div>
-                <div class="hv-dash-body">
-                    <div class="hv-stats">
-                        <div class="hv-stat">
-                            <div class="hv-stat-l">Ocupación hoy</div>
-                            <div class="hv-stat-n">87%<span class="up">↑12</span></div>
-                        </div>
-                        <div class="hv-stat">
-                            <div class="hv-stat-l">Reservas IA</div>
-                            <div class="hv-stat-n">14<span class="up">↑6</span></div>
-                        </div>
-                        <div class="hv-stat">
-                            <div class="hv-stat-l">Tours hoy</div>
-                            <div class="hv-stat-n">3</div>
-                        </div>
-                    </div>
-                    <div class="hv-cal">
-                        <div class="hv-cal-h">
-                            Calendario · Abril 26 <span>L · M · X · J · V · S · D</span>
-                        </div>
-                        <div class="hv-cal-grid">
-                            <div class="hv-cal-cell label">Domo 1</div>
-                            <div class="hv-cal-cell booked"></div>
-                            <div class="hv-cal-cell booked"></div>
-                            <div class="hv-cal-cell free"></div>
-                            <div class="hv-cal-cell free"></div>
-                            <div class="hv-cal-cell confirmed"></div>
-                            <div class="hv-cal-cell confirmed"></div>
-                            <div class="hv-cal-cell confirmed"></div>
-
-                            <div class="hv-cal-cell label">Domo 2</div>
-                            <div class="hv-cal-cell free"></div>
-                            <div class="hv-cal-cell booked"></div>
-                            <div class="hv-cal-cell booked"></div>
-                            <div class="hv-cal-cell booked"></div>
-                            <div class="hv-cal-cell free"></div>
-                            <div class="hv-cal-cell free"></div>
-                            <div class="hv-cal-cell confirmed"></div>
-
-                            <div class="hv-cal-cell label">Cabaña</div>
-                            <div class="hv-cal-cell maint"></div>
-                            <div class="hv-cal-cell free"></div>
-                            <div class="hv-cal-cell confirmed"></div>
-                            <div class="hv-cal-cell confirmed"></div>
-                            <div class="hv-cal-cell confirmed"></div>
-                            <div class="hv-cal-cell booked"></div>
-                            <div class="hv-cal-cell booked"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- WhatsApp mockup pequeño -->
-            <div class="hv-card whatsapp">
-                <div class="hv-wa-header">
-                    <div class="hv-wa-avatar">VV</div>
-                    <div>
-                        <div class="hv-wa-name">Vista Verde · IA</div>
-                        <div class="hv-wa-status">en línea · responde por ti</div>
-                    </div>
-                </div>
-                <div class="hv-wa-body">
-                    <div class="hv-wa-msg in">¿Tienen disponible el domo para este finde?</div>
-                    <div class="hv-wa-msg out">¡Sí! Para 2 noches el domo Origen sale $720.000 con desayuno 🌿</div>
-                    <div class="hv-wa-msg in">Perfecto, ¿cómo reservo?</div>
-                </div>
-            </div>
-        </div>
+<div class="hero">
+    <div class="hero-badge">
+        <div class="hero-badge-dot"></div>
+        Primer mes gratis &nbsp;·&nbsp; Sin tarjeta de crédito
     </div>
-</section>
+
+    <h1>Tu hotel vende<br>mientras <span class="txt-wa">duermes</span></h1>
+
+    <p class="hero-sub">PMS + IA en WhatsApp 24/7. Reservas automáticas, precios inteligentes y cero consultas sin respuesta. Listo en menos de 10 minutos.</p>
+
+    <div class="hero-btns">
+        <a href="#registro" class="btn-primary">Crear cuenta gratis →</a>
+        <a href="#whatsapp-ia" class="btn-secondary">Ver cómo funciona</a>
+    </div>
+
+    <p class="hero-note">Sin tarjeta de crédito &nbsp;·&nbsp; <strong>30 días gratis</strong> &nbsp;·&nbsp; Cancela cuando quieras</p>
+</div>
 
 <!-- ══════════════════════════════════════════════════════════
-     PROOF STRIP
+     STATS
 ══════════════════════════════════════════════════════════ -->
-<div class="proof-strip">
-    <div class="proof-inner">
-        <div class="proof-label">Diseñado para</div>
-        <div class="proof-types">
-            <div class="proof-type">
-                <span class="proof-type-icon">🏡</span>
-                Hoteles boutique
-            </div>
-            <div class="proof-type">
-                <span class="proof-type-icon">⛺</span>
-                Glamping
-            </div>
-            <div class="proof-type">
-                <span class="proof-type-icon">🌲</span>
-                Cabañas
-            </div>
-            <div class="proof-type">
-                <span class="proof-type-icon">🥾</span>
-                Tours y actividades
-            </div>
-        </div>
+<div class="stats-strip">
+    <div class="stat-item reveal">
+        <div class="stat-n"><span>+</span>28<span>%</span></div>
+        <div class="stat-l">reservas directas promedio</div>
+    </div>
+    <div class="stat-item reveal">
+        <div class="stat-n"><span>&lt;</span>5<span>s</span></div>
+        <div class="stat-l">tiempo de respuesta IA</div>
+    </div>
+    <div class="stat-item reveal">
+        <div class="stat-n">98<span>%</span></div>
+        <div class="stat-l">tasa de respuesta WhatsApp</div>
+    </div>
+    <div class="stat-item reveal">
+        <div class="stat-n"><span>+</span>3<span>h</span></div>
+        <div class="stat-l">ahorradas por día / agente</div>
     </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════════
-     PAIN POINTS — los dolores reales
+     PAIN POINTS
 ══════════════════════════════════════════════════════════ -->
-<section class="pain-section" id="dolor">
+<section class="pain-section">
     <div class="container">
-        <div class="pain-head reveal">
-            <span class="eyebrow">El problema</span>
-            <h2 class="section-h">Tu día empieza con un Excel <em>y termina con culpa</em>.</h2>
-            <p class="section-p">Si manejas un alojamiento boutique, glamping, cabañas o tours, sabes que los problemas no aparecen en los pitch decks de los grandes PMS. Esto es lo que pasa de verdad.</p>
+        <div class="reveal" style="max-width:600px">
+            <div class="eyebrow">¿Te suena familiar?</div>
+            <h2 class="section-h">El costo invisible de no responder a tiempo</h2>
         </div>
 
         <div class="pain-grid">
             <div class="pain-card reveal">
-                <div class="pain-card-icon">📵</div>
-                <h3>Mensajes a las 11 de la noche que nadie respondió</h3>
-                <p>El cliente preguntó disponibilidad, no le respondiste a tiempo, reservó en el competidor de al lado. Pasa todos los días. No es falta de ganas, es falta de horas.</p>
-                <div class="quote">"Si no contesto en 5 minutos, ya reservaron en otro lado."</div>
+                <div class="pain-icon">🌙</div>
+                <div>
+                    <h3>La reserva que se fue en la madrugada</h3>
+                    <p>Son las 2am. Un huésped pregunta disponibilidad para el puente. Nadie responde. La reserva la hace en Booking.</p>
+                </div>
             </div>
-
             <div class="pain-card reveal">
-                <div class="pain-card-icon">📊</div>
-                <h3>Tres Excels, un cuaderno y un grupo de WhatsApp</h3>
-                <p>El calendario de reservas en una hoja, los pagos en otra, los tours en un cuaderno, y el equipo coordina por chat. Un cobro se pierde, una habitación queda doble-reservada, y nadie sabe qué pasó.</p>
+                <div class="pain-icon">📋</div>
+                <div>
+                    <h3>3 horas diarias en preguntas repetitivas</h3>
+                    <p>Tu equipo pasa horas respondiendo "¿cuánto cuesta la doble?" en lugar de cerrar ventas complejas.</p>
+                </div>
             </div>
-
             <div class="pain-card reveal">
-                <div class="pain-card-icon">💸</div>
-                <h3>Los PMS de siempre cuestan como si fueras un Hilton</h3>
-                <p>Cloud-based, módulos por separado, $200+ al mes solo el PMS, otros $200 el chatbot, comisiones del 3-5% sobre cada reserva. Te dicen que es "el estándar de la industria". Lo es… para hoteles de 200 habitaciones.</p>
+                <div class="pain-icon">📉</div>
+                <div>
+                    <h3>Precios desactualizados en los canales</h3>
+                    <p>Tienes el precio mal en 4 canales distintos y no te das cuenta hasta que ya hubo una reserva al precio equivocado.</p>
+                </div>
             </div>
-
             <div class="pain-card reveal">
-                <div class="pain-card-icon">🧩</div>
-                <h3>Software que no entiende lo que vendes</h3>
-                <p>Tu cabaña tiene tres habitaciones que también se alquilan por separado. Vendes el alojamiento y el tour al cañón. Tu temporada alta es Semana Santa, no junio. Ningún software hecho en otro continente entiende eso.</p>
+                <div class="pain-icon">💬</div>
+                <div>
+                    <h3>WhatsApp con 40 mensajes sin leer</h3>
+                    <p>12 de esos mensajes eran consultas de reserva. Ya buscaron otra opción. Ya se fueron.</p>
+                </div>
             </div>
-
             <div class="pain-card reveal">
-                <div class="pain-card-icon">🎫</div>
-                <h3>Vendes tours pero los gestionas en Notion</h3>
-                <p>Cupos, manifiestos de pasajeros, comisiones de guías, pagos parciales. Si además vendes el tour al huésped del hotel, fundir las dos cuentas es un dolor de cabeza manual cada noche.</p>
+                <div class="pain-icon">🔄</div>
+                <div>
+                    <h3>Overbooking por desincronización</h3>
+                    <p>Actualizas disponibilidad en el PMS y se te olvida actualizar el motor de reservas. Problema garantizado.</p>
+                </div>
             </div>
-
             <div class="pain-card reveal">
-                <div class="pain-card-icon">🤖</div>
-                <h3>Compraste un chatbot y sigues operando igual</h3>
-                <p>El chatbot responde, pero después tienes que copiar la reserva al PMS. Verificar el comprobante de pago a mano. Mover la disponibilidad. El "AI" es solo otra app más en tu pila — no resuelve la operación, la duplica.</p>
+                <div class="pain-icon">💸</div>
+                <div>
+                    <h3>Comisiones del 20% a las OTAs</h3>
+                    <p>Pagas comisiones enormes porque no tienes tiempo de atender la venta directa. GuestHandle lo hace por ti.</p>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 <!-- ══════════════════════════════════════════════════════════
-     SOLUTION — qué es Tentii
+     WHATSAPP IA 24/7
 ══════════════════════════════════════════════════════════ -->
-<section class="solution" id="producto">
-    <div class="solution-inner">
-        <div class="solution-head reveal">
-            <span class="eyebrow">La diferencia</span>
-            <h2 class="section-h">Tentii no es un chatbot con un PMS al lado. <em>Es un PMS con IA por dentro.</em></h2>
-            <p class="section-p">Cuatro módulos integrados que comparten datos en tiempo real. La IA no es un add-on que vendieron como feature — es la lógica que mueve el sistema desde el primer minuto.</p>
-        </div>
-
-        <div class="pillars reveal">
-            <div class="pillar">
-                <div class="pillar-num">— 01</div>
-                <h3>Gestión completa de alojamiento</h3>
-                <p>El ciclo de reserva entero: disponibilidad, confirmación, check-in, check-out, cancelación. Soporta unidades con jerarquías (cabañas con habitaciones independientes), tarifas dinámicas con personas extra, niños y temporadas, y estados en tiempo real.</p>
-                <ul class="pillar-feats">
-                    <li>Máquina de estados real, no campos sueltos</li>
-                    <li>Cálculo de precios día por día con modificadores</li>
-                    <li>Calendario unificado de todas tus unidades</li>
-                </ul>
-            </div>
-
-            <div class="pillar">
-                <div class="pillar-num">— 02</div>
-                <h3>Módulo de tours y actividades</h3>
-                <p>Lo que ningún otro PMS tiene de verdad. Crea tours con dificultad, punto de encuentro, precios y salidas programadas. Manifiesto de pasajeros, cupos en tiempo real, y vinculación al folio del huésped si vendes ambos servicios.</p>
-                <ul class="pillar-feats">
-                    <li>Salidas con guía asignado y precios diferenciados</li>
-                    <li>Comisiones automáticas para guías y agentes</li>
-                    <li>Folio unificado: alojamiento + tour</li>
-                </ul>
-            </div>
-
-            <div class="pillar">
-                <div class="pillar-num">— 03</div>
-                <h3>Asistente IA conectado a WhatsApp</h3>
-                <p>Conoce todo tu catálogo, consulta disponibilidad y precios en tiempo real, crea reservas y guía al cliente por un funnel estructurado. Procesa notas de voz, lee comprobantes de pago con OCR y los registra en el folio. Si necesita un humano, te avisa y se desactiva.</p>
-                <ul class="pillar-feats">
-                    <li>Transcripción automática de notas de voz</li>
-                    <li>OCR de comprobantes con Gemini Vision</li>
-                    <li>Escalado inteligente a humano cuando hace falta</li>
-                </ul>
-            </div>
-
-            <div class="pillar">
-                <div class="pillar-num">— 04</div>
-                <h3>Finanzas, comisiones y multi-tenant</h3>
-                <p>Pagos parciales, saldos, múltiples métodos. Comisiones automáticas para agentes y guías (tarifa fija, por pasajero, sobre venta o mixto). Cada negocio opera aislado: zona horaria, moneda, políticas, prompt de IA y perfil propio.</p>
-                <ul class="pillar-feats">
-                    <li>Comisiones generadas al cerrar cada salida</li>
-                    <li>Aislamiento total entre tenants</li>
-                    <li>Configuración del asistente IA por negocio</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- ══════════════════════════════════════════════════════════
-     WHATSAPP DEMO
-══════════════════════════════════════════════════════════ -->
-<section class="wa-section">
+<section id="whatsapp-ia" class="wa-section">
     <div class="container">
-        <div class="wa-grid">
-            <div class="wa-text reveal">
-                <span class="eyebrow moss">WhatsApp · 24/7</span>
-                <h2 class="section-h">Un asistente que <em>vende</em>, no solo responde.</h2>
-                <p class="section-p">El asistente de Tentii no es un FAQ disfrazado. Cotiza con tus tarifas reales, bloquea la unidad cuando confirma, registra el comprobante en el folio del huésped, y si la conversación se complica te llama a ti.</p>
+        <div class="reveal" style="max-width:600px">
+            <div class="eyebrow">WhatsApp IA 24/7</div>
+            <h2 class="section-h">Tu mejor vendedor nunca descansa</h2>
+            <p class="section-p">Nuestra IA atiende, cotiza y confirma reservas directamente en WhatsApp — conectada en tiempo real a tu disponibilidad y precios.</p>
+        </div>
 
+        <div class="wa-grid">
+            <div class="reveal">
                 <div class="wa-feat-list">
                     <div class="wa-feat">
-                        <div class="wa-feat-icon">⚡</div>
-                        <div class="wa-feat-text">
-                            <strong>Responde en menos de 20 segundos, en cualquier idioma</strong>
-                            <span>A las 3am, en domingo, en tu cumpleaños. Nunca pierde un lead por horario.</span>
-                        </div>
+                        <div class="wa-check"></div>
+                        <span>Responde en menos de 5 segundos, las 24 horas, los 365 días</span>
                     </div>
                     <div class="wa-feat">
-                        <div class="wa-feat-icon">🎙️</div>
-                        <div class="wa-feat-text">
-                            <strong>Entiende notas de voz y comprobantes de pago</strong>
-                            <span>El cliente manda un audio o una foto del Bancolombia, Tentii lo transcribe, lo lee y lo registra solo.</span>
-                        </div>
+                        <div class="wa-check"></div>
+                        <span>Consulta disponibilidad y precios en tiempo real desde el PMS</span>
                     </div>
                     <div class="wa-feat">
-                        <div class="wa-feat-icon">🧠</div>
-                        <div class="wa-feat-text">
-                            <strong>Conoce tu negocio de verdad</strong>
-                            <span>Personalizas su prompt, cargas tus políticas, tarifas y tono. No es un bot genérico — es tu recepcionista virtual.</span>
-                        </div>
+                        <div class="wa-check"></div>
+                        <span>Habla el idioma del huésped: español, inglés, portugués y más</span>
                     </div>
                     <div class="wa-feat">
-                        <div class="wa-feat-icon">🤝</div>
-                        <div class="wa-feat-text">
-                            <strong>Sabe cuándo callarse</strong>
-                            <span>Detecta cuando hace falta un humano, te escala la conversación, y se desactiva solo. Cero respuestas raras.</span>
-                        </div>
+                        <div class="wa-check"></div>
+                        <span>Transfiere a un agente humano cuando detecta situaciones complejas</span>
+                    </div>
+                    <div class="wa-feat">
+                        <div class="wa-check"></div>
+                        <span>Guarda el lead si no hay disponibilidad y hace seguimiento automático</span>
+                    </div>
+                    <div class="wa-feat">
+                        <div class="wa-check"></div>
+                        <span>Envía recordatorios previos al check-in y previene no-shows</span>
                     </div>
                 </div>
-
-                <a href="#registro" class="btn-primary">Probarlo en mi WhatsApp <span class="arrow">→</span></a>
             </div>
 
-            <div class="wa-mockup reveal">
+            <div class="reveal">
                 <div class="chat-phone">
                     <div class="chat-ph-header">
-                        <div class="chat-avatar">VV</div>
+                        <div class="chat-avatar">GH</div>
                         <div>
-                            <div class="chat-name">Vista Verde Glamping</div>
-                            <div class="chat-status"><span class="status-dot"></span> Asistente IA · en línea</div>
+                            <div class="chat-name">Hotel Boutique Casa Verde</div>
+                            <div class="chat-status">
+                                <div class="status-dot"></div>
+                                Asistente IA activo
+                            </div>
                         </div>
                     </div>
-
-                    <div class="chat-body" id="chatBody">
+                    <div class="chat-body">
                         <div class="msg-wrap right">
-                            <div class="msg-bubble in">¿Hola! Tienen domos para 2 personas el viernes 8?</div>
+                            <div class="msg-bubble in">Hola! tienen disponibilidad para 2 adultos del 15 al 18 de mayo?</div>
                             <div class="msg-meta">10:24 am</div>
                         </div>
-
                         <div class="msg-wrap left">
-                            <div class="msg-bubble out">¡Hola! 👋 Sí, tenemos disponibilidad. Para 2 personas en el <strong>Domo Origen</strong> con vista al valle, son <strong>$720.000</strong> total por las 2 noches incluyendo desayuno 🌿</div>
-                            <div class="msg-meta out-t">10:24 am <span class="ticks">✓✓</span> Respondido por IA</div>
+                            <div class="msg-bubble out">¡Hola María! Sí tenemos disponibilidad para esas fechas 🙌<br><br>• Hab. Doble Superior — $320.000/noche<br>• Suite con vista — $480.000/noche<br><br>¿Cuál te interesa? Puedo reservarte ahora mismo.</div>
+                            <div class="msg-meta out-t">10:24 am <span class="ticks">✓✓</span> Respondido automáticamente</div>
                         </div>
-
                         <div class="msg-wrap right">
-                            <div class="msg-bubble in voice">
-                                <div class="voice-play">▶</div>
-                                <div class="voice-wave">
-                                    <span style="height:40%"></span><span style="height:70%"></span>
-                                    <span style="height:90%"></span><span style="height:50%"></span>
-                                    <span style="height:80%"></span><span style="height:60%"></span>
-                                    <span style="height:75%"></span><span style="height:45%"></span>
-                                </div>
-                                <div class="voice-time">0:08</div>
-                            </div>
-                            <div class="msg-meta">10:25 am · "¿incluye desayuno?"</div>
+                            <div class="msg-bubble in">La doble, ¿incluye desayuno?</div>
+                            <div class="msg-meta">10:25 am</div>
                         </div>
-
                         <div class="msg-wrap left">
                             <div class="chat-typing">
-                                <span class="typing-dot"></span>
-                                <span class="typing-dot"></span>
-                                <span class="typing-dot"></span>
+                                <div class="typing-dot"></div>
+                                <div class="typing-dot"></div>
+                                <div class="typing-dot"></div>
                             </div>
                         </div>
                     </div>
-
                     <div class="chat-footer-bar">
                         <div class="chat-input-fake"></div>
                         <div class="chat-send">
-                            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                            <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+                        </div>
+                    </div>
+                    <div class="chat-badge">⚡ Respondido en 3 segundos · Powered by GuestHandle IA</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     PMS MÓDULOS
+══════════════════════════════════════════════════════════ -->
+<section id="pms" class="pms-section">
+    <div class="container">
+        <div class="reveal" style="max-width:600px">
+            <div class="eyebrow blue">PMS completo</div>
+            <h2 class="section-h">Un PMS de verdad. No solo un chatbot.</h2>
+            <p class="section-p">Asksuite te da IA pero no el PMS. Pxsol tiene el PMS pero la IA es un add-on tardío. GuestHandle es los dos, integrados desde el primer día.</p>
+        </div>
+
+        <div class="pms-grid">
+            <div class="pms-card reveal">
+                <div class="pms-icon g">📅</div>
+                <h3>Panel de ocupación</h3>
+                <p>Vista calendario en tiempo real, drag & drop de reservas, detección automática de overbooking.</p>
+                <span class="pms-tag g">Tiempo real</span>
+            </div>
+            <div class="pms-card reveal">
+                <div class="pms-icon b">🛒</div>
+                <h3>Motor de reservas directo</h3>
+                <p>Integrado a tu sitio web, sincronizado al segundo. Tus huéspedes reservan directo, sin comisiones.</p>
+                <span class="pms-tag b">Sin comisiones</span>
+            </div>
+            <div class="pms-card reveal">
+                <div class="pms-icon t">🌐</div>
+                <h3>Channel Manager</h3>
+                <p>Sincroniza con Booking.com, Expedia, Airbnb y +200 canales. Disponibilidad unificada, cero sobreventas.</p>
+                <span class="pms-tag t">+200 canales</span>
+            </div>
+            <div class="pms-card reveal">
+                <div class="pms-icon a">📈</div>
+                <h3>Revenue Manager IA</h3>
+                <p>Precios dinámicos automáticos según ocupación, temporada y competencia. El RevPAR solo puede subir.</p>
+                <span class="pms-tag a">IA automático</span>
+            </div>
+            <div class="pms-card reveal">
+                <div class="pms-icon g">📱</div>
+                <h3>Check-in / out digital</h3>
+                <p>Pre check-in por WhatsApp, escaneo de documentos con IA y firma digital. Experiencia sin fricción.</p>
+                <span class="pms-tag g">Sin papel</span>
+            </div>
+            <div class="pms-card reveal">
+                <div class="pms-icon b">📊</div>
+                <h3>Reportes y analítica</h3>
+                <p>Dashboard de ingresos, RevPAR, ADR y ocupación. Exportable, en tiempo real, sin Excel.</p>
+                <span class="pms-tag b">Tiempo real</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     ONBOARDING
+══════════════════════════════════════════════════════════ -->
+<section class="onboard-section">
+    <div class="container">
+        <div class="reveal" style="max-width:600px">
+            <div class="eyebrow">Conexión fácil</div>
+            <h2 class="section-h">Listo en menos de 10 minutos. En serio.</h2>
+            <p class="section-p">Sin desarrollo. Sin migraciones dolorosas. Sin técnicos externos. Conectás el número de WhatsApp que ya tenés.</p>
+        </div>
+
+        <div class="steps-row">
+            <div class="step-card reveal">
+                <div class="step-num">01</div>
+                <div class="step-title">Crea tu cuenta</div>
+                <p class="step-sub">Ingresa los datos de tu hotel, tipos de habitación y tarifas base. Simple como configurar un perfil.</p>
+                <span class="step-time">2 minutos</span>
+            </div>
+            <div class="step-card reveal">
+                <div class="step-num">02</div>
+                <div class="step-title">Conecta tu WhatsApp</div>
+                <p class="step-sub">Escaneas un QR o conectas el número mediante API oficial de Meta. No necesitas cambiar de número.</p>
+                <span class="step-time">5 minutos</span>
+            </div>
+            <div class="step-card reveal">
+                <div class="step-num">03</div>
+                <div class="step-title">Tu IA empieza a vender</div>
+                <p class="step-sub">La IA aprende tu hotel en automático. Ya puede cotizar, responder y confirmar reservas. Tú solo supervisas.</p>
+                <span class="step-time">Inmediato</span>
+            </div>
+        </div>
+
+        <div class="guarantees reveal">
+            <div class="guar-item"><div class="guar-icon">🛡️</div>30 días de garantía o te devolvemos el dinero</div>
+            <div class="guar-item"><div class="guar-icon">🔧</div>Onboarding incluido sin costo</div>
+            <div class="guar-item"><div class="guar-icon">💬</div>Soporte humano por WhatsApp</div>
+            <div class="guar-item"><div class="guar-icon">🔄</div>Migración de datos asistida</div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     GESTIÓN DE CONVERSACIONES
+══════════════════════════════════════════════════════════ -->
+<section class="inbox-section">
+    <div class="container">
+        <div class="reveal" style="max-width:600px">
+            <div class="eyebrow">Inbox unificado</div>
+            <h2 class="section-h">Todas las conversaciones. Un solo lugar.</h2>
+            <p class="section-p">IA y equipo humano trabajando juntos. Tú decides cuándo tomar el control.</p>
+        </div>
+
+        <div class="inbox-grid">
+            <div class="inbox-features reveal">
+                <div class="inbox-feat">
+                    <div class="inbox-feat-icon">📥</div>
+                    <div>
+                        <h4>Vista unificada multicanal</h4>
+                        <p>WhatsApp, email y webchat en una sola bandeja. Sin saltar entre apps.</p>
+                    </div>
+                </div>
+                <div class="inbox-feat">
+                    <div class="inbox-feat-icon">🤖</div>
+                    <div>
+                        <h4>Etiquetas automáticas por IA</h4>
+                        <p>La IA clasifica y prioriza cada conversación según intención de compra.</p>
+                    </div>
+                </div>
+                <div class="inbox-feat">
+                    <div class="inbox-feat-icon">👤</div>
+                    <div>
+                        <h4>Traspaso IA → Agente en 1 clic</h4>
+                        <p>El agente toma el control cuando lo necesita, con todo el historial visible.</p>
+                    </div>
+                </div>
+                <div class="inbox-feat">
+                    <div class="inbox-feat-icon">💡</div>
+                    <div>
+                        <h4>Respuestas sugeridas por IA</h4>
+                        <p>El copiloto sugiere la mejor respuesta al agente humano en tiempo real.</p>
+                    </div>
+                </div>
+                <div class="inbox-feat">
+                    <div class="inbox-feat-icon">📊</div>
+                    <div>
+                        <h4>Métricas por agente y canal</h4>
+                        <p>Tiempo de respuesta, tasa de conversión y volumen por agente en un dashboard.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="reveal">
+                <div class="inbox-mock">
+                    <div class="inbox-mock-header">
+                        <div class="inbox-mock-title">Bandeja de entrada</div>
+                        <div class="inbox-badge">5 nuevos</div>
+                    </div>
+                    <div class="inbox-row active">
+                        <div class="inbox-av" style="background:#DCFCE7;color:#166534">MC</div>
+                        <div class="inbox-row-body">
+                            <div class="inbox-row-name">María Camila</div>
+                            <div class="inbox-row-preview">¿Tienen disponibilidad para...</div>
+                        </div>
+                        <div class="inbox-row-meta">
+                            <div class="inbox-row-time">10:24</div>
+                            <div class="inbox-tag tag-wa">WhatsApp</div>
+                            <div class="inbox-tag tag-ai">IA activa</div>
+                        </div>
+                    </div>
+                    <div class="inbox-row">
+                        <div class="inbox-av" style="background:#EDE9FE;color:#5B21B6">JP</div>
+                        <div class="inbox-row-body">
+                            <div class="inbox-row-name">Juan Pablo Soto</div>
+                            <div class="inbox-row-preview">Perfecto, confirmo la reserva...</div>
+                        </div>
+                        <div class="inbox-row-meta">
+                            <div class="inbox-row-time">09:51</div>
+                            <div class="inbox-tag tag-wa">WhatsApp</div>
+                        </div>
+                    </div>
+                    <div class="inbox-row">
+                        <div class="inbox-av" style="background:#FEF3C7;color:#92400E">LG</div>
+                        <div class="inbox-row-body">
+                            <div class="inbox-row-name">Luisa González</div>
+                            <div class="inbox-row-preview">Quiero cancelar mi reserva...</div>
+                        </div>
+                        <div class="inbox-row-meta">
+                            <div class="inbox-row-time">09:33</div>
+                            <div class="inbox-tag tag-human">Agente</div>
+                        </div>
+                    </div>
+                    <div class="inbox-row">
+                        <div class="inbox-av" style="background:#E6F1FB;color:#0C447C">RM</div>
+                        <div class="inbox-row-body">
+                            <div class="inbox-row-name">reservas@booking.com</div>
+                            <div class="inbox-row-preview">Nueva reserva confirmada...</div>
+                        </div>
+                        <div class="inbox-row-meta">
+                            <div class="inbox-row-time">08:10</div>
+                            <div class="inbox-tag tag-ai">Email</div>
+                        </div>
+                    </div>
+                    <div class="inbox-row">
+                        <div class="inbox-av" style="background:#FDF2F8;color:#86198F">AC</div>
+                        <div class="inbox-row-body">
+                            <div class="inbox-row-name">Andrés Castro</div>
+                            <div class="inbox-row-preview">Hola, necesito una cotización...</div>
+                        </div>
+                        <div class="inbox-row-meta">
+                            <div class="inbox-row-time">Ayer</div>
+                            <div class="inbox-tag tag-wa">WhatsApp</div>
+                            <div class="inbox-tag tag-ai">IA activa</div>
                         </div>
                     </div>
                 </div>
@@ -2347,416 +2020,381 @@
 </section>
 
 <!-- ══════════════════════════════════════════════════════════
-     COMPARISON TABLE
+     REVENUE
 ══════════════════════════════════════════════════════════ -->
-<section class="compare-section" id="comparacion">
+<section class="revenue-section">
     <div class="container">
-        <div class="compare-head reveal">
-            <div>
-                <span class="eyebrow">Comparación honesta</span>
-                <h2 class="section-h">Tentii vs <em>los chatbots</em>.</h2>
-            </div>
-            <p class="section-p">WeSpeak y Asksuite son buenos productos — son chatbots especializados en hotelería. Pero son solo eso: chatbots. Tu PMS, tu calendario, tus tours, tu folio, tus comisiones, tu equipo… los sigues manejando aparte. Tentii integra todo.</p>
+        <div class="reveal" style="max-width:600px">
+            <div class="eyebrow">Revenue Manager IA</div>
+            <h2 class="section-h">La IA que te hace ganar más, no solo trabajar menos.</h2>
+            <p class="section-p">Precios dinámicos automáticos que se ajustan solos según demanda, eventos y competencia.</p>
         </div>
 
-        <div class="compare-table-wrap reveal">
-            <table class="compare-table">
-                <thead>
-                <tr>
-                    <th>Funcionalidad</th>
-                    <th class="tentii-col">Tentii</th>
-                    <th>WeSpeak</th>
-                    <th>Asksuite</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                    <td class="feature">PMS completo (reservas, calendario, check-in/out)</td>
-                    <td class="tentii-col"><span class="check-yes">✓ Incluido</span></td>
-                    <td><span class="check-no">✗ No es PMS</span></td>
-                    <td><span class="check-no">✗ No es PMS</span></td>
-                </tr>
-                <tr>
-                    <td class="feature">Asistente IA en WhatsApp 24/7</td>
-                    <td class="tentii-col"><span class="check-yes">✓</span></td>
-                    <td><span class="check-yes">✓</span></td>
-                    <td><span class="check-yes">✓</span></td>
-                </tr>
-                <tr>
-                    <td class="feature">Módulo de tours y actividades</td>
-                    <td class="tentii-col"><span class="check-yes">✓ Nativo</span></td>
-                    <td><span class="check-no">✗</span></td>
-                    <td><span class="check-no">✗</span></td>
-                </tr>
-                <tr>
-                    <td class="feature">Folio unificado alojamiento + tour</td>
-                    <td class="tentii-col"><span class="check-yes">✓</span></td>
-                    <td><span class="check-no">✗</span></td>
-                    <td><span class="check-no">✗</span></td>
-                </tr>
-                <tr>
-                    <td class="feature">Comisiones automáticas (agentes y guías)</td>
-                    <td class="tentii-col"><span class="check-yes">✓ 4 modelos</span></td>
-                    <td><span class="check-no">✗</span></td>
-                    <td><span class="check-no">✗</span></td>
-                </tr>
-                <tr>
-                    <td class="feature">OCR de comprobantes de pago</td>
-                    <td class="tentii-col"><span class="check-yes">✓ Gemini Vision</span></td>
-                    <td><span class="check-partial">Parcial</span></td>
-                    <td><span class="check-no">✗</span></td>
-                </tr>
-                <tr>
-                    <td class="feature">Precios dinámicos por temporada y día</td>
-                    <td class="tentii-col"><span class="check-yes">✓ Modificadores día a día</span></td>
-                    <td><span class="check-partial">Vía PMS externo</span></td>
-                    <td><span class="check-partial">Vía PMS externo</span></td>
-                </tr>
-                <tr>
-                    <td class="feature">Comisión por reserva</td>
-                    <td class="tentii-col"><span class="check-yes">0%</span></td>
-                    <td><span class="check-text">Plan + fees</span></td>
-                    <td><span class="check-no">3–5%</span></td>
-                </tr>
-                <tr>
-                    <td class="feature">Precio mensual base</td>
-                    <td class="tentii-col"><span class="check-yes">USD 20</span></td>
-                    <td><span class="check-text">Bajo cotización</span></td>
-                    <td><span class="check-text">Desde USD 199</span></td>
-                </tr>
-                <tr>
-                    <td class="feature">Necesitas también pagar un PMS aparte</td>
-                    <td class="tentii-col"><span class="check-yes">No</span></td>
-                    <td><span class="check-no">Sí</span></td>
-                    <td><span class="check-no">Sí</span></td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-        <p class="compare-note">Datos públicos de los sitios y prensa de los competidores a abril 2026.</p>
-    </div>
-</section>
-
-<!-- ══════════════════════════════════════════════════════════
-     DIFFERENTIATORS
-══════════════════════════════════════════════════════════ -->
-<section class="diff-section">
-    <div class="diff-inner">
-        <div class="diff-head reveal">
-            <span class="eyebrow">Por qué Tentii</span>
-            <h2 class="section-h">Construido por gente que <em>operó</em> alojamientos. No por un VC con un deck.</h2>
-            <p class="section-p">Cada decisión del producto responde a un dolor real de operación. No a una matriz de features para ganar un Capterra.</p>
-        </div>
-
-        <div class="diff-grid">
-            <div class="diff-card reveal">
-                <div class="diff-card-num">01</div>
-                <h3>Una sola plataforma, una sola factura</h3>
-                <p>No pagas un PMS, un chatbot, un channel manager y un sistema de tours. Pagas Tentii. Y todo conversa entre sí porque vive en la misma base de datos.</p>
+        <div class="revenue-grid">
+            <div class="rev-card reveal">
+                <div class="rev-card-head">
+                    <div class="rev-icon red">📉</div>
+                    <div>
+                        <div style="font-size:.85rem;font-weight:600;color:var(--navy)">Precio fijo todo el año</div>
+                        <div style="font-size:.75rem;color:var(--gray-400)">Sin revenue management</div>
+                    </div>
+                </div>
+                <div class="rev-before">
+                    <strong>Pierdes dinero en temporada alta</strong> y tienes habitaciones vacías en temporada baja. Siempre le vendes al mismo precio a todo el mundo.
+                </div>
+                <div class="rev-after">
+                    <strong>Con Revenue Manager IA:</strong> +34% RevPAR promedio. El precio sube cuando hay demanda y baja cuando hay que llenar.
+                </div>
             </div>
-
-            <div class="diff-card reveal">
-                <div class="diff-card-num">02</div>
-                <h3>Pensado para tu tamaño</h3>
-                <p>Hoteles boutique de 6–40 habitaciones, glamping con 8 domos, cabañas familiares, operadores con 3 tours. No tendrás 200 features que nunca usarás ni pagarás como si fueras una cadena.</p>
+            <div class="rev-card reveal">
+                <div class="rev-card-head">
+                    <div class="rev-icon red">📅</div>
+                    <div>
+                        <div style="font-size:.85rem;font-weight:600;color:var(--navy)">Te enteras tarde de los eventos</div>
+                        <div style="font-size:.75rem;color:var(--gray-400)">Sin monitoreo de demanda</div>
+                    </div>
+                </div>
+                <div class="rev-before">
+                    <strong>El festival de música del fin de semana</strong> lo sabías el jueves. Ya era tarde para subir precios.
+                </div>
+                <div class="rev-after">
+                    <strong>Con Revenue Manager IA:</strong> el precio sube automáticamente 2 semanas antes cuando detecta demanda creciente en la zona.
+                </div>
             </div>
-
-            <div class="diff-card reveal">
-                <div class="diff-card-num">03</div>
-                <h3>El único PMS con tours nativos</h3>
-                <p>Si vendes alojamiento y experiencias (cañón, cabalgata, parapente, gastronómicos), Tentii es la única opción que une ambas cuentas. Sin parches.</p>
-            </div>
-
-            <div class="diff-card reveal">
-                <div class="diff-card-num">04</div>
-                <h3>IA personalizada, no un bot genérico</h3>
-                <p>Tu prompt, tu tono, tu catálogo, tus políticas. El asistente habla como tú, no como un GPT envasado. Y aprende del comportamiento real de tus huéspedes.</p>
-            </div>
-
-            <div class="diff-card reveal">
-                <div class="diff-card-num">05</div>
-                <h3>Cero comisiones. De verdad.</h3>
-                <p>Pagas tu mensualidad y listo. No te quitamos un porcentaje de cada reserva, no cobramos por reservas generadas por la IA, no hay letra chica. Tu venta es tuya.</p>
-            </div>
-
-            <div class="diff-card reveal">
-                <div class="diff-card-num">06</div>
-                <h3>Setup en un día, no en un trimestre</h3>
-                <p>Cargas tus unidades, conectas tu WhatsApp Business, ajustas el prompt y operas. Sin consultores, sin onboarding de 3 meses, sin reuniones para configurar el módulo de impuestos.</p>
+            <div class="rev-card reveal">
+                <div class="rev-card-head">
+                    <div class="rev-icon red">🔄</div>
+                    <div>
+                        <div style="font-size:.85rem;font-weight:600;color:var(--navy)">Actualización manual de canales</div>
+                        <div style="font-size:.75rem;color:var(--gray-400)">Sin channel manager integrado</div>
+                    </div>
+                </div>
+                <div class="rev-before">
+                    <strong>Cambias el precio</strong> en Booking, luego en Expedia, luego en tu web… y en Airbnb te olvidaste.
+                </div>
+                <div class="rev-after">
+                    <strong>Con Channel Manager IA:</strong> un cambio de precio se actualiza en todos tus canales en menos de 30 segundos.
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 <!-- ══════════════════════════════════════════════════════════
-     SECTORS
+     INTEGRACIONES
 ══════════════════════════════════════════════════════════ -->
-<section class="sectors-section" id="sectores">
-    <div class="container">
-        <div class="sectors-head reveal">
-            <span class="eyebrow amber">Para quién</span>
-            <h2 class="section-h">Si tu negocio se ve así, <em>Tentii encaja</em>.</h2>
-            <p class="section-p">No somos para Hilton ni para el Airbnb del primo. Somos para los negocios reales que sostienen el turismo en la región.</p>
+<section class="integrations-section">
+    <div class="container" style="text-align:center">
+        <div class="reveal">
+            <div class="eyebrow">Integraciones</div>
+            <h2 class="section-h">Se conecta con las herramientas que ya usas</h2>
+            <p class="section-p" style="margin:0 auto 2.5rem">¿No ves tu herramienta? Contáctanos — conectamos en 72 horas.</p>
         </div>
 
-        <div class="sectors-grid">
-            <div class="sector-card reveal">
-                <span class="sector-icon">🏡</span>
-                <h3>Hoteles boutique</h3>
-                <p>De 6 a 40 habitaciones. Te importa el detalle, la marca y la atención personalizada. Necesitas software que no te despersonalice.</p>
-            </div>
+        <div class="int-grid reveal">
+            <div class="int-pill"><div class="int-dot" style="background:#003580"></div>Booking.com</div>
+            <div class="int-pill"><div class="int-dot" style="background:#E4002B"></div>Expedia</div>
+            <div class="int-pill"><div class="int-dot" style="background:#FF5A5F"></div>Airbnb</div>
+            <div class="int-pill"><div class="int-dot" style="background:#E6002D"></div>Despegar</div>
+            <div class="int-pill"><div class="int-dot" style="background:#4285F4"></div>Google Hotel Ads</div>
+            <div class="int-pill"><div class="int-dot" style="background:#00AF87"></div>TripAdvisor</div>
+            <div class="int-pill"><div class="int-dot" style="background:#25D366"></div>WhatsApp API</div>
+            <div class="int-pill"><div class="int-dot" style="background:#635BFF"></div>Stripe</div>
+            <div class="int-pill"><div class="int-dot" style="background:#009EE3"></div>PayU</div>
+            <div class="int-pill"><div class="int-dot" style="background:#009EE3"></div>Mercado Pago</div>
+            <div class="int-pill"><div class="int-dot" style="background:#FF6900"></div>Zapier</div>
+            <div class="int-pill"><div class="int-dot" style="background:#0078D4"></div>Outlook / Gmail</div>
+        </div>
+    </div>
+</section>
 
-            <div class="sector-card reveal">
-                <span class="sector-icon">⛺</span>
-                <h3>Glamping</h3>
-                <p>Domos, tipis, cabañas-tienda. Temporada concentrada, tarifas dinámicas, mucho WhatsApp y huéspedes que llegan con preguntas raras.</p>
-            </div>
+<!-- ══════════════════════════════════════════════════════════
+     TESTIMONIOS
+══════════════════════════════════════════════════════════ -->
+<section class="testimonials-section">
+    <div class="container">
+        <div class="reveal" style="text-align:center;max-width:580px;margin:0 auto 2.75rem">
+            <div class="eyebrow">Resultados reales</div>
+            <h2 class="section-h">Hoteles que ya duermen tranquilos</h2>
+        </div>
 
-            <div class="sector-card reveal">
-                <span class="sector-icon">🌲</span>
-                <h3>Cabañas y fincas</h3>
-                <p>Unidades enteras o por habitación. Cabaña con 3 cuartos que también se vende completa. Tarifas con extras, niños, estadías largas.</p>
+        <div class="testimonials-grid">
+            <div class="tcard reveal">
+                <div class="tcard-metrics">
+                    <div class="metric-pill">
+                        <span class="mn"><span>+</span>41<span>%</span></span>
+                        <span class="ml">reservas directas</span>
+                    </div>
+                    <div class="metric-pill">
+                        <span class="mn">3<span>h</span></span>
+                        <span class="ml">ahorradas/día</span>
+                    </div>
+                    <div class="metric-pill">
+                        <span class="mn"><span>-</span>22<span>%</span></span>
+                        <span class="ml">comisiones OTA</span>
+                    </div>
+                </div>
+                <p class="tcard-quote">"Antes respondíamos 80 WhatsApps por día manualmente. Ahora la IA atiende el 94% sola y nuestras reservas directas subieron un 41% en el primer trimestre."</p>
+                <div class="tcard-author">
+                    <div class="author-av">MG</div>
+                    <div>
+                        <div class="author-name">María González</div>
+                        <div class="author-role">Gerente General · Hotel Boutique Casa Verde</div>
+                    </div>
+                </div>
             </div>
-
-            <div class="sector-card reveal">
-                <span class="sector-icon">🥾</span>
-                <h3>Operadores de tours</h3>
-                <p>Cañón, parapente, cabalgata, gastronómico, cultural. Salidas con cupos, guías, manifiestos y comisiones. Todo en un solo lugar.</p>
+            <div class="tcard reveal">
+                <div class="tcard-metrics">
+                    <div class="metric-pill">
+                        <span class="mn"><span>+</span>28<span>%</span></span>
+                        <span class="ml">RevPAR</span>
+                    </div>
+                    <div class="metric-pill">
+                        <span class="mn">98<span>%</span></span>
+                        <span class="ml">satisfacción</span>
+                    </div>
+                    <div class="metric-pill">
+                        <span class="mn"><span>&lt;</span>3<span>s</span></span>
+                        <span class="ml">respuesta IA</span>
+                    </div>
+                </div>
+                <p class="tcard-quote">"Configuramos todo en una tarde. Al día siguiente la IA ya estaba respondiendo consultas y cerrando reservas. No podía creer que fuera tan fácil."</p>
+                <div class="tcard-author">
+                    <div class="author-av" style="background:#EDE9FE;color:#5B21B6">CR</div>
+                    <div>
+                        <div class="author-name">Carlos Restrepo</div>
+                        <div class="author-role">Director de Ventas · Apart Hotel El Poblado</div>
+                    </div>
+                </div>
             </div>
-
-            <div class="sector-card reveal">
-                <span class="sector-icon">🌄</span>
-                <h3>Hotel + tours</h3>
-                <p>Si tu hotel también vende experiencias, Tentii une la cuenta del huésped. No más "súmenle el tour a la habitación 4" en una libreta.</p>
-            </div>
-
-            <div class="sector-card reveal">
-                <span class="sector-icon">🌐</span>
-                <h3>Multi-establecimiento</h3>
-                <p>Tienes dos glampings o un hotel y una agencia. Cada uno con su tenant, sus tarifas, su moneda, su asistente IA. Aislados pero gestionados desde un solo equipo.</p>
+            <div class="tcard reveal">
+                <div class="tcard-metrics">
+                    <div class="metric-pill">
+                        <span class="mn">89<span>%</span></span>
+                        <span class="ml">menos trabajo manual</span>
+                    </div>
+                    <div class="metric-pill">
+                        <span class="mn"><span>+</span>35<span>%</span></span>
+                        <span class="ml">conversión</span>
+                    </div>
+                </div>
+                <p class="tcard-quote">"Tenemos cabaña en zona rural sin recepcionista de noche. GuestHandle cambió completamente nuestro modelo: la IA atiende, la gente reserva y nosotros dormimos."</p>
+                <div class="tcard-author">
+                    <div class="author-av" style="background:#FEF3C7;color:#92400E">LS</div>
+                    <div>
+                        <div class="author-name">Laura Soto</div>
+                        <div class="author-role">Propietaria · Cabañas La Montaña</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 <!-- ══════════════════════════════════════════════════════════
-     PRICING
+     PRECIOS
 ══════════════════════════════════════════════════════════ -->
-<section class="pricing-section" id="precios">
+<section id="precios" class="pricing-section">
     <div class="container">
-        <div class="pricing-head reveal">
-            <span class="eyebrow">Precios honestos</span>
-            <h2 class="section-h">Dos planes. <em>Cero comisiones.</em></h2>
-            <p class="section-p">Lo que pagas es lo que pagas. Si una reserva se cierra por la IA, es tuya. Si vendes 200 tours, son tuyos. Sin sorpresas, sin tarifas escalonadas, sin "cargo por uso".</p>
+        <div class="reveal" style="text-align:center">
+            <div class="eyebrow" style="text-align:center">Planes</div>
+            <h2 class="section-h" style="text-align:center">Precio justo. Sin sorpresas.</h2>
+            <p class="section-p" style="margin:0 auto .5rem;text-align:center">Primer mes gratis en cualquier plan. Sin comisiones por reserva. Sin contratos anuales.</p>
         </div>
 
         <div class="pricing-grid">
-
-            <!-- Starter -->
-            <div class="price-card reveal">
-                <div class="price-name">Starter</div>
-                <p class="price-desc">Para alojamientos pequeños o operadores que están empezando.</p>
-
-                <div class="price-amount">
-                    <span class="currency">USD</span>
-                    <span class="number">20</span>
-                    <span class="period">/mes</span>
-                </div>
-                <p class="price-note">Pago anual · O USD 25/mes pago mensual</p>
-
-                <ul class="price-feats">
-                    <li>Hasta 10 unidades de alojamiento</li>
-                    <li>Calendario y reservas ilimitadas</li>
-                    <li>Asistente IA en WhatsApp</li>
-                    <li>OCR de comprobantes</li>
-                    <li>Notas de voz transcritas</li>
-                    <li>Pagos parciales y folio del huésped</li>
-                    <li>Soporte por WhatsApp</li>
-                    <li class="muted">Módulo de tours</li>
-                    <li class="muted">Comisiones de agentes y guías</li>
+            <div class="pcard reveal">
+                <div class="p-name">Esencial</div>
+                <div class="p-price"><sup>$</sup>99.000</div>
+                <div class="p-period">COP / mes · hasta 10 unidades</div>
+                <ul class="p-list">
+                    <li>PMS completo + calendario</li>
+                    <li>Motor de tarifas</li>
+                    <li>WhatsApp IA (500 conv/mes)</li>
+                    <li>Folio y punto de venta</li>
+                    <li>Reportes básicos</li>
+                    <li>Hasta 3 usuarios</li>
+                    <li>Soporte por email</li>
                 </ul>
-
-                <a href="#registro" class="price-btn">Empezar con Starter</a>
+                <a href="#registro" class="btn-plan outline">Empezar gratis</a>
             </div>
 
-            <!-- Pro -->
-            <div class="price-card featured reveal">
-                <span class="price-tag">Más popular</span>
-                <div class="price-name">Pro</div>
-                <p class="price-desc">Para alojamientos que también venden tours, multi-establecimiento o con equipo.</p>
-
-                <div class="price-amount">
-                    <span class="currency">USD</span>
-                    <span class="number">104</span>
-                    <span class="period">/mes</span>
-                </div>
-                <p class="price-note">Pago anual · O USD 124/mes pago mensual</p>
-
-                <ul class="price-feats">
-                    <li>Unidades de alojamiento ilimitadas</li>
-                    <li>Módulo completo de tours y actividades</li>
-                    <li>Folio unificado alojamiento + tour</li>
-                    <li>Manifiesto de pasajeros y cupos en tiempo real</li>
-                    <li>Comisiones automáticas (agentes + guías, 4 modelos)</li>
-                    <li>Multi-tenant: varios establecimientos</li>
-                    <li>Prompt de IA personalizable por negocio</li>
-                    <li>Roles y permisos para tu equipo</li>
-                    <li>Soporte prioritario</li>
+            <div class="pcard featured reveal">
+                <div class="p-badge">Más popular</div>
+                <div class="p-name">Profesional</div>
+                <div class="p-price"><sup>$</sup>189.000</div>
+                <div class="p-period">COP / mes · unidades ilimitadas</div>
+                <ul class="p-list">
+                    <li>Todo lo de Esencial</li>
+                    <li>WhatsApp IA 24/7 ilimitado</li>
+                    <li>Channel Manager (+200 canales)</li>
+                    <li>Revenue Manager IA</li>
+                    <li>Sitio web + motor de reservas</li>
+                    <li>Inbox unificado multicanal</li>
+                    <li>Check-in digital</li>
+                    <li>Usuarios ilimitados</li>
+                    <li>Soporte prioritario WhatsApp</li>
                 </ul>
-
-                <a href="#registro" class="price-btn">Empezar con Pro</a>
+                <a href="#registro" class="btn-plan primary">Empezar 30 días gratis →</a>
             </div>
         </div>
 
-        <p style="text-align:center;margin-top:2rem;font-size:.85rem;color:var(--slate-500)">
-            ¿Tienes una cadena con más de 5 propiedades? <a href="#registro" style="color:var(--terra);font-weight:500;text-decoration:underline">Hablemos de un plan a medida →</a>
+        <p class="reveal" style="text-align:center;font-size:.78rem;color:var(--gray-400);margin-top:1.5rem">
+            Sin tarjeta de crédito &nbsp;·&nbsp; Cancela en cualquier momento &nbsp;·&nbsp; Datos seguros en Colombia
         </p>
-    </div>
-</section>
-
-<!-- ══════════════════════════════════════════════════════════
-     FAQ
-══════════════════════════════════════════════════════════ -->
-<section class="faq-section" id="faq">
-    <div class="container">
-        <div class="faq-head reveal">
-            <span class="eyebrow moss">Preguntas frecuentes</span>
-            <h2 class="section-h">Lo que <em>todos</em> nos preguntan.</h2>
-        </div>
-
-        <div class="faq-grid">
-            <details class="faq-item reveal">
-                <summary>¿Cuánto tarda el setup?</summary>
-                <p>Menos de un día. Cargas tus unidades (o las importas de un Excel), conectas tu número de WhatsApp Business, ajustas el prompt del asistente con tu tono y políticas, y ya estás operando. Tenemos guías paso a paso y soporte humano por chat.</p>
-            </details>
-
-            <details class="faq-item reveal">
-                <summary>¿Necesito tener WhatsApp Business API?</summary>
-                <p>Te ayudamos a obtenerla en el proceso de setup. Tarda entre 24 y 72 horas y la gestionamos contigo. No necesitas conocimientos técnicos.</p>
-            </details>
-
-            <details class="faq-item reveal">
-                <summary>¿Funciona si solo vendo alojamiento (sin tours)?</summary>
-                <p>Sí. Tentii detecta automáticamente el perfil de tu negocio y adapta el menú, el dashboard y el asistente IA. Si solo vendes alojamiento, no verás módulos de tours en tu pantalla. El plan Starter está pensado exactamente para eso.</p>
-            </details>
-
-            <details class="faq-item reveal">
-                <summary>¿Y si solo soy operador de tours?</summary>
-                <p>También. El plan Pro es ideal para operadores turísticos puros: gestiona salidas, cupos, guías con sus modelos de pago, comisiones y manifiestos. La IA en WhatsApp atiende las consultas de tus tours igual que atendería las de un hotel.</p>
-            </details>
-
-            <details class="faq-item reveal">
-                <summary>¿Qué pasa con mis datos? ¿Es seguro?</summary>
-                <p>Cada negocio (tenant) opera completamente aislado, con su propia configuración. Usamos la infraestructura cloud estándar de la industria, cifrado en tránsito y en reposo, y nunca compartimos datos entre tenants. Tus datos son tuyos.</p>
-            </details>
-
-            <details class="faq-item reveal">
-                <summary>¿Puedo cancelar cuando quiera?</summary>
-                <p>Sí. Sin permanencia, sin letra chica. Cancelas y exportas todos tus datos en formato estándar. Si pagaste anual y cancelas a mitad, te devolvemos lo no consumido los primeros 30 días.</p>
-            </details>
-
-            <details class="faq-item reveal">
-                <summary>¿Cómo se compara con WeSpeak o Asksuite?</summary>
-                <p>WeSpeak y Asksuite son chatbots de WhatsApp para hoteles — buenos en lo que hacen, pero no son PMS. Si los usas, sigues necesitando un PMS aparte (Cloudbeds, Sirvoy, etc.) más tu sistema de tours, más tu Excel de comisiones. Tentii reemplaza todo eso por una sola plataforma que además incluye el asistente IA. Y sin comisiones por reserva.</p>
-            </details>
-
-            <details class="faq-item reveal">
-                <summary>¿Qué idiomas habla la IA?</summary>
-                <p>Más de 50, incluyendo español (con variantes regionales), inglés, portugués, francés, alemán e italiano. Detecta el idioma del huésped y le responde en el suyo automáticamente.</p>
-            </details>
-
-            <details class="faq-item reveal">
-                <summary>¿Hay prueba gratuita?</summary>
-                <p>Sí, 14 días sin tarjeta de crédito. Tienes acceso a todas las funciones del plan Pro durante la prueba. Si al final decides que no es para ti, no pagas nada.</p>
-            </details>
-        </div>
     </div>
 </section>
 
 <!-- ══════════════════════════════════════════════════════════
      REGISTRO
 ══════════════════════════════════════════════════════════ -->
-<section class="register-section" id="registro">
-    <div class="reg-grid">
-        <div class="reg-left reveal">
-            <span class="eyebrow">Empezar</span>
-            <h2>Tu primera reserva por IA <em>antes de la cena</em>.</h2>
-            <p>Crea tu cuenta gratis, configura tu primera unidad en 10 minutos y conecta WhatsApp. Si no te convence, te ayudamos a migrar de vuelta sin drama.</p>
+<section id="registro" class="register-section">
+    <div class="container">
+        <div class="register-grid">
 
-            <ul class="reg-bullets">
-                <li>14 días gratis · sin tarjeta de crédito</li>
-                <li>Acceso completo al plan Pro durante la prueba</li>
-                <li>Migración de tu Excel/PMS actual incluida</li>
-                <li>Soporte humano por WhatsApp en español</li>
-                <li>Si cancelas, exportas todo en CSV</li>
-            </ul>
-        </div>
+            <!-- Columna izquierda -->
+            <div class="reveal">
+                <div class="eyebrow">Registro gratuito</div>
+                <h2 class="section-h">Empieza hoy,<br>en menos de 2 minutos.</h2>
+                <p class="section-p" style="margin-bottom:2.25rem">Al registrarte, un asistente guiado te ayuda a configurar tu hotel paso a paso. En menos de 10 minutos ya tendrás la IA respondiendo por WhatsApp.</p>
 
-        <div class="reg-form-card reveal">
-            <div id="formContent">
-                <h3>Crear cuenta gratis</h3>
-                <p class="reg-sub">Empieza tu prueba de 14 días. Sin compromisos.</p>
-
-                <div id="formError" class="form-error"></div>
-
-                <form id="registerForm" novalidate>
-                    <div class="form-group">
-                        <label for="hotel_name">Nombre del establecimiento</label>
-                        <input type="text" id="hotel_name" name="hotel_name" placeholder="Ej. Glamping Vista Verde" required>
+                <div style="margin-bottom:2rem">
+                    <div class="reg-left-step">
+                        <div class="reg-step-circle">1</div>
+                        <div class="reg-step-text">Completa el formulario — menos de 2 minutos</div>
                     </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="name">Tu nombre</label>
-                            <input type="text" id="name" name="name" placeholder="María Pérez" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="city">Ciudad</label>
-                            <input type="text" id="city" name="city" placeholder="Bucaramanga" required>
-                        </div>
+                    <div class="reg-left-step">
+                        <div class="reg-step-circle">2</div>
+                        <div class="reg-step-text">El wizard te guía para configurar tu hotel</div>
                     </div>
-
-                    <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email" name="email" placeholder="maria@vistaverde.co" required>
+                    <div class="reg-left-step">
+                        <div class="reg-step-circle">3</div>
+                        <div class="reg-step-text">30 días gratis con todas las funcionalidades</div>
                     </div>
+                </div>
 
-                    <div class="form-group">
-                        <label for="phone">WhatsApp</label>
-                        <input type="tel" id="phone" name="phone" placeholder="+57 300 000 0000" required>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="password">Contraseña</label>
-                            <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="password_confirm">Confirmar</label>
-                            <input type="password" id="password_confirm" name="password_confirm" placeholder="Repite" required>
-                        </div>
-                    </div>
-
-                    <div class="terms-row">
-                        <input type="checkbox" id="terms" name="terms">
-                        <label for="terms">Acepto los <a href="/terminos" target="_blank">términos</a> y la <a href="/privacidad" target="_blank">política de privacidad</a>.</label>
-                    </div>
-
-                    <button type="submit" class="btn-submit" id="btnReg">
-                        Crear cuenta y empezar gratis →
-                    </button>
-
-                    <p class="form-footer">
-                        ¿Ya tienes cuenta? <a href="/login">Iniciar sesión</a>
-                    </p>
-                </form>
+                <div style="padding:1.25rem;background:var(--gray-50);border-radius:var(--r2);border:1px solid var(--gray-100)">
+                    <p style="font-size:.78rem;color:var(--gray-500);margin-bottom:.4rem">¿Ya tienes cuenta?</p>
+                    <a href="/login" style="display:inline-flex;align-items:center;gap:.5rem;font-size:.875rem;color:var(--blue);font-weight:600">
+                        Iniciar sesión en tu panel →
+                    </a>
+                </div>
             </div>
 
-            <div id="successWrap" class="success-wrap">
-                <div class="success-icon">✓</div>
-                <h3>¡Listo, ya estás dentro!</h3>
-                <p>Te llevamos al panel. Allí cargas tu primera unidad y conectamos tu WhatsApp.</p>
+            <!-- Columna derecha: formulario -->
+            <div class="reveal">
+                <div class="rform">
+                    <div id="formContent">
+                        <h3 class="rform-title">Crear cuenta gratis</h3>
+                        <p class="rform-sub">
+                            <span style="background:var(--wa-light);color:var(--wa-dark);font-size:.7rem;font-weight:700;padding:.2rem .6rem;border-radius:4px">30 días gratis</span>
+                            Sin tarjeta de crédito
+                        </p>
+
+                        <div class="form-error" id="formError"></div>
+
+                        <form id="registerForm" novalidate>
+                            <?= csrf_field() ?>
+
+                            <div class="fg">
+                                <label for="hotel_name">Nombre del hotel *</label>
+                                <input type="text" id="hotel_name" name="hotel_name"
+                                       placeholder="Hotel Boutique Casa Grande"
+                                       required maxlength="120">
+                            </div>
+
+                            <div class="fg-row">
+                                <div class="fg">
+                                    <label for="reg_name">Tu nombre *</label>
+                                    <input type="text" id="reg_name" name="name"
+                                           placeholder="Ana García"
+                                           required maxlength="120">
+                                </div>
+                                <div class="fg">
+                                    <label for="reg_phone">WhatsApp *</label>
+                                    <input type="tel" id="reg_phone" name="phone"
+                                           placeholder="+57 300 000 0000"
+                                           required maxlength="30">
+                                </div>
+                            </div>
+
+                            <div class="fg">
+                                <label for="reg_email">Email *</label>
+                                <input type="email" id="reg_email" name="email"
+                                       placeholder="ana@mihotel.com"
+                                       required maxlength="150">
+                            </div>
+
+                            <div class="fg-row">
+                                <div class="fg">
+                                    <label for="reg_city">Ciudad *</label>
+                                    <input type="text" id="reg_city" name="city"
+                                           placeholder="Medellín"
+                                           required maxlength="100">
+                                </div>
+                                <div class="fg">
+                                    <label for="reg_country">País</label>
+                                    <select id="reg_country" name="country">
+                                        <option value="Colombia">Colombia</option>
+                                        <option value="México">México</option>
+                                        <option value="Argentina">Argentina</option>
+                                        <option value="Chile">Chile</option>
+                                        <option value="Perú">Perú</option>
+                                        <option value="Ecuador">Ecuador</option>
+                                        <option value="Costa Rica">Costa Rica</option>
+                                        <option value="Panamá">Panamá</option>
+                                        <option value="España">España</option>
+                                        <option value="Otro">Otro</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="fg-row">
+                                <div class="fg">
+                                    <label for="reg_password">Contraseña *</label>
+                                    <input type="password" id="reg_password" name="password"
+                                           placeholder="Mínimo 8 caracteres"
+                                           required minlength="8">
+                                </div>
+                                <div class="fg">
+                                    <label for="reg_password_confirm">Confirmar *</label>
+                                    <input type="password" id="reg_password_confirm"
+                                           name="password_confirm"
+                                           placeholder="Repetir contraseña"
+                                           required>
+                                </div>
+                            </div>
+
+                            <div class="fcheck">
+                                <input type="checkbox" id="terms" required>
+                                <label for="terms">
+                                    Acepto los <a href="/terminos" target="_blank">términos de servicio</a>
+                                    y la <a href="/privacidad" target="_blank">política de privacidad</a>
+                                </label>
+                            </div>
+
+                            <button type="submit" class="btn-reg" id="btnReg">
+                                Crear cuenta y empezar gratis →
+                            </button>
+
+                            <p class="form-note">Al registrarte, el wizard de configuración te espera</p>
+                        </form>
+
+                        <div class="login-link">
+                            ¿Ya tienes cuenta? <a href="/login">Inicia sesión aquí</a>
+                        </div>
+                    </div>
+
+                    <!-- Éxito -->
+                    <div class="success-wrap" id="successWrap">
+                        <div class="success-icon">✓</div>
+                        <h3>¡Bienvenido a GuestHandle!</h3>
+                        <p>Tu cuenta está lista. En un momento te redirigimos al asistente de configuración.</p>
+                        <a href="/onboarding" class="btn-goto">Ir al wizard →</a>
+                    </div>
+                </div>
             </div>
+
         </div>
     </div>
 </section>
@@ -2765,22 +2403,17 @@
      CTA FINAL
 ══════════════════════════════════════════════════════════ -->
 <section class="final-cta">
-    <h2>¿Cuántas reservas perdiste <em>esta semana</em> por no responder a tiempo?</h2>
-    <p>Hoy mismo puedes tener un asistente IA respondiendo en tu WhatsApp y un PMS de verdad gestionando tu calendario. En 10 minutos.</p>
+    <h2>¿Cuántas reservas perdiste hoy por no responder a tiempo?</h2>
+    <p>Empieza gratis hoy. Sin compromisos. En 10 minutos tu hotel ya tiene IA respondiendo en WhatsApp.</p>
     <div class="final-btns">
-        <a href="#registro" class="btn-primary">Empezar gratis <span class="arrow">→</span></a>
-        <a href="https://wa.me/573000000000" target="_blank" rel="noopener" class="btn-secondary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366" style="margin-right:.1rem"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            Hablar con el equipo
+        <a href="#registro" class="btn-primary" style="font-size:1rem;padding:.9rem 2.25rem">Activar prueba gratuita →</a>
+        <a href="https://wa.me/573000000000" target="_blank" rel="noopener"
+           style="display:inline-flex;align-items:center;gap:.6rem;background:rgba(255,255,255,.08);color:#fff;padding:.9rem 1.75rem;border-radius:var(--r2);font-size:.95rem;font-weight:500;border:1.5px solid rgba(255,255,255,.15);transition:all .2s">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Hablar con un asesor
         </a>
     </div>
-    <p class="final-note">
-        <strong>14 días gratis</strong>
-        <span class="sep">·</span>
-        Sin tarjeta de crédito
-        <span class="sep">·</span>
-        Cancela cuando quieras
-    </p>
+    <p class="final-note">30 días de garantía o te devolvemos el dinero &nbsp;·&nbsp; Sin tarjeta de crédito &nbsp;·&nbsp; Cancela cuando quieras</p>
 </section>
 
 <!-- ══════════════════════════════════════════════════════════
@@ -2788,23 +2421,24 @@
 ══════════════════════════════════════════════════════════ -->
 <footer>
     <div class="footer-logo">
-        Tentii<span class="footer-logo-dot"></span>
+        <div class="footer-logo-dot"></div>
+        GuestHandle
     </div>
 
     <div class="footer-links">
         <a href="/terminos">Términos</a>
         <a href="/privacidad">Privacidad</a>
-        <a href="/login">Entrar</a>
+        <a href="/login">Iniciar sesión</a>
     </div>
 
     <div class="footer-right">
-        &copy; <?= date('Y') ?> Tentii · El PMS nativo en la era de la IA
+        &copy; <?= date('Y') ?> GuestHandle &middot; Todos los derechos reservados
     </div>
 </footer>
 
 <!-- WhatsApp flotante -->
 <a href="https://wa.me/573000000000" target="_blank" rel="noopener" class="wa-float" title="Hablar por WhatsApp">
-    <svg viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
 </a>
 
 <!-- ══════════════════════════════════════════════════════════
@@ -2818,7 +2452,7 @@
         var obs    = new IntersectionObserver(function(entries){
             entries.forEach(function(e, i){
                 if(e.isIntersecting){
-                    setTimeout(function(){ e.target.classList.add('visible'); }, i * 60);
+                    setTimeout(function(){ e.target.classList.add('visible'); }, i * 70);
                     obs.unobserve(e.target);
                 }
             });
@@ -2830,8 +2464,8 @@
         var typingEl = document.querySelector('.chat-typing');
         if(typingEl){
             var replies = [
-                'Sí, el desayuno buffet está incluido para 2 personas 🍳 ¿Confirmamos? Solo necesito tu nombre y email para reservar el domo.',
-                '¡Perfecto, María! Te envío link de pago seguro para los $720.000 👇'
+                'Sí incluye desayuno buffet para 2 personas 🍳 El total sería <strong>$960.000</strong> por 3 noches. ¿Confirmo? Solo necesito tu nombre completo y email.',
+                '¡Perfecto! ¿Para qué nombre hago la reserva?'
             ];
             var step = 0;
             function showReply(){
@@ -2845,14 +2479,12 @@
                     bubble.innerHTML = replies[step % replies.length];
                     var meta = document.createElement('div');
                     meta.className = 'msg-meta out-t';
-                    meta.innerHTML = '10:25 am <span class="ticks">✓✓</span> Respondido por IA';
+                    meta.innerHTML = '10:25 am <span class="ticks">✓✓</span> Respondido automáticamente';
                     wrap.appendChild(bubble);
                     wrap.appendChild(meta);
                     typingEl.parentNode.insertBefore(wrap, typingEl);
                     step++;
-                    if(step < 2){
-                        setTimeout(showReply, 4500);
-                    }
+                    setTimeout(showReply, 4500);
                 }, 1800);
             }
             setTimeout(showReply, 2000);
@@ -2890,10 +2522,10 @@
             var terms  = document.getElementById('terms').checked;
             var btn    = document.getElementById('btnReg');
 
-            if(!hotel)          return showError('El nombre del establecimiento es requerido.');
+            if(!hotel)          return showError('El nombre del hotel es requerido.');
             if(!name)           return showError('Tu nombre es requerido.');
             if(!email)          return showError('El email es requerido.');
-            if(!phone)          return showError('El WhatsApp es requerido.');
+            if(!phone)          return showError('El teléfono / WhatsApp es requerido.');
             if(!city)           return showError('La ciudad es requerida.');
             if(pwd.length < 8)  return showError('La contraseña debe tener al menos 8 caracteres.');
             if(pwd !== pwdC)    return showError('Las contraseñas no coinciden.');
