@@ -52,6 +52,24 @@ class Whatsapp extends BaseController
      */
     private function receiveMessage()
     {
+
+        // --- INICIO DE VALIDACIÓN DE SEGURIDAD (MAVILUSA) solo aceptamos llamadas desde mavilusa, ya no hay atención directa---
+        $expectedToken = env('MAVILUSA_WEBHOOK_SECRET');
+
+        if (!empty($expectedToken)) {
+            // Obtenemos el header 'Authorization' que nos envía Mavilusa
+            $providedToken = $this->request->getHeaderLine('Authorization');
+
+            // Limpiamos la palabra 'Bearer ' por si Mavilusa la envía así
+            $cleanProvidedToken = trim(str_replace('Bearer', '', $providedToken));
+
+            if ($cleanProvidedToken !== $expectedToken) {
+                log_message('error', '[WhatsApp Controller] Intento de acceso no autorizado al webhook. Token inválido o ausente.');
+                return $this->response->setStatusCode(401)->setBody('Unauthorized');
+            }
+        }
+        // --- FIN DE VALIDACIÓN DE SEGURIDAD ---
+
         $jsonPayload = $this->request->getBody();
         $payload = json_decode($jsonPayload, true);
 
