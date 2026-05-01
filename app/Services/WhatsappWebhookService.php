@@ -327,6 +327,7 @@ class WhatsappWebhookService
      * =================================================================================
      */
 
+
     private function getOrCreateGuest(string $phone, string $name, int $tenantId)
     {
         $guest = $this->db->table('guests')
@@ -343,10 +344,21 @@ class WhatsappWebhookService
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
+
             $this->db->table('guests')->insert($data);
-            $data['id'] = $this->db->insertID();
-            $guest = (object) $data;
-            log_message('info', "[WebhookService] Nuevo Guest creado: ID {$guest->id} para Tenant {$tenantId}");
+            $insertId = $this->db->insertID();
+
+            // --- INICIO CORRECCIÓN ---
+            // Volvemos a consultar la base de datos para obtener el registro completo.
+            // Esto garantiza que el objeto $guest tenga TODAS las columnas de la tabla
+            // (document, chat_state, ai_active, etc.) evitando el "Undefined property".
+            $guest = $this->db->table('guests')
+                ->where('id', $insertId)
+                ->get()
+                ->getRow();
+            // --- FIN CORRECCIÓN ---
+
+            log_message('info', "[WebhookService] Nuevo Guest creado e hidratado: ID {$guest->id} para Tenant {$tenantId}");
         }
 
         return $guest;
