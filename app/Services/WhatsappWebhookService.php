@@ -501,6 +501,7 @@ class WhatsappWebhookService
                     'final_response' => trim($iaDecision)
                 ];
             }
+
             // --- FIN CORRECCIÓN ---
 
             // 3. Evaluar la decisión de la IA (OPCIÓN A u OPCIÓN B de tu prompt)
