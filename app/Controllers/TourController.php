@@ -247,26 +247,47 @@ class TourController extends BaseController
      * Formulario para reservar un tour.
      * Recibe schedule_id opcional para pre-seleccionar la salida.
      */
+
+    // Busca el método createReservation() y reemplázalo completo por esto:
+
     public function createReservation(int $tourId): string
     {
         $tourModel     = new TourModel();
         $scheduleModel = new TourScheduleModel();
-        $guestModel    = new GuestModel();
-        $agentModel = new \App\Models\CommissionAgentModel();
+        $guestModel    = model('App\Models\GuestModel');
+        $agentModel    = new \App\Models\CommissionAgentModel();
 
         $tour = $tourModel->where('tenant_id', $this->tenantId)->find($tourId);
+
         if (!$tour) {
             return redirect()->to('/tours')->with('error', 'Tour no encontrado.');
         }
 
-        return view('tours/reservation_create', [
-            'tour'      => $tour,
-            'schedules' => $scheduleModel->getUpcomingByTour($tourId),
-            'guests'    => $guestModel->where('tenant_id', $this->tenantId)->findAll(),
-            'agents'    => $agentModel->where('tenant_id', $this->tenantId)  // ← agregar
-            ->where('is_active', 1)
-                ->findAll(),
-        ]);
+        // Obtener schedules disponibles del tour
+        $schedules = $scheduleModel
+            ->select('tour_schedules.*')
+            ->where('tour_schedules.tour_id', $tourId)
+            ->where('tour_schedules.status', 'scheduled')
+            ->where('tour_schedules.start_datetime >=', date('Y-m-d H:i:s'))
+            ->orderBy('tour_schedules.start_datetime', 'ASC')
+            ->findAll();
+
+        // Obtener guests del tenant
+        $guests = $guestModel->where('tenant_id', $this->tenantId)->findAll();
+
+        // Obtener agentes comisionistas
+        $agents = $agentModel->where('tenant_id', $this->tenantId)->where('is_active', 1)->findAll();
+
+        // ← NUEVA LÍNEA: leer el schedule_id de la URL
+        $preselectedScheduleId = (int) $this->request->getGet('schedule_id');
+
+        return view('tours/reservation_create', array_merge($this->viewData, [
+            'tour'                  => $tour,
+            'schedules'             => $schedules,
+            'guests'                => $guests,
+            'agents'                => $agents,
+            'preselectedScheduleId' => $preselectedScheduleId, // ← NUEVA LÍNEA
+        ]));
     }
 
     /**

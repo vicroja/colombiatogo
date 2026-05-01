@@ -29,7 +29,7 @@
                         <select name="schedule_id" id="schedule_id" class="form-select" required>
                             <option value="">Seleccione una salida...</option>
                             <?php
-                            $preselected = $this->request->getGet('schedule_id');
+                            $preselected = $preselectedScheduleId ?? 0;
                             foreach ($schedules as $s):
                                 $available = (int)$s['max_pax'] - (int)$s['current_pax'];
                                 $priceAd   = $s['price_adult_override'] ?? $tour['price_adult'];
