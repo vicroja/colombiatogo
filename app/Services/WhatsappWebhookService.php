@@ -487,10 +487,21 @@ class WhatsappWebhookService
             $cleanJson = $this->geminiModel->cleanJsonResponse($response['text']);
             $iaDecision = json_decode($cleanJson, true);
 
+// --- INICIO CORRECCIÓN: TOLERANCIA A FALLOS DE FORMATO IA ---
             if (json_last_error() !== JSON_ERROR_NONE) {
-                log_message('error', "[WebhookService] Gemini no devolvió un JSON válido. Raw: " . $response['text']);
-                return "Hubo un error interpretando mi respuesta interna. Por favor intenta de nuevo.";
+                log_message('warning', "[WebhookService] Gemini no devolvió JSON válido. Forzando formato. Raw: " . $response['text']);
+                // Si falla el JSON, forzamos a que sea un final_response plano.
+                $iaDecision = [
+                    'final_response' => trim($cleanJson)
+                ];
+            } elseif (is_string($iaDecision)) {
+                log_message('warning', "[WebhookService] Gemini devolvió un string JSON, no un objeto. Forzando formato. String: " . $iaDecision);
+                // A veces Gemini devuelve "Texto" (con comillas). json_decode lo hace string, no array.
+                $iaDecision = [
+                    'final_response' => trim($iaDecision)
+                ];
             }
+            // --- FIN CORRECCIÓN ---
 
             // 3. Evaluar la decisión de la IA (OPCIÓN A u OPCIÓN B de tu prompt)
 
