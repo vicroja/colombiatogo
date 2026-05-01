@@ -229,6 +229,12 @@ class Whatsapp extends BaseController
             ]);
         }
 
+        // --- INICIO: AVISAR AL PROXY (MAVILUSA) ---
+        // Le mandamos el tenantId (que en Mavilusa será el hospital_id) y el phone_number_id
+        $this->notifyMavilusaProxy($tenantId, $phoneNumberId);
+        // --- FIN: AVISAR AL PROXY ---
+
+
         log_message('info', "[WA/saveConfig] WhatsApp configurado exitosamente para tenant {$tenantId}. Campos guardados: whatsapp_token, whatsapp_access_token, whatsapp_waba_id, whatsapp_phone_number_id, ai_provider, whatsapp_verify_token, admin_whatsapp_phone");
 
         return $this->response->setJSON([
@@ -284,5 +290,52 @@ class Whatsapp extends BaseController
         }
 
         return ['success' => true, 'token' => $data['access_token'], 'message' => ''];
+    }
+
+    /**
+     * Notifica a Mavilusa que debe crear las reglas de enrutamiento para este Tenant.
+     */
+    private function notifyMavilusaProxy(int $tenantId, string $phoneNumberId): void
+    {
+        $syncUrl = env('MAVILUSA_PROXY_SYNC_URL');
+        $syncSecret = env('MAVILUSA_PROXY_SECRET');
+        $webhookToken = env('MAVILUSA_WEBHOOK_SECRET'); // El token que Tentii exige para recibir webhooks
+
+        if (empty($syncUrl) || empty($syncSecret)) {
+            log_message('warning', "[WA/notifyProxy] No se ha configurado MAVILUSA_PROXY_SYNC_URL o SECRET. Saltando sincronización de proxy.");
+            return;
+        }
+
+        // Construimos la URL del webhook de este sistema (Tentii)
+        $tentiiWebhookUrl = rtrim(config('App')->baseURL, '/') . '/whatsapp/webhook';
+
+        $payload = [
+            'hospital_id'                 => 0,//OJO TODO
+            'whatsapp_phone_number_id'    => $phoneNumberId,
+            'external_webhook_url'        => $tentiiWebhookUrl,
+            'external_webhook_auth_token' => $webhookToken
+        ];
+
+        $client = \Config\Services::curlrequest();
+
+        try {
+            $response = $client->post($syncUrl, [
+                'headers' => [
+                    'Authorization' => $syncSecret,
+                    'Content-Type'  => 'application/json'
+                ],
+                'json' => $payload,
+                'timeout' => 10,
+                'http_errors' => false
+            ]);
+
+            if ($response->getStatusCode() === 200) {
+                log_message('info', "[WA/notifyProxy] Reglas de enrutamiento creadas en Mavilusa exitosamente para Tenant {$tenantId}.");
+            } else {
+                log_message('error', "[WA/notifyProxy] Fallo al notificar a Mavilusa. HTTP: " . $response->getStatusCode() . " Respuesta: " . $response->getBody());
+            }
+        } catch (\Exception $e) {
+            log_message('error', "[WA/notifyProxy] Excepción de cURL al notificar a Mavilusa: " . $e->getMessage());
+        }
     }
 }
