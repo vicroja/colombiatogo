@@ -56,18 +56,27 @@
                 <div class="card shadow-sm mb-3">
                     <div class="card-header fw-bold">2. Huésped</div>
                     <div class="card-body row g-3">
+
                         <div class="col-12">
                             <label class="form-label">Huésped principal <span class="text-danger">*</span></label>
-                            <select name="guest_id" class="form-select" required>
-                                <option value="">Seleccionar huésped...</option>
-                                <?php foreach ($guests as $g): ?>
-                                    <option value="<?= $g['id'] ?>"><?= esc($g['full_name']) ?> — <?= esc($g['document'] ?? 'Sin doc') ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#quickGuestModal">
-                                <i class="bi bi-plus-circle"></i> Nuevo
-                            </button>
+                            <div class="input-group">
+                                <select name="guest_id" id="guest_id" class="form-select" required>
+                                    <option value="">Seleccionar huésped...</option>
+                                    <?php foreach ($guests as $g): ?>
+                                        <option value="<?= $g['id'] ?>">
+                                            <?= esc($g['full_name']) ?>
+                                            <?php if ($g['document']): ?>
+                                                — <?= esc($g['document']) ?>
+                                            <?php endif; ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#quickGuestModal">
+                                    <i class="bi bi-plus-circle"></i> Nuevo
+                                </button>
+                            </div>
                         </div>
+
                         <div class="col-md-6">
                             <label class="form-label">Adultos <span class="text-danger">*</span></label>
                             <input type="number" name="num_adults" id="num_adults" class="form-control" value="1" min="1" required>
@@ -240,7 +249,6 @@
     </div>
 
     <script>
-        // Creación rápida de huésped vía AJAX
         document.getElementById('quickGuestForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
@@ -248,6 +256,17 @@
             const formData = new FormData(form);
             const submitBtn = document.getElementById('quickGuestSubmit');
             const errorDiv  = document.getElementById('quickGuestError');
+
+            // Leer CSRF del form principal (CI4 lo mantiene actualizado ahí)
+            const mainForm = document.getElementById('tourResForm');
+            const csrfInput = mainForm.querySelector('input[type="hidden"][name^="csrf_"]');
+
+            if (csrfInput) {
+                formData.append(csrfInput.name, csrfInput.value);
+                console.log('CSRF agregado:', csrfInput.name, '=', csrfInput.value);
+            } else {
+                console.error('No se encontró el token CSRF en el form principal');
+            }
 
             // UI feedback
             submitBtn.disabled = true;
@@ -257,54 +276,70 @@
             try {
                 const response = await fetch('<?= base_url('/tours/guest/quick-create') ?>', {
                     method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': '<?= csrf_hash() ?>'
-                    },
                     body: formData
                 });
 
+                console.log('Response status:', response.status);
+
+                const contentType = response.headers.get('content-type');
+
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Respuesta HTML en vez de JSON:', text.substring(0, 500));
+                    throw new Error('El servidor devolvió HTML. Probablemente un error 403/500.');
+                }
+
                 const data = await response.json();
+                console.log('Respuesta JSON:', data);
 
-                if (data.success) {
-                    // Agregar el nuevo guest al select
+                if (response.ok && data.success) {
+                    // Agregar al select
                     const select = document.getElementById('guest_id');
-                    const option = new Option(
-                        `${data.guest.full_name}${data.guest.document ? ' — ' + data.guest.document : ''}`,
-                        data.guest.id,
-                        true,
-                        true
-                    );
-                    select.add(option);
 
-                    // Cerrar modal y resetear form
-                    bootstrap.Modal.getInstance(document.getElementById('quickGuestModal')).hide();
+                    if (!select) {
+                        console.error('El select #guest_id no existe en el DOM');
+                        throw new Error('No se encontró el selector de huéspedes');
+                    }
+
+                    const option = new Option(
+                        data.guest.full_name + (data.guest.document ? ' — ' + data.guest.document : ''),
+                        data.guest.id,
+                        true,  // defaultSelected
+                        true   // selected
+                    );
+
+                    select.add(option);
+                    console.log('✅ Opción agregada al select:', option.text);
+
+                    // Cerrar modal
+                    const modalEl = document.getElementById('quickGuestModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) {
+                        modal.hide();
+                    }
                     form.reset();
 
-                    // Mensaje de éxito (opcional)
-                    console.log('✅ Huésped creado:', data.guest.full_name);
                 } else {
-                    // Mostrar errores de validación
-                    let errorMsg = 'Error al crear el huésped:\n';
+                    let errorMsg = '';
                     if (data.fields) {
-                        errorMsg += Object.values(data.fields).join('\n');
+                        errorMsg = Object.values(data.fields).join('\n');
                     } else {
-                        errorMsg += data.error || 'Error desconocido';
+                        errorMsg = data.error || 'Error desconocido';
                     }
                     errorDiv.textContent = errorMsg;
                     errorDiv.classList.remove('d-none');
                 }
+
             } catch (error) {
-                errorDiv.textContent = 'Error de conexión. Intenta de nuevo.';
+                console.error('Error completo:', error);
+                errorDiv.innerHTML = `<strong>Error:</strong> ${error.message}<br><small>Revisa la consola del navegador (F12) para más detalles.</small>`;
                 errorDiv.classList.remove('d-none');
-                console.error('Error AJAX:', error);
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Crear y Seleccionar';
             }
         });
 
-        // Limpiar errores al abrir el modal
         document.getElementById('quickGuestModal').addEventListener('show.bs.modal', function() {
             document.getElementById('quickGuestForm').reset();
             document.getElementById('quickGuestError').classList.add('d-none');
