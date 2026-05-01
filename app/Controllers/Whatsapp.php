@@ -308,9 +308,11 @@ class Whatsapp extends BaseController
 
         // Construimos la URL del webhook de este sistema (Tentii)
         $tentiiWebhookUrl = rtrim(config('App')->baseURL, '/') . '/whatsapp/webhook';
+        $tenantModel = new \App\Models\TenantModel();
+        $tenantName = $tenantModel->find($tenantId)['name'] ?? 'Tenant Desconocido';
 
         $payload = [
-            'hospital_id'                 => 0,//OJO TODO
+            'tenant_name'                 => $tenantName, // <-- Agregas esta línea
             'whatsapp_phone_number_id'    => $phoneNumberId,
             'external_webhook_url'        => $tentiiWebhookUrl,
             'external_webhook_auth_token' => $webhookToken
