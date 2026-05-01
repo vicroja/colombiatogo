@@ -428,7 +428,7 @@ class TourController extends BaseController
      * Vista de detalle de una reserva de tour.
      * Muestra desglose de precio, pagos y estado.
      */
-    public function showReservation(int $id): string
+    public function showReservation(int $id)
     {
         $tourResModel = new TourReservationModel();
         $paymentModel = new PaymentModel();
