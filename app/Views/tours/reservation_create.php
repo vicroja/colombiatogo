@@ -257,15 +257,13 @@
             const submitBtn = document.getElementById('quickGuestSubmit');
             const errorDiv  = document.getElementById('quickGuestError');
 
-            // Leer CSRF del form principal (CI4 lo mantiene actualizado ahí)
+            // Leer CSRF del form principal
             const mainForm = document.getElementById('tourResForm');
             const csrfInput = mainForm.querySelector('input[type="hidden"][name^="csrf_"]');
 
             if (csrfInput) {
                 formData.append(csrfInput.name, csrfInput.value);
                 console.log('CSRF agregado:', csrfInput.name, '=', csrfInput.value);
-            } else {
-                console.error('No se encontró el token CSRF en el form principal');
             }
 
             // UI feedback
@@ -276,6 +274,9 @@
             try {
                 const response = await fetch('<?= base_url('/tours/guest/quick-create') ?>', {
                     method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'  // ← FIX: header AJAX obligatorio para CI4
+                    },
                     body: formData
                 });
 
@@ -285,54 +286,47 @@
 
                 if (!contentType || !contentType.includes('application/json')) {
                     const text = await response.text();
-                    console.error('Respuesta HTML en vez de JSON:', text.substring(0, 500));
-                    throw new Error('El servidor devolvió HTML. Probablemente un error 403/500.');
+                    console.error('Respuesta no-JSON:', text.substring(0, 500));
+                    throw new Error('El servidor no devolvió JSON.');
                 }
 
                 const data = await response.json();
-                console.log('Respuesta JSON:', data);
+                console.log('Respuesta:', data);
 
                 if (response.ok && data.success) {
-                    // Agregar al select
                     const select = document.getElementById('guest_id');
 
                     if (!select) {
-                        console.error('El select #guest_id no existe en el DOM');
-                        throw new Error('No se encontró el selector de huéspedes');
+                        throw new Error('Select #guest_id no encontrado en el DOM');
                     }
 
                     const option = new Option(
                         data.guest.full_name + (data.guest.document ? ' — ' + data.guest.document : ''),
                         data.guest.id,
-                        true,  // defaultSelected
-                        true   // selected
+                        true,
+                        true
                     );
 
                     select.add(option);
-                    console.log('✅ Opción agregada al select:', option.text);
+                    console.log('✅ Huésped agregado:', data.guest.full_name);
 
                     // Cerrar modal
                     const modalEl = document.getElementById('quickGuestModal');
                     const modal = bootstrap.Modal.getInstance(modalEl);
-                    if (modal) {
-                        modal.hide();
-                    }
+                    if (modal) modal.hide();
                     form.reset();
 
                 } else {
-                    let errorMsg = '';
-                    if (data.fields) {
-                        errorMsg = Object.values(data.fields).join('\n');
-                    } else {
-                        errorMsg = data.error || 'Error desconocido';
-                    }
+                    let errorMsg = data.fields
+                        ? Object.values(data.fields).join('\n')
+                        : (data.error || 'Error desconocido');
                     errorDiv.textContent = errorMsg;
                     errorDiv.classList.remove('d-none');
                 }
 
             } catch (error) {
-                console.error('Error completo:', error);
-                errorDiv.innerHTML = `<strong>Error:</strong> ${error.message}<br><small>Revisa la consola del navegador (F12) para más detalles.</small>`;
+                console.error('Error:', error);
+                errorDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
                 errorDiv.classList.remove('d-none');
             } finally {
                 submitBtn.disabled = false;
