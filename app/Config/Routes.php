@@ -230,6 +230,9 @@ $routes->group('tours', ['filter' => 'tenant_auth'], function ($routes) {
 
     $routes->post('schedule/(:num)/status', 'TourController::updateScheduleStatus/$1');
 
+    $routes->post('guest/quick-create', 'TourController::quickCreateGuest');
+
+
 });
 
 $routes->group('guides', ['filter' => 'tenant_auth'], function ($routes) {

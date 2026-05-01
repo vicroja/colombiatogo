@@ -626,4 +626,44 @@ class TourController extends BaseController
 
         return redirect()->back()->with('success', 'Estado de la salida actualizado.');
     }
+
+    // Agregar al final de TourController, después de los otros métodos
+
+    /**
+     * AJAX endpoint: crea un guest rápidamente desde el modal.
+     * Devuelve JSON con el guest creado para agregarlo al select sin recargar.
+     */
+    public function quickCreateGuest()
+    {
+        if (!$this->request->isAJAX()) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Solo AJAX']);
+        }
+
+        $guestModel = model('App\Models\GuestModel');
+
+        $data = [
+            'tenant_id' => $this->tenantId,
+            'full_name' => $this->request->getPost('full_name'),
+            'document'  => $this->request->getPost('document'),
+            'email'     => $this->request->getPost('email'),
+            'phone'     => $this->request->getPost('phone'),
+            'ai_active' => 0, // Creado manualmente desde el panel
+            'chat_state'=> 'CLOSED',
+        ];
+
+        if (!$guestModel->insert($data)) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'error'  => 'Error de validación',
+                'fields' => $guestModel->errors(),
+            ]);
+        }
+
+        $guestId = $guestModel->getInsertID();
+        $guest   = $guestModel->find($guestId);
+
+        return $this->response->setJSON([
+            'success' => true,
+            'guest'   => $guest,
+        ]);
+    }
 }

@@ -64,6 +64,9 @@
                                     <option value="<?= $g['id'] ?>"><?= esc($g['full_name']) ?> — <?= esc($g['document'] ?? 'Sin doc') ?></option>
                                 <?php endforeach; ?>
                             </select>
+                            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#quickGuestModal">
+                                <i class="bi bi-plus-circle"></i> Nuevo
+                            </button>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Adultos <span class="text-danger">*</span></label>
@@ -193,5 +196,118 @@
         // Ejecutar al cargar si hay salida preseleccionada
         document.addEventListener('DOMContentLoaded', updateSummary);
     </script>
+    <!-- Modal creación rápida de huésped -->
+    <div class="modal fade" id="quickGuestModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Crear Huésped Rápido</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="quickGuestForm">
+                    <div class="modal-body">
+                        <div class="alert alert-danger d-none" id="quickGuestError"></div>
+                        <div class="mb-3">
+                            <label class="form-label">Nombre completo <span class="text-danger">*</span></label>
+                            <input type="text" name="full_name" class="form-control" required
+                                   placeholder="Ej: María García">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Documento</label>
+                            <input type="text" name="document" class="form-control"
+                                   placeholder="CC 123456789">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" name="phone" class="form-control"
+                                   placeholder="+57 300 1234567">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control"
+                                   placeholder="email@ejemplo.com">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="quickGuestSubmit">
+                            <i class="bi bi-check-circle"></i> Crear y Seleccionar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
+    <script>
+        // Creación rápida de huésped vía AJAX
+        document.getElementById('quickGuestForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const form = e.target;
+            const formData = new FormData(form);
+            const submitBtn = document.getElementById('quickGuestSubmit');
+            const errorDiv  = document.getElementById('quickGuestError');
+
+            // UI feedback
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Creando...';
+            errorDiv.classList.add('d-none');
+
+            try {
+                const response = await fetch('<?= base_url('/tours/guest/quick-create') ?>', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': '<?= csrf_hash() ?>'
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Agregar el nuevo guest al select
+                    const select = document.getElementById('guest_id');
+                    const option = new Option(
+                        `${data.guest.full_name}${data.guest.document ? ' — ' + data.guest.document : ''}`,
+                        data.guest.id,
+                        true,
+                        true
+                    );
+                    select.add(option);
+
+                    // Cerrar modal y resetear form
+                    bootstrap.Modal.getInstance(document.getElementById('quickGuestModal')).hide();
+                    form.reset();
+
+                    // Mensaje de éxito (opcional)
+                    console.log('✅ Huésped creado:', data.guest.full_name);
+                } else {
+                    // Mostrar errores de validación
+                    let errorMsg = 'Error al crear el huésped:\n';
+                    if (data.fields) {
+                        errorMsg += Object.values(data.fields).join('\n');
+                    } else {
+                        errorMsg += data.error || 'Error desconocido';
+                    }
+                    errorDiv.textContent = errorMsg;
+                    errorDiv.classList.remove('d-none');
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Error de conexión. Intenta de nuevo.';
+                errorDiv.classList.remove('d-none');
+                console.error('Error AJAX:', error);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Crear y Seleccionar';
+            }
+        });
+
+        // Limpiar errores al abrir el modal
+        document.getElementById('quickGuestModal').addEventListener('show.bs.modal', function() {
+            document.getElementById('quickGuestForm').reset();
+            document.getElementById('quickGuestError').classList.add('d-none');
+        });
+    </script>
 <?= $this->endSection() ?>
