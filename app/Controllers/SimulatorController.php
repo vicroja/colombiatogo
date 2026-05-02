@@ -27,6 +27,8 @@ class SimulatorController extends BaseController
     private int                  $tenantId;
     private array                $tenant;
     private \CodeIgniter\Database\BaseConnection $db;
+    private \App\Models\WhatsappModel          $whatsappModel;
+
 
     public function initController(
         \CodeIgniter\HTTP\RequestInterface  $request,
@@ -604,5 +606,26 @@ class SimulatorController extends BaseController
                 'parts' => [['text' => '{"final_response": "Contexto cargado. Listo para atender."}']],
             ],
         ];
+    }
+
+    // =========================================================================
+    // CLEAR — Borra mensajes de simulación de la BD (AJAX)
+    // =========================================================================
+    public function clear(): \CodeIgniter\HTTP\ResponseInterface
+    {
+        if (!$this->request->isAJAX()) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'success' => false,
+                'message' => 'Acceso no permitido.',
+            ]);
+        }
+
+        $deletedCount = $this->whatsappModel->clearSimulationData($this->tenantId);
+
+        return $this->response->setJSON([
+            'success' => true,
+            'deleted' => $deletedCount,
+            'message' => "Se eliminaron {$deletedCount} mensajes de simulación.",
+        ]);
     }
 }
