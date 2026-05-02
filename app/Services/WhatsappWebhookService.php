@@ -152,25 +152,37 @@ class WhatsappWebhookService
             return json_encode(['error' => 'Lo siento, esa unidad acaba de ser reservada por alguien más. Por favor ofrece otra unidad libre.']);
         }
 
-        // 3. Insertar la reserva en estado 'pending' (A la espera del abono)
-        $dataReserva = [
-            'tenant_id' => $this->currentTenantId,
-            'guest_id' => $guest->id,
-            'accommodation_unit_id' => $unitId,
-            'check_in_date' => $fechaIn,
-            'check_out_date' => $fechaOut,
-            'status' => 'pending',
-            'total_price' => $precioTotal,
-            'created_at' => date('Y-m-d H:i:s'),
-            'updated_at' => date('Y-m-d H:i:s')
-        ];
+        // FIX B1 + R2: Transacción atómica previene race condition. num_adults/children ahora se persisten.
+        $numAdults   = (int)($args['num_adults']   ?? 1);
+        $numChildren = (int)($args['num_children'] ?? 0);
 
-        $this->db->table('reservations')->insert($dataReserva);
+        $this->db->transStart();
+
+        $this->db->table('reservations')->insert([
+            'tenant_id'             => $this->currentTenantId,
+            'guest_id'              => $guest->id,
+            'accommodation_unit_id' => $unitId,
+            'check_in_date'         => $fechaIn,
+            'check_out_date'        => $fechaOut,
+            'status'                => 'pending',
+            'total_price'           => $precioTotal,
+            'num_adults'            => $numAdults,
+            'num_children'          => $numChildren,
+            'created_at'            => date('Y-m-d H:i:s'),
+            'updated_at'            => date('Y-m-d H:i:s'),
+        ]);
         $reservaId = $this->db->insertID();
 
+        $this->db->transComplete();
+
+        if ($this->db->transStatus() === false) {
+            log_message('error', "[WebhookService/toolCrearReserva] Transacción fallida para unit {$unitId}.");
+            return json_encode(['error' => 'Error en la base de datos al crear la reserva. Por favor intenta de nuevo.']);
+        }
+
         return json_encode([
-            'mensaje' => 'Reserva creada exitosamente en estado Pendiente. Dile al cliente que la cabaña está bloqueada y envíale los datos de pago para confirmar.',
-            'reservation_id' => $reservaId
+            'mensaje'        => 'Reserva creada exitosamente en estado Pendiente. Dile al cliente que la unidad está bloqueada y envíale los datos de pago para confirmar.',
+            'reservation_id' => $reservaId,
         ]);
     }
 
@@ -217,7 +229,7 @@ class WhatsappWebhookService
 
             // Si la transcripción fue exitosa, actualizamos el registro en la BD
             if ($messageBody) {
-               //aun no se hace nada en este caso
+                //aun no se hace nada en este caso
             } else {
                 $this->sendDirectReply($senderPhone, "Recibí tu audio, pero no logré transcribirlo correctamente. ¿Podrías escribírmelo?", $isSaas, $tenantId);
                 return;
@@ -383,30 +395,24 @@ class WhatsappWebhookService
         return $prompt;
     }
 
+    /**
+     * @deprecated Reemplazado por build_guest_context_data() del helper whatsapp_context.
+     * Conservado solo para referencia — no llamar directamente.
+     * El contexto real se genera en processNotification() línea ~264.
+     */
     private function buildSystemContext($guest, int $tenantId): string
     {
-        // Aquí va tu Helper de Contexto.
-        // Por ahora es un Placeholder que inyecta datos dinámicos al prompt de Gemini
-        $fechaActual = date('Y-m-d H:i:s');
-        $diaSemana = date('l'); // Retorna Monday, Tuesday... puedes traducirlo
-
-        $contexto = "
-        [CONTEXTO DEL SISTEMA INYECTADO AUTOMÁTICAMENTE]
-        - Fecha y hora actual del servidor: {$fechaActual} ({$diaSemana})
-        - Nombre del usuario interactuando: {$guest->full_name}
-        - Teléfono del usuario: {$guest->phone}
-        ";
-
-        // Si tienes helpers cargados, podrías hacer algo como:
-        // $contexto .= build_guest_context_data($guest->id, $tenantId);
-
-        return $contexto;
+        log_message('warning', '[WebhookService] buildSystemContext() está deprecado — usar build_guest_context_data().');
+        return build_guest_context_data($guest, $tenantId, $guest->phone ?? '');
     }
 
 
     private function getChatHistory(string $phone, int $tenantId, int $limit = 10, int $excludeId = 0): array
     {
         // 1. Subconsulta: trae los IDs de los últimos $limit mensajes (orden DESC)
+        // FIX R1: Excluir mensajes de relay de herramientas que callGemini inyecta al historial.
+        // Estos mensajes ([Consultando:...] y [RESULTADO DE HERRAMIENTAS]) no son mensajes reales
+        // del usuario/asistente y confunden a Gemini en conversaciones largas.
         $subQuery = $this->db->table('whatsapp_messages')
             ->select('id')
             ->where('tenant_id', $tenantId)
@@ -414,7 +420,11 @@ class WhatsappWebhookService
             ->where('sender_phone', $phone)
             ->orWhere('recipient_phone', $phone)
             ->groupEnd()
-            ->whereIn('message_type', ['text', 'interactive']);
+            ->whereIn('message_type', ['text', 'interactive'])
+            ->groupStart()
+            ->where('message_body NOT LIKE', '[Consultando:%')
+            ->where('message_body NOT LIKE', '[RESULTADO DE HERRAMIENTAS]%')
+            ->groupEnd();
 
         if ($excludeId > 0) {
             $subQuery->where('id !=', $excludeId);
@@ -514,7 +524,9 @@ class WhatsappWebhookService
                 ];
 
                 // Procesar metadata si existe — actualiza funnel_stage y estado en BD
-                if (!empty($iaDecision['metadata']) && !empty($this->currentGuest)) {
+                // FIX R3: currentGuest puede ser null si processNotification falló antes de asignarlo.
+                // Verificar que sea un objeto válido (no solo truthy) antes de processar metadata.
+                if (!empty($iaDecision['metadata']) && isset($this->currentGuest) && is_object($this->currentGuest)) {
                     $this->processMetadata($iaDecision['metadata'], $this->currentGuest);
                 }
 
@@ -820,6 +832,20 @@ class WhatsappWebhookService
         // ------------------------------------------
 
         // 6. Registrar el Pago en la BD (Ahora con attachment_path)
+        // FIX B3: Validar que existe una reserva activa antes de intentar registrar el pago.
+        // Sin esta guardia, $reserva->id lanza un error fatal si el cliente no tiene reservas.
+        if (!$reserva) {
+            log_message('warning', "[WebhookService/Pagos] Comprobante recibido de {$senderPhone} pero no tiene reservas activas. Pago ignorado.");
+            $this->sendDirectReply(
+                $senderPhone,
+                "Recibí tu comprobante, pero no encontré ninguna reserva activa a tu nombre. " .
+                "Por favor comunícate con nosotros para verificar.",
+                $isSaas,
+                $tenantId
+            );
+            return;
+        }
+
         $this->db->table('payments')->insert([
             'tenant_id'      => $tenantId,
             'reservation_id' => $reserva->id,

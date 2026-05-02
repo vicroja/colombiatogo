@@ -40,7 +40,7 @@ if (!function_exists('build_guest_context_data')) {
             $unidades = $db->query("
                 SELECT
                     au.id, au.name, au.description, au.max_occupancy,
-                    au.base_occupancy, au.beds_info,
+                    au.base_occupancy, au.beds_info, au.cancellation_policy,
                     at.base_capacity,
                     (SELECT price_per_night FROM unit_rates
                      WHERE unit_id = au.id AND is_active = 1
@@ -65,17 +65,20 @@ if (!function_exists('build_guest_context_data')) {
                     ->countAllResults();
 
                 $catalogoAlojamiento[] = [
-                    'id'              => (int)$u->id,
-                    'nombre'          => $u->name,
-                    'descripcion'     => $u->description,
-                    'capacidad_base'  => (int)$u->base_occupancy,
-                    'capacidad_max'   => (int)$u->max_occupancy,
-                    'camas'           => $u->beds_info,
-                    'precio_desde'    => (float)($u->base_price ?? 0),
-                    'precio_extra_persona' => (float)($u->extra_price ?? 0),
-                    'tiene_fotos'     => $fotoCount > 0,
-                    'num_fotos'       => (int)$fotoCount,
-                    'nota'            => 'Precio "desde" — usar consultar_disponibilidad para precio exacto con temporadas y extras.',
+                    'id'                  => (int)$u->id,
+                    'nombre'              => $u->name,
+                    'descripcion'         => $u->description,
+                    'capacidad_base'      => (int)$u->base_occupancy,
+                    'capacidad_max'       => (int)$u->max_occupancy,
+                    'camas'               => $u->beds_info,
+                    'precio_desde'        => (float)($u->base_price ?? 0),
+                    'precio_extra_persona'=> (float)($u->extra_price ?? 0),
+                    // FIX C6: Exponer cancellation_policy para que Gemini pueda responder
+                    // preguntas de cancelación sin escalar innecesariamente al administrador.
+                    'politica_cancelacion'=> $u->cancellation_policy ?? null,
+                    'tiene_fotos'         => $fotoCount > 0,
+                    'num_fotos'           => (int)$fotoCount,
+                    'nota'                => 'Precio "desde" — usar consultar_disponibilidad para precio exacto con temporadas y extras.',
                 ];
             }
         }
@@ -87,7 +90,7 @@ if (!function_exists('build_guest_context_data')) {
                 SELECT
                     t.id, t.name, t.description, t.duration_minutes,
                     t.meeting_point, t.min_pax, t.price_adult, t.price_child,
-                    t.difficulty_level,
+                    t.difficulty_level, t.cancellation_policy,
                     COUNT(ts.id) as proximas_salidas
                 FROM tours t
                 LEFT JOIN tour_schedules ts
@@ -102,17 +105,19 @@ if (!function_exists('build_guest_context_data')) {
 
             foreach ($tours as $t) {
                 $catalogoTours[] = [
-                    'id'               => (int)$t->id,
-                    'nombre'           => $t->name,
-                    'descripcion'      => $t->description,
-                    'duracion_minutos' => (int)$t->duration_minutes,
-                    'punto_encuentro'  => $t->meeting_point,
-                    'min_personas'     => (int)$t->min_pax,
-                    'precio_adulto'    => (float)$t->price_adult,
-                    'precio_nino'      => (float)$t->price_child,
-                    'dificultad'       => $t->difficulty_level,
+                    'id'                  => (int)$t->id,
+                    'nombre'              => $t->name,
+                    'descripcion'         => $t->description,
+                    'duracion_minutos'    => (int)$t->duration_minutes,
+                    'punto_encuentro'     => $t->meeting_point,
+                    'min_personas'        => (int)$t->min_pax,
+                    'precio_adulto'       => (float)$t->price_adult,
+                    'precio_nino'         => (float)$t->price_child,
+                    'dificultad'          => $t->difficulty_level,
+                    // FIX C6: Exponer politica_cancelacion del tour para respuestas directas al cliente.
+                    'politica_cancelacion'=> $t->cancellation_policy ?? null,
                     'salidas_disponibles' => (int)$t->proximas_salidas,
-                    'nota'             => 'Usar consultar_tours_disponibles para ver fechas exactas y cupos.',
+                    'nota'                => 'Usar consultar_tours_disponibles para ver fechas exactas y cupos.',
                 ];
             }
         }

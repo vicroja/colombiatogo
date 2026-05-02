@@ -40,6 +40,26 @@ class WhatsappToolExecutor
                     $output = $this->webhookService->toolConsultarToursDisponibles($arguments);
                     break;
                 case 'reservar_tour':
+                    // FIX B2: Recalcular precio desde BD antes de persistir.
+                    // Gemini puede haber calculado el precio en un turno anterior —
+                    // recalcularlo aquí garantiza que el precio guardado sea siempre correcto.
+                    $scheduleIdForPrice = (int)($arguments['schedule_id'] ?? 0);
+                    $numAdultsForPrice  = (int)($arguments['num_adults']  ?? 1);
+                    $numChildrenForPrice= (int)($arguments['num_children']?? 0);
+
+                    if ($scheduleIdForPrice > 0) {
+                        try {
+                            $calculator   = new \App\Services\TourPriceCalculatorService();
+                            $priceData    = $calculator->calculate($scheduleIdForPrice, $numAdultsForPrice, $numChildrenForPrice);
+                            if ($priceData['price_source'] !== 'error') {
+                                $arguments['precio_total_acordado'] = $priceData['total_price'];
+                                log_message('info', "[ToolExecutor/reservar_tour] Precio recalculado desde BD: {$priceData['total_price']} (era: " . ($arguments['precio_total_acordado'] ?? 'null') . ")");
+                            }
+                        } catch (\Exception $e) {
+                            log_message('warning', "[ToolExecutor/reservar_tour] No se pudo recalcular precio: " . $e->getMessage() . " — usando precio de Gemini.");
+                        }
+                    }
+
                     $output = $this->webhookService->toolReservarTour($arguments);
                     break;
                 default:

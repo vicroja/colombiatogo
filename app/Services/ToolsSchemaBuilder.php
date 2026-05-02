@@ -116,6 +116,14 @@ class ToolsSchemaBuilder
                             'type'        => 'string',
                             'description' => 'Nombre completo del cliente para el registro.',
                         ],
+                        'num_adults' => [
+                            'type'        => 'integer',
+                            'description' => 'Número de adultos confirmado. Requerido para el registro de la reserva.',
+                        ],
+                        'num_children' => [
+                            'type'        => 'integer',
+                            'description' => 'Número de niños confirmado. Enviar 0 si no hay niños.',
+                        ],
                     ],
                 ],
             ];
@@ -128,7 +136,7 @@ class ToolsSchemaBuilder
                 'description' => 'Consulta qué tours tienen salidas disponibles con cupos libres. Usar cuando el cliente pregunte por tours, actividades, experiencias o planes. Devuelve tours con fechas, precios y cupos disponibles.',
                 'parameters'  => [
                     'type'       => 'object',
-                    'required'   => [],
+                    'required'   => ['num_personas'],
                     'properties' => [
                         'fecha_desde' => [
                             'type'        => 'string',
@@ -140,7 +148,7 @@ class ToolsSchemaBuilder
                         ],
                         'num_personas' => [
                             'type'        => 'integer',
-                            'description' => 'Número total de personas (adultos + niños). Opcional, para filtrar por cupos disponibles.',
+                            'description' => 'Número total de personas (adultos + niños). Requerido para filtrar cupos disponibles.',
                         ],
                     ],
                 ],
