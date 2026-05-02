@@ -247,6 +247,22 @@ if (!function_exists('build_guest_context_data')) {
         }
 
         // ── 6. CONSTRUIR EL JSON FINAL ────────────────────────────────────────
+
+        // Medios de pago: exponer bank_accounts para que Gemini responda
+        // "¿a qué cuenta les transfiero?" sin escalar al administrador.
+        $mediosDePago = [];
+        if (!empty($settings['bank_accounts']) && is_array($settings['bank_accounts'])) {
+            foreach ($settings['bank_accounts'] as $cuenta) {
+                $mediosDePago[] = [
+                    'banco'   => $cuenta['banco']   ?? null,
+                    'tipo'    => $cuenta['tipo']    ?? null,
+                    'numero'  => $cuenta['numero']  ?? null,
+                    'titular' => $cuenta['titular'] ?? null,
+                    'nit'     => $cuenta['nit']     ?? null,
+                ];
+            }
+        }
+
         $contexto = [
             'fecha_hora' => $dt->format('Y-m-d H:i:s'),
             'dia_semana' => translate_day_to_spanish($dt->format('l')),
@@ -258,12 +274,13 @@ if (!function_exists('build_guest_context_data')) {
                 'moneda'   => $tenant->currency_code,
                 'simbolo'  => $tenant->currency_symbol,
             ],
-            'huesped'            => $datosHuesped,
-            'reservas_activas'   => $reservasActivas,
-            'tours_reservados'   => $toursReservados,
+            'medios_de_pago'       => $mediosDePago,
+            'huesped'              => $datosHuesped,
+            'reservas_activas'     => $reservasActivas,
+            'tours_reservados'     => $toursReservados,
             'catalogo_alojamiento' => $catalogoAlojamiento,
-            'catalogo_tours'     => $catalogoTours,
-            'estado_conversacion' => array_merge([
+            'catalogo_tours'       => $catalogoTours,
+            'estado_conversacion'  => array_merge([
                 'funnel_stage'               => $funnelStage,
                 'precio_revelado'            => false,
                 'disponibilidad_consultada'  => false,
