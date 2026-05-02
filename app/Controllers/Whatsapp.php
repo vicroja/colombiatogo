@@ -90,6 +90,7 @@ class Whatsapp extends BaseController
         return $this->response->setStatusCode(200)->setBody('EVENT_RECEIVED');
     }
 
+
     /**
      * Busca en la tabla 'tenants' cuál inquilino tiene asignado este WABA Phone ID
      * dentro de su columna 'settings_json'.
@@ -339,5 +340,37 @@ class Whatsapp extends BaseController
         } catch (\Exception $e) {
             log_message('error', "[WA/notifyProxy] Excepción de cURL al notificar a Mavilusa: " . $e->getMessage());
         }
+    }
+
+    /**
+     * Borra físicamente de la base de datos los mensajes marcados como is_simulation = 1
+     * para el tenant actual.
+     */
+    public function clear(): \CodeIgniter\HTTP\ResponseInterface
+    {
+        // 1. Validar seguridad: solo peticiones AJAX/Fetch
+        if (!$this->request->isAJAX()) {
+            return $this->response->setStatusCode(403);
+        }
+
+        // 2. Obtener el contexto del tenant (inquilino activo)[cite: 2]
+        $tenantId = session('active_tenant_id') ?? session('tenant_id');
+
+        if (!$tenantId) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Sesión de tenant no encontrada.'
+            ]);
+        }
+
+        // 3. Ejecutar el borrado usando el modelo[cite: 3]
+        $whatsappModel = new \App\Models\WhatsappModel();
+        $deletedCount  = $whatsappModel->clearSimulationData($tenantId);
+
+        return $this->response->setJSON([
+            'success' => true,
+            'deleted' => $deletedCount,
+            'message' => "Se eliminaron {$deletedCount} mensajes de simulación."
+        ]);
     }
 }
