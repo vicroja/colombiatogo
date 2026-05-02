@@ -59,6 +59,7 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
     $routes->post('whatsapp/simulator/save',    'SimulatorController::savePrompt');
     $routes->post('whatsapp/simulator/turn',    'SimulatorController::simulateTurn');
 
+
     $routes->post('whatsapp/simulator/clear',   'SimulatorController::clear');
 
     // Módulo de Live Chat (WhatsApp Manual y Handoff)

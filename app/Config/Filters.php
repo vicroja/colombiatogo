@@ -85,6 +85,8 @@ class Filters extends BaseFilters
                     'maintenance/update-status/.*',
                     'crm/ai/message',
                     'whatsapp/simulator/turn',
+                    'whatsapp/simulator/clear',
+
 
                 ]
             ],
