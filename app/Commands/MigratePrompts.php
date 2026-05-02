@@ -47,7 +47,7 @@ class MigratePrompts extends BaseCommand
                 'assistant_name'  => 'Adrianita',
                 'tone'            => 'formal',
                 'has_accommodation'=> true,
-                'has_tours'       => false,
+                'has_tours'       => true,
             ],
             [
                 'id'              => 8,
