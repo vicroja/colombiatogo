@@ -86,7 +86,7 @@ class Filters extends BaseFilters
                     'crm/ai/message',
                     'whatsapp/simulator/turn',
                     'whatsapp/simulator/clear',
-                    //TODO PARA ARREGLAR
+                    //TODO PARA ARREGLAR, no deberia ser por exclusion para que funcione
                     'tours/(:num)/media/upload',
                     'tours/(:num)/media/(:segment)/delete',
                     'tours/(:num)/media/(:segment)/description',

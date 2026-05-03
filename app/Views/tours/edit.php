@@ -469,7 +469,7 @@ $excluded   = json_decode($tour['excluded_json'] ?? '[]', true) ?? [];
                 <?php foreach ($mediaItems as $item): ?>
                     <?php
                     $isVideo   = ($item['type'] ?? '') === 'video';
-                    $publicUrl = base_url('writable/' . ($item['path'] ?? ''));
+                    $publicUrl = base_url($item['path'] ?? '');
                     ?>
                     <div class="media-card" data-media-id="<?= esc($item['id']) ?>">
 
@@ -522,13 +522,8 @@ $excluded   = json_decode($tour['excluded_json'] ?? '[]', true) ?? [];
         let   csrfValue = '<?= csrf_hash() ?>';
 
         // ── Helpers ────────────────────────────────────────────────────
-        function getHeaders(extra = {}) {
-            return { 'X-Requested-With': 'XMLHttpRequest', [CSRF_NAME]: csrfValue, ...extra };
-        }
-
-        function updateCsrf(response) {
-            const newToken = response.headers.get('X-CSRF-TOKEN');
-            if (newToken) csrfValue = newToken;
+        function updateCsrf(data) {
+            if (data && data.csrf_token) csrfValue = data.csrf_token;
         }
 
         function toast(msg, type = 'success') {
@@ -566,7 +561,7 @@ $excluded   = json_decode($tour['excluded_json'] ?? '[]', true) ?? [];
         // ── Crear card de media (para uploads nuevos) ──────────────────
         function createMediaCard(item) {
             const isVideo  = item.type === 'video';
-            const publicUrl = '/' + item.path;
+            const publicUrl = '<?= base_url() ?>/' + item.path;
 
             const card = document.createElement('div');
             card.className = 'media-card';
@@ -622,12 +617,12 @@ $excluded   = json_decode($tour['excluded_json'] ?? '[]', true) ?? [];
                 try {
                     const res = await fetch(`/tours/${TOUR_ID}/media/upload`, {
                         method:  'POST',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' },  // solo esto, sin el token
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
                         body:    formData,
                     });
 
-                    updateCsrf(res);
                     const data = await res.json();
+                    updateCsrf(data);
 
                     if (data.success) {
                         const card = createMediaCard(data.item);
@@ -686,8 +681,8 @@ $excluded   = json_decode($tour['excluded_json'] ?? '[]', true) ?? [];
                     body:    formData,
                 });
 
-                updateCsrf(res);
                 const data = await res.json();
+                updateCsrf(data);
 
                 if (data.success) {
                     card.style.transition = 'all .3s';
@@ -725,12 +720,12 @@ $excluded   = json_decode($tour['excluded_json'] ?? '[]', true) ?? [];
 
                     const res = await fetch(`/tours/${TOUR_ID}/media/${mediaId}/description`, {
                         method:  'POST',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' },  // ← sin token aquí
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
                         body:    formData,
                     });
 
-                    updateCsrf(res);
                     const data = await res.json();
+                    updateCsrf(data);
 
                     if (data.success) {
                         statusEl.textContent = '✓ Guardado';
@@ -759,10 +754,14 @@ $excluded   = json_decode($tour['excluded_json'] ?? '[]', true) ?? [];
                 try {
                     const res = await fetch(`/tours/${TOUR_ID}/media/reorder`, {
                         method:  'POST',
-                        headers: getHeaders({ 'Content-Type': 'application/json' }),
-                        body:    JSON.stringify({ order }),
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ order, [CSRF_NAME]: csrfValue }),
                     });
-                    updateCsrf(res);
+                    const data = await res.json();
+                    updateCsrf(data);
                 } catch {
                     toast('No se pudo guardar el orden', 'error');
                 }

@@ -754,8 +754,9 @@ class TourController extends BaseController
         log_message('info', "[TourController::uploadMedia] Archivo '{$newItem['original']}' subido para tour {$tourId}.");
 
         return $this->response->setJSON([
-            'success' => true,
-            'item'    => $newItem,
+            'success'    => true,
+            'item'       => $newItem,
+            'csrf_token' => csrf_hash(),
         ]);
     }
 
@@ -796,7 +797,7 @@ class TourController extends BaseController
 
         $tourModel->update($tourId, ['media_json' => json_encode($media)]);
 
-        return $this->response->setJSON(['success' => true]);
+        return $this->response->setJSON(['success' => true, 'csrf_token' => csrf_hash()]);
     }
 
     /**
@@ -833,8 +834,8 @@ class TourController extends BaseController
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Media no encontrado.']);
         }
 
-        // Borrar archivo físico
-        $filePath = WRITEPATH . $toDelete['path'];
+        // Borrar archivo físico (se guardó en FCPATH, no en WRITEPATH)
+        $filePath = FCPATH . $toDelete['path'];
         if (file_exists($filePath)) {
             unlink($filePath);
         }
@@ -843,7 +844,7 @@ class TourController extends BaseController
 
         log_message('info', "[TourController::deleteMedia] Media '{$toDelete['filename']}' eliminado del tour {$tourId}.");
 
-        return $this->response->setJSON(['success' => true]);
+        return $this->response->setJSON(['success' => true, 'csrf_token' => csrf_hash()]);
     }
 
     /**
@@ -865,7 +866,8 @@ class TourController extends BaseController
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Tour no encontrado.']);
         }
 
-        $newOrder = json_decode($this->request->getBody(), true)['order'] ?? [];
+        $input    = $this->request->getJSON(true) ?? json_decode($this->request->getBody(), true) ?? [];
+        $newOrder = $input['order'] ?? [];
         $media    = json_decode($tour['media_json'] ?? '[]', true) ?? [];
 
         // Indexar por ID para reordenar
@@ -883,7 +885,7 @@ class TourController extends BaseController
 
         $tourModel->update($tourId, ['media_json' => json_encode($reordered)]);
 
-        return $this->response->setJSON(['success' => true]);
+        return $this->response->setJSON(['success' => true, 'csrf_token' => csrf_hash()]);
     }
 
 
