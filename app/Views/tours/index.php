@@ -52,8 +52,8 @@
                             <a href="<?= base_url("/tours/{$tour['id']}/schedules") ?>" class="btn btn-sm btn-outline-primary w-100">
                                 <i class="bi bi-calendar3"></i> Salidas
                             </a>
-                            <a href="<?= base_url("/tours/{$tour['id']}/edit") ?>" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-pencil"></i>
+                            <a href="<?= base_url("/tours/{$tour['id']}/edit") ?>" class="btn btn-sm btn-outline-secondary w-100">
+                                <i class="bi bi-pencil"></i> Editar
                             </a>
                         </div>
                     </div>

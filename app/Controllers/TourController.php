@@ -115,14 +115,14 @@ class TourController extends BaseController
             'excluded_json'       => json_encode($this->request->getPost('excluded') ?? []),
             'is_active'           => 1,
         ];
-
-        if (!$tourModel->insert($data)) {
+        $tourId=$tourModel->insert($data);
+        if (!$tourId) {
             log_message('error', '[TourController::store] Error al insertar tour: ' . json_encode($tourModel->errors()));
             return redirect()->back()->withInput()->with('error', 'Error al guardar el tour.');
         }
 
         log_message('info', "[TourController::store] Tour '{$data['name']}' creado para tenant {$this->tenantId}.");
-        return redirect()->to('/tours')->with('success', 'Tour creado correctamente.');
+        return redirect()->to("/tours/{$tourId}/edit")->with('success', 'Tour creado. Ahora puedes añadir fotos y videos.');
     }
 
     /**
@@ -665,5 +665,223 @@ class TourController extends BaseController
             'success' => true,
             'guest'   => $guest,
         ]);
+    }
+
+    /**
+     * AJAX — Sube un archivo de media (foto o video) para un tour.
+     * Guarda el archivo en writable/uploads/tours/{tenant_id}/
+     * y actualiza media_json del tour.
+     *
+     * POST /tours/{id}/media/upload
+     * Body (multipart): file, description
+     */
+    public function uploadMedia(int $tourId)
+    {
+        if (!$this->request->isAJAX()) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Solo AJAX']);
+        }
+
+        $tourModel = new TourModel();
+        $tour = $tourModel->where('tenant_id', $this->tenantId)->find($tourId);
+
+        if (!$tour) {
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'Tour no encontrado.']);
+        }
+
+        $file = $this->request->getFile('file');
+
+        if (!$file || !$file->isValid()) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'error' => 'Archivo inválido: ' . ($file ? $file->getErrorString() : 'no recibido'),
+            ]);
+        }
+
+        // Validar tipo MIME permitido
+        $allowedMimes = [
+            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+            'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm',
+        ];
+
+        if (!in_array($file->getMimeType(), $allowedMimes)) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'error' => 'Tipo de archivo no permitido. Solo imágenes (JPG, PNG, WEBP) y videos (MP4, MOV, AVI, WEBM).',
+            ]);
+        }
+
+        // Validar tamaño: máx 50 MB
+        if ($file->getSize() > 50 * 1024 * 1024) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'error' => 'El archivo supera el límite de 50 MB.',
+            ]);
+        }
+
+        // Directorio de destino
+        $uploadDir = WRITEPATH . "uploads/tours/{$this->tenantId}";
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        // Nombre único para evitar colisiones
+        $newName = $file->getRandomName();
+
+        if (!$file->move($uploadDir, $newName)) {
+            log_message('error', "[TourController::uploadMedia] No se pudo mover el archivo para tour {$tourId}.");
+            return $this->response->setStatusCode(500)->setJSON(['error' => 'Error al guardar el archivo en disco.']);
+        }
+
+        // Detectar tipo: imagen o video
+        $isVideo = str_starts_with($file->getMimeType(), 'video/');
+
+        $newItem = [
+            'id'          => uniqid('media_', true),
+            'type'        => $isVideo ? 'video' : 'image',
+            'filename'    => $newName,
+            'original'    => $file->getClientName(),
+            'mime'        => $file->getMimeType(),
+            'size'        => $file->getSize(),
+            'path'        => "uploads/tours/{$this->tenantId}/{$newName}",
+            'description' => $this->request->getPost('description') ?? '',
+            'uploaded_at' => date('Y-m-d H:i:s'),
+        ];
+
+        // Actualizar media_json del tour
+        $currentMedia = json_decode($tour['media_json'] ?? '[]', true) ?? [];
+        $currentMedia[] = $newItem;
+
+        $tourModel->update($tourId, ['media_json' => json_encode($currentMedia)]);
+
+        log_message('info', "[TourController::uploadMedia] Archivo '{$newItem['original']}' subido para tour {$tourId}.");
+
+        return $this->response->setJSON([
+            'success' => true,
+            'item'    => $newItem,
+        ]);
+    }
+
+    /**
+     * AJAX — Actualiza la descripción de un item de media.
+     *
+     * POST /tours/{id}/media/{mediaId}/description
+     * Body: description
+     */
+    public function updateMediaDescription(int $tourId, string $mediaId)
+    {
+        if (!$this->request->isAJAX()) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Solo AJAX']);
+        }
+
+        $tourModel = new TourModel();
+        $tour = $tourModel->where('tenant_id', $this->tenantId)->find($tourId);
+
+        if (!$tour) {
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'Tour no encontrado.']);
+        }
+
+        $media = json_decode($tour['media_json'] ?? '[]', true) ?? [];
+        $found = false;
+
+        foreach ($media as &$item) {
+            if ($item['id'] === $mediaId) {
+                $item['description'] = $this->request->getPost('description') ?? '';
+                $found = true;
+                break;
+            }
+        }
+        unset($item);
+
+        if (!$found) {
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'Media no encontrado.']);
+        }
+
+        $tourModel->update($tourId, ['media_json' => json_encode($media)]);
+
+        return $this->response->setJSON(['success' => true]);
+    }
+
+    /**
+     * AJAX — Elimina un archivo de media del tour.
+     * Borra el archivo físico y actualiza media_json.
+     *
+     * POST /tours/{id}/media/{mediaId}/delete
+     */
+    public function deleteMedia(int $tourId, string $mediaId)
+    {
+        if (!$this->request->isAJAX()) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Solo AJAX']);
+        }
+
+        $tourModel = new TourModel();
+        $tour = $tourModel->where('tenant_id', $this->tenantId)->find($tourId);
+
+        if (!$tour) {
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'Tour no encontrado.']);
+        }
+
+        $media   = json_decode($tour['media_json'] ?? '[]', true) ?? [];
+        $toDelete = null;
+
+        $filtered = array_filter($media, function ($item) use ($mediaId, &$toDelete) {
+            if ($item['id'] === $mediaId) {
+                $toDelete = $item;
+                return false; // excluir del array resultante
+            }
+            return true;
+        });
+
+        if (!$toDelete) {
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'Media no encontrado.']);
+        }
+
+        // Borrar archivo físico
+        $filePath = WRITEPATH . $toDelete['path'];
+        if (file_exists($filePath)) {
+            unlink($filePath);
+        }
+
+        $tourModel->update($tourId, ['media_json' => json_encode(array_values($filtered))]);
+
+        log_message('info', "[TourController::deleteMedia] Media '{$toDelete['filename']}' eliminado del tour {$tourId}.");
+
+        return $this->response->setJSON(['success' => true]);
+    }
+
+    /**
+     * AJAX — Reordena los items de media del tour.
+     *
+     * POST /tours/{id}/media/reorder
+     * Body JSON: { "order": ["media_id1", "media_id2", ...] }
+     */
+    public function reorderMedia(int $tourId)
+    {
+        if (!$this->request->isAJAX()) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Solo AJAX']);
+        }
+
+        $tourModel = new TourModel();
+        $tour = $tourModel->where('tenant_id', $this->tenantId)->find($tourId);
+
+        if (!$tour) {
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'Tour no encontrado.']);
+        }
+
+        $newOrder = json_decode($this->request->getBody(), true)['order'] ?? [];
+        $media    = json_decode($tour['media_json'] ?? '[]', true) ?? [];
+
+        // Indexar por ID para reordenar
+        $indexed = [];
+        foreach ($media as $item) {
+            $indexed[$item['id']] = $item;
+        }
+
+        $reordered = [];
+        foreach ($newOrder as $id) {
+            if (isset($indexed[$id])) {
+                $reordered[] = $indexed[$id];
+            }
+        }
+
+        $tourModel->update($tourId, ['media_json' => json_encode($reordered)]);
+
+        return $this->response->setJSON(['success' => true]);
     }
 }

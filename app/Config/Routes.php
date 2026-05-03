@@ -235,6 +235,11 @@ $routes->group('tours', ['filter' => 'tenant_auth'], function ($routes) {
 
     $routes->post('guest/quick-create', 'TourController::quickCreateGuest');
 
+    // --- Media de Tours (fotos y videos) ---
+    $routes->post('(:num)/media/upload',                    'TourController::uploadMedia/$1');
+    $routes->post('(:num)/media/(:segment)/description',    'TourController::updateMediaDescription/$1/$2');
+    $routes->post('(:num)/media/(:segment)/delete',         'TourController::deleteMedia/$1/$2');
+    $routes->post('(:num)/media/reorder',                   'TourController::reorderMedia/$1');
 
 });
 

@@ -29,4 +29,8 @@ class TourModel extends BaseMultiTenantModel
             ->orderBy('tours.name', 'ASC')
             ->findAll();
     }
+    public function getMedia(array $tour): array
+    {
+        return json_decode($tour['media_json'] ?? '[]', true) ?? [];
+    }
 }
