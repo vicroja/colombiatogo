@@ -667,14 +667,7 @@ class TourController extends BaseController
         ]);
     }
 
-    /**
-     * AJAX — Sube un archivo de media (foto o video) para un tour.
-     * Guarda el archivo en writable/uploads/tours/{tenant_id}/
-     * y actualiza media_json del tour.
-     *
-     * POST /tours/{id}/media/upload
-     * Body (multipart): file, description
-     */
+
     public function uploadMedia(int $tourId)
     {
         if (!$this->request->isAJAX()) {
@@ -683,21 +676,19 @@ class TourController extends BaseController
 
         $tourModel = new TourModel();
         $tour = $tourModel->where('tenant_id', $this->tenantId)->find($tourId);
-
         if (!$tour) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Tour no encontrado.']);
         }
 
         $file = $this->request->getFile('file');
-
         if (!$file || !$file->isValid()) {
             return $this->response->setStatusCode(400)->setJSON([
                 'error' => 'Archivo inválido: ' . ($file ? $file->getErrorString() : 'no recibido'),
             ]);
         }
 
-// ✅ Leer MIME y tamaño ANTES de cualquier move()
-        $mimeType     = $file->getClientMimeType();   // usa lo que reporta el cliente
+        // Leer MIME y metadatos ANTES de mover el archivo temporal
+        $mimeType     = $file->getClientMimeType();
         $fileSize     = $file->getSize();
         $originalName = $file->getClientName();
 
@@ -708,7 +699,7 @@ class TourController extends BaseController
 
         if (!in_array($mimeType, $allowedMimes)) {
             return $this->response->setStatusCode(422)->setJSON([
-                'error' => 'Tipo de archivo no permitido. Solo imágenes (JPG, PNG, WEBP) y videos (MP4, MOV, AVI, WEBM).',
+                'error' => 'Tipo no permitido. Solo imágenes (JPG, PNG, WEBP) y videos (MP4, MOV, AVI, WEBM).',
             ]);
         }
 
@@ -718,19 +709,18 @@ class TourController extends BaseController
             ]);
         }
 
-// Directorio de destino
+        // Guardar en public/uploads/ para que sea accesible desde el navegador
         $uploadDir = FCPATH . "uploads/tours/{$this->tenantId}";
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
 
         $newName = $file->getRandomName();
-
         if (!$file->move($uploadDir, $newName)) {
+            log_message('error', "[TourController::uploadMedia] No se pudo mover el archivo para tour {$tourId}.");
             return $this->response->setStatusCode(500)->setJSON(['error' => 'Error al guardar el archivo en disco.']);
         }
 
-// ✅ Detectar tipo DESPUÉS del move usando el MIME ya leído
         $isVideo = str_starts_with($mimeType, 'video/');
 
         $newItem = [
@@ -740,30 +730,23 @@ class TourController extends BaseController
             'original'    => $originalName,
             'mime'        => $mimeType,
             'size'        => $fileSize,
-            'path' => "uploads/tours/{$this->tenantId}/{$newName}",
+            'path'        => "uploads/tours/{$this->tenantId}/{$newName}",
             'description' => $this->request->getPost('description') ?? '',
             'uploaded_at' => date('Y-m-d H:i:s'),
         ];
 
-        // Actualizar media_json del tour
-        $currentMedia = json_decode($tour['media_json'] ?? '[]', true) ?? [];
+        $currentMedia   = json_decode($tour['media_json'] ?? '[]', true) ?? [];
         $currentMedia[] = $newItem;
-
         $tourModel->update($tourId, ['media_json' => json_encode($currentMedia)]);
 
-        log_message('info', "[TourController::uploadMedia] Archivo '{$newItem['original']}' subido para tour {$tourId}.");
+        log_message('info', "[TourController::uploadMedia] '{$originalName}' subido para tour {$tourId}.");
 
-        return $this->response->setJSON([
-            'success' => true,
-            'item'    => $newItem,
-        ]);
+        return $this->response->setJSON(['success' => true, 'item' => $newItem]);
     }
 
     /**
      * AJAX — Actualiza la descripción de un item de media.
-     *
      * POST /tours/{id}/media/{mediaId}/description
-     * Body: description
      */
     public function updateMediaDescription(int $tourId, string $mediaId)
     {
@@ -773,7 +756,6 @@ class TourController extends BaseController
 
         $tourModel = new TourModel();
         $tour = $tourModel->where('tenant_id', $this->tenantId)->find($tourId);
-
         if (!$tour) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Tour no encontrado.']);
         }
@@ -800,9 +782,7 @@ class TourController extends BaseController
     }
 
     /**
-     * AJAX — Elimina un archivo de media del tour.
-     * Borra el archivo físico y actualiza media_json.
-     *
+     * AJAX — Elimina un archivo de media.
      * POST /tours/{id}/media/{mediaId}/delete
      */
     public function deleteMedia(int $tourId, string $mediaId)
@@ -813,18 +793,17 @@ class TourController extends BaseController
 
         $tourModel = new TourModel();
         $tour = $tourModel->where('tenant_id', $this->tenantId)->find($tourId);
-
         if (!$tour) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Tour no encontrado.']);
         }
 
-        $media   = json_decode($tour['media_json'] ?? '[]', true) ?? [];
+        $media    = json_decode($tour['media_json'] ?? '[]', true) ?? [];
         $toDelete = null;
 
         $filtered = array_filter($media, function ($item) use ($mediaId, &$toDelete) {
             if ($item['id'] === $mediaId) {
                 $toDelete = $item;
-                return false; // excluir del array resultante
+                return false;
             }
             return true;
         });
@@ -833,24 +812,23 @@ class TourController extends BaseController
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Media no encontrado.']);
         }
 
-        // Borrar archivo físico
-        $filePath = WRITEPATH . $toDelete['path'];
+        // Borrar archivo físico de public/uploads/
+        $filePath = FCPATH . $toDelete['path'];
         if (file_exists($filePath)) {
             unlink($filePath);
         }
 
         $tourModel->update($tourId, ['media_json' => json_encode(array_values($filtered))]);
 
-        log_message('info', "[TourController::deleteMedia] Media '{$toDelete['filename']}' eliminado del tour {$tourId}.");
+        log_message('info', "[TourController::deleteMedia] '{$toDelete['filename']}' eliminado del tour {$tourId}.");
 
         return $this->response->setJSON(['success' => true]);
     }
 
     /**
-     * AJAX — Reordena los items de media del tour.
-     *
+     * AJAX — Reordena los items de media.
      * POST /tours/{id}/media/reorder
-     * Body JSON: { "order": ["media_id1", "media_id2", ...] }
+     * Body (FormData): order = JSON string con array de IDs
      */
     public function reorderMedia(int $tourId)
     {
@@ -860,15 +838,14 @@ class TourController extends BaseController
 
         $tourModel = new TourModel();
         $tour = $tourModel->where('tenant_id', $this->tenantId)->find($tourId);
-
         if (!$tour) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Tour no encontrado.']);
         }
 
-        $newOrder = json_decode($this->request->getBody(), true)['order'] ?? [];
+        // El order llega como string JSON dentro del campo 'order' del FormData
+        $newOrder = json_decode($this->request->getPost('order') ?? '[]', true);
         $media    = json_decode($tour['media_json'] ?? '[]', true) ?? [];
 
-        // Indexar por ID para reordenar
         $indexed = [];
         foreach ($media as $item) {
             $indexed[$item['id']] = $item;
