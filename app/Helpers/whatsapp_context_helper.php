@@ -90,7 +90,7 @@ if (!function_exists('build_guest_context_data')) {
                 SELECT
                     t.id, t.name, t.description, t.duration_minutes,
                     t.meeting_point, t.min_pax, t.price_adult, t.price_child,
-                    t.difficulty_level, t.cancellation_policy,
+                    t.difficulty_level, t.cancellation_policy, t.media_json,
                     COUNT(ts.id) as proximas_salidas
                 FROM tours t
                 LEFT JOIN tour_schedules ts
@@ -104,6 +104,10 @@ if (!function_exists('build_guest_context_data')) {
             ", [$tenantId])->getResult();
 
             foreach ($tours as $t) {
+                $mediaItems = json_decode($t->media_json ?? '[]', true) ?? [];
+                $numFotos  = count(array_filter($mediaItems, fn($m) => ($m['type'] ?? 'image') === 'image'));
+                $numVideos = count(array_filter($mediaItems, fn($m) => ($m['type'] ?? 'image') === 'video'));
+
                 $catalogoTours[] = [
                     'id'                  => (int)$t->id,
                     'nombre'              => $t->name,
@@ -114,10 +118,12 @@ if (!function_exists('build_guest_context_data')) {
                     'precio_adulto'       => (float)$t->price_adult,
                     'precio_nino'         => (float)$t->price_child,
                     'dificultad'          => $t->difficulty_level,
-                    // FIX C6: Exponer politica_cancelacion del tour para respuestas directas al cliente.
                     'politica_cancelacion'=> $t->cancellation_policy ?? null,
                     'salidas_disponibles' => (int)$t->proximas_salidas,
-                    'nota'                => 'Usar consultar_tours_disponibles para ver fechas exactas y cupos.',
+                    'tiene_fotos'         => ($numFotos + $numVideos) > 0,
+                    'num_fotos'           => $numFotos,
+                    'num_videos'          => $numVideos,
+                    'nota'                => 'Usar consultar_tours_disponibles para ver fechas exactas y cupos. Usar enviar_fotos_tour para enviar fotos/videos al cliente.',
                 ];
             }
         }
