@@ -566,7 +566,7 @@ $excluded   = json_decode($tour['excluded_json'] ?? '[]', true) ?? [];
         // ── Crear card de media (para uploads nuevos) ──────────────────
         function createMediaCard(item) {
             const isVideo  = item.type === 'video';
-            const publicUrl = '/writable/' + item.path;
+            const publicUrl = '/' + item.path;
 
             const card = document.createElement('div');
             card.className = 'media-card';

@@ -719,7 +719,7 @@ class TourController extends BaseController
         }
 
 // Directorio de destino
-        $uploadDir = WRITEPATH . "uploads/tours/{$this->tenantId}";
+        $uploadDir = FCPATH . "uploads/tours/{$this->tenantId}";
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
@@ -740,7 +740,7 @@ class TourController extends BaseController
             'original'    => $originalName,
             'mime'        => $mimeType,
             'size'        => $fileSize,
-            'path'        => "uploads/tours/{$this->tenantId}/{$newName}",
+            'path' => "uploads/tours/{$this->tenantId}/{$newName}",
             'description' => $this->request->getPost('description') ?? '',
             'uploaded_at' => date('Y-m-d H:i:s'),
         ];
