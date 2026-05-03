@@ -669,7 +669,6 @@ $excluded   = json_decode($tour['excluded_json'] ?? '[]', true) ?? [];
             fileInput.value = ''; // reset para poder volver a seleccionar los mismos
         });
 
-        // ── Eliminar media ─────────────────────────────────────────────
         async function deleteMedia(mediaId, btn) {
             if (!confirm('¿Eliminar este archivo? Esta acción no se puede deshacer.')) return;
 
@@ -677,10 +676,14 @@ $excluded   = json_decode($tour['excluded_json'] ?? '[]', true) ?? [];
             card.style.opacity = '.4';
             card.style.pointerEvents = 'none';
 
+            const formData = new FormData();
+            formData.append(CSRF_NAME, csrfValue);
+
             try {
                 const res = await fetch(`/tours/${TOUR_ID}/media/${mediaId}/delete`, {
                     method:  'POST',
-                    headers: getHeaders({ 'Content-Type': 'application/json' }),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body:    formData,
                 });
 
                 updateCsrf(res);
@@ -706,7 +709,6 @@ $excluded   = json_decode($tour['excluded_json'] ?? '[]', true) ?? [];
 
         // ── Guardar descripción (debounce) ─────────────────────────────
         const descTimers = {};
-
         function saveDescription(input) {
             const mediaId = input.dataset.mediaId;
             const statusEl = document.getElementById('status-' + mediaId);
@@ -723,7 +725,7 @@ $excluded   = json_decode($tour['excluded_json'] ?? '[]', true) ?? [];
 
                     const res = await fetch(`/tours/${TOUR_ID}/media/${mediaId}/description`, {
                         method:  'POST',
-                        headers: getHeaders(),
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },  // ← sin token aquí
                         body:    formData,
                     });
 
@@ -736,14 +738,13 @@ $excluded   = json_decode($tour['excluded_json'] ?? '[]', true) ?? [];
                         setTimeout(() => { statusEl.textContent = ''; }, 2000);
                     } else {
                         statusEl.textContent = '✗ Error';
-                        statusEl.className = 'media-desc-status error';
                     }
                 } catch {
                     statusEl.textContent = '✗ Sin conexión';
-                    statusEl.className = 'media-desc-status error';
                 }
             }, 800);
         }
+
 
         // ── Reordenar con SortableJS ───────────────────────────────────
         const grid = document.getElementById('media-grid');
