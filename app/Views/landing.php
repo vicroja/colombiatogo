@@ -239,7 +239,9 @@
         .chat-name{font-size:.85rem;font-weight:600;color:#fff}
         .chat-status{display:flex;align-items:center;gap:.35rem;font-size:.72rem;color:#94A3B8}
         .status-dot{width:6px;height:6px;background:var(--wa);border-radius:50%}
-        .chat-body{padding:1rem;display:flex;flex-direction:column;gap:.65rem;background:#ECE5DD;min-height:200px}
+        .chat-body{padding:1rem;display:flex;flex-direction:column;gap:.65rem;background:#ECE5DD;height:280px;overflow-y:auto;scroll-behavior:smooth}
+        .chat-body::-webkit-scrollbar{width:3px}
+        .chat-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:2px}
         .msg-wrap{display:flex;flex-direction:column;gap:.2rem}
         .msg-wrap.right{align-items:flex-end}
         .msg-wrap.left{align-items:flex-start}
@@ -751,25 +753,11 @@
                             </div>
                         </div>
                     </div>
-                    <div class="chat-body">
-                        <div class="msg-wrap right">
-                            <div class="msg-bubble in">Hola! tienen disponibilidad para 2 adultos del 15 al 18 de mayo?</div>
-                            <div class="msg-meta">10:24 am</div>
-                        </div>
-                        <div class="msg-wrap left">
-                            <div class="msg-bubble out">¡Hola María! Sí tenemos disponibilidad para esas fechas 🙌<br><br>• Hab. Doble Superior — $320.000/noche<br>• Suite con vista — $480.000/noche<br><br>¿Cuál te interesa? Puedo reservarte ahora mismo.</div>
-                            <div class="msg-meta out-t">10:24 am <span class="ticks">✓✓</span> Respondido automáticamente</div>
-                        </div>
-                        <div class="msg-wrap right">
-                            <div class="msg-bubble in">La doble, ¿incluye desayuno?</div>
-                            <div class="msg-meta">10:25 am</div>
-                        </div>
-                        <div class="msg-wrap left">
-                            <div class="chat-typing">
-                                <div class="typing-dot"></div>
-                                <div class="typing-dot"></div>
-                                <div class="typing-dot"></div>
-                            </div>
+                    <div class="chat-body" id="chatBody">
+                        <div class="chat-typing" id="chatTyping">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
                         </div>
                     </div>
                     <div class="chat-footer-bar">
@@ -778,7 +766,7 @@
                             <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
                         </div>
                     </div>
-                    <div class="chat-badge">⚡ Respondido en 3 segundos · Powered by Tentii IA</div>
+                    <div class="chat-badge" id="chatBadge">⚡ Respondido en 3 segundos · Powered by Tentii IA</div>
                 </div>
             </div>
         </div>
@@ -1287,7 +1275,7 @@
         <div class="pricing-grid">
             <div class="pcard reveal">
                 <div class="p-name">Esencial</div>
-                <div class="p-price"><sup>$</sup>104.000</div>
+                <div class="p-price"><sup>$</sup>99.000</div>
                 <div class="p-period">COP / mes · hasta 10 unidades</div>
                 <ul class="p-list">
                     <li>PMS completo + calendario</li>
@@ -1304,7 +1292,7 @@
             <div class="pcard featured reveal">
                 <div class="p-badge">Más popular</div>
                 <div class="p-name">Profesional</div>
-                <div class="p-price"><sup>$</sup>489.000</div>
+                <div class="p-price"><sup>$</sup>189.000</div>
                 <div class="p-period">COP / mes · unidades ilimitadas</div>
                 <ul class="p-list">
                     <li>Todo lo de Esencial</li>
@@ -1518,35 +1506,115 @@
         }, { threshold: 0.07 });
         revEls.forEach(function(el){ obs.observe(el); });
 
-        /* Chat typing animation */
-        var typingEl = document.querySelector('.chat-typing');
-        if(typingEl){
-            var replies = [
-                'Sí incluye desayuno buffet para 2 personas 🍳 El total sería <strong>$960.000</strong> por 3 noches. ¿Confirmo? Solo necesito tu nombre completo y email.',
-                '¡Perfecto! ¿Para qué nombre hago la reserva?'
+        /* ── Chat animation: full conversation loop ── */
+        (function(){
+            var body    = document.getElementById('chatBody');
+            var typing  = document.getElementById('chatTyping');
+            var badge   = document.getElementById('chatBadge');
+            if(!body || !typing) return;
+
+            /* Each turn: { side:'guest'|'ai', text, time, delay }
+               delay = ms to wait before showing this message after the previous one appeared */
+            var conversation = [
+                { side:'guest', text:'Hola! tienen disponibilidad para 2 adultos del 15 al 18 de mayo?', time:'10:24 am', delay:800 },
+                { side:'ai',    text:'¡Hola María! Sí tenemos disponibilidad 🙌<br><br>• Hab. Doble Superior — $320.000/noche<br>• Suite con vista — $480.000/noche<br><br>¿Cuál te interesa?', time:'10:24 am', delay:1600 },
+                { side:'guest', text:'La doble, ¿incluye desayuno?', time:'10:25 am', delay:2200 },
+                { side:'ai',    text:'Sí, incluye desayuno buffet para 2 personas 🍳<br>Total: <strong>$960.000</strong> por 3 noches.<br><br>¿Confirmo la reserva? Solo necesito tu nombre y email.', time:'10:25 am', delay:1800 },
+                { side:'guest', text:'Sí perfecto! María Camila Torres, mcamila@gmail.com', time:'10:26 am', delay:2500 },
+                { side:'ai',    text:'¡Listo María! ✅ Reserva confirmada:<br><br>📅 15–18 mayo · Doble Superior<br>🍳 Desayuno incluido<br>💳 Pago al llegar<br><br>Te envío el voucher por este chat.', time:'10:26 am', delay:1600 },
+                { side:'guest', text:'Perfecto gracias! Una pregunta más... ¿tienen tours disponibles?', time:'10:27 am', delay:2800 },
+                { side:'ai',    text:'¡Claro! Tenemos estas salidas para esas fechas 🗺️<br><br>• Cañón del Chicamocha — $85.000/p<br>• Rafting Río Suarez — $120.000/p<br>• City Tour nocturno — $45.000/p<br><br>¿Te agrego alguno a tu reserva?', time:'10:27 am', delay:1800 },
+                { side:'guest', text:'El del cañón para los 2, para el 16', time:'10:28 am', delay:2000 },
+                { side:'ai',    text:'Perfecto! Tour Cañón del Chicamocha agregado 🏔️<br><br>📅 16 mayo · 8:00 am<br>👥 2 personas · $170.000<br>📍 Recogida en recepción del hotel<br><br>¡Los esperamos! Cualquier duda aquí estoy 😊', time:'10:28 am', delay:1600 },
             ];
-            var step = 0;
-            function showReply(){
-                typingEl.style.display = 'flex';
-                setTimeout(function(){
-                    typingEl.style.display = 'none';
-                    var wrap = document.createElement('div');
-                    wrap.className = 'msg-wrap left';
+
+            var step       = 0;
+            var timeouts   = [];
+            var PAUSE_END  = 4000;   /* pause at end before restarting */
+            var TYPING_DUR = 1400;   /* how long typing indicator shows */
+
+            function clearAll(){
+                timeouts.forEach(clearTimeout);
+                timeouts = [];
+            }
+
+            function addMessage(turn, onDone){
+                var isAI = turn.side === 'ai';
+
+                if(isAI){
+                    /* show typing indicator */
+                    typing.style.display = 'flex';
+                    body.scrollTop = body.scrollHeight;
+                }
+
+                var t = setTimeout(function(){
+                    if(isAI) typing.style.display = 'none';
+
+                    var wrap   = document.createElement('div');
+                    wrap.className = 'msg-wrap ' + (isAI ? 'left' : 'right');
+
                     var bubble = document.createElement('div');
-                    bubble.className = 'msg-bubble out';
-                    bubble.innerHTML = replies[step % replies.length];
-                    var meta = document.createElement('div');
-                    meta.className = 'msg-meta out-t';
-                    meta.innerHTML = '10:25 am <span class="ticks">✓✓</span> Respondido automáticamente';
+                    bubble.className = 'msg-bubble ' + (isAI ? 'out' : 'in');
+                    bubble.innerHTML = turn.text;
+
+                    var meta   = document.createElement('div');
+                    meta.className = 'msg-meta' + (isAI ? ' out-t' : '');
+                    meta.innerHTML = isAI
+                        ? turn.time + ' <span class="ticks">✓✓</span> Respondido automáticamente'
+                        : turn.time;
+
                     wrap.appendChild(bubble);
                     wrap.appendChild(meta);
-                    typingEl.parentNode.insertBefore(wrap, typingEl);
-                    step++;
-                    setTimeout(showReply, 4500);
-                }, 1800);
+                    body.insertBefore(wrap, typing);
+                    body.scrollTop = body.scrollHeight;
+
+                    if(onDone) onDone();
+                }, isAI ? TYPING_DUR : 0);
+
+                timeouts.push(t);
             }
-            setTimeout(showReply, 2000);
-        }
+
+            function runStep(){
+                if(step >= conversation.length){
+                    /* end of conversation — pause then restart */
+                    var t = setTimeout(function(){
+                        restart();
+                    }, PAUSE_END);
+                    timeouts.push(t);
+                    return;
+                }
+
+                var turn = conversation[step];
+                step++;
+
+                var t = setTimeout(function(){
+                    addMessage(turn, function(){
+                        runStep();
+                    });
+                }, turn.delay);
+                timeouts.push(t);
+            }
+
+            function restart(){
+                clearAll();
+                /* remove all dynamic messages (keep only the typing indicator) */
+                var kids = Array.prototype.slice.call(body.children);
+                kids.forEach(function(el){
+                    if(el !== typing) body.removeChild(el);
+                });
+                typing.style.display = 'none';
+                body.scrollTop = 0;
+                step = 0;
+                /* brief pause then start again */
+                var t = setTimeout(runStep, 800);
+                timeouts.push(t);
+            }
+
+            /* kick off */
+            typing.style.display = 'none';
+            var t = setTimeout(runStep, 1000);
+            timeouts.push(t);
+        })();
 
         /* Registro */
         var form = document.getElementById('registerForm');
