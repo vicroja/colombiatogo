@@ -696,49 +696,50 @@ class TourController extends BaseController
             ]);
         }
 
-        // Validar tipo MIME permitido
+// ✅ Leer MIME y tamaño ANTES de cualquier move()
+        $mimeType     = $file->getClientMimeType();   // usa lo que reporta el cliente
+        $fileSize     = $file->getSize();
+        $originalName = $file->getClientName();
+
         $allowedMimes = [
             'image/jpeg', 'image/png', 'image/webp', 'image/gif',
             'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm',
         ];
 
-        if (!in_array($file->getMimeType(), $allowedMimes)) {
+        if (!in_array($mimeType, $allowedMimes)) {
             return $this->response->setStatusCode(422)->setJSON([
                 'error' => 'Tipo de archivo no permitido. Solo imágenes (JPG, PNG, WEBP) y videos (MP4, MOV, AVI, WEBM).',
             ]);
         }
 
-        // Validar tamaño: máx 50 MB
-        if ($file->getSize() > 50 * 1024 * 1024) {
+        if ($fileSize > 50 * 1024 * 1024) {
             return $this->response->setStatusCode(422)->setJSON([
                 'error' => 'El archivo supera el límite de 50 MB.',
             ]);
         }
 
-        // Directorio de destino
+// Directorio de destino
         $uploadDir = WRITEPATH . "uploads/tours/{$this->tenantId}";
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
 
-        // Nombre único para evitar colisiones
         $newName = $file->getRandomName();
 
         if (!$file->move($uploadDir, $newName)) {
-            log_message('error', "[TourController::uploadMedia] No se pudo mover el archivo para tour {$tourId}.");
             return $this->response->setStatusCode(500)->setJSON(['error' => 'Error al guardar el archivo en disco.']);
         }
 
-        // Detectar tipo: imagen o video
-        $isVideo = str_starts_with($file->getMimeType(), 'video/');
+// ✅ Detectar tipo DESPUÉS del move usando el MIME ya leído
+        $isVideo = str_starts_with($mimeType, 'video/');
 
         $newItem = [
             'id'          => uniqid('media_', true),
             'type'        => $isVideo ? 'video' : 'image',
             'filename'    => $newName,
-            'original'    => $file->getClientName(),
-            'mime'        => $file->getMimeType(),
-            'size'        => $file->getSize(),
+            'original'    => $originalName,
+            'mime'        => $mimeType,
+            'size'        => $fileSize,
             'path'        => "uploads/tours/{$this->tenantId}/{$newName}",
             'description' => $this->request->getPost('description') ?? '',
             'uploaded_at' => date('Y-m-d H:i:s'),

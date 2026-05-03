@@ -617,12 +617,12 @@ $excluded   = json_decode($tour['excluded_json'] ?? '[]', true) ?? [];
 
                 const formData = new FormData();
                 formData.append('file', file);
-                formData.append(CSRF_NAME, csrfValue);
+                formData.append(CSRF_NAME, csrfValue);  // ← ya está bien aquí
 
                 try {
-                    const res  = await fetch(`/tours/${TOUR_ID}/media/upload`, {
+                    const res = await fetch(`/tours/${TOUR_ID}/media/upload`, {
                         method:  'POST',
-                        headers: getHeaders(),
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },  // solo esto, sin el token
                         body:    formData,
                     });
 
