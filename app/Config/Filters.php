@@ -91,6 +91,7 @@ class Filters extends BaseFilters
                     'tours/(:num)/media/(:segment)/delete',
                     'tours/(:num)/media/(:segment)/description',
                     'tours/(:num)/media/reorder',
+                    'calculadora/analizar',
 
 
                 ]
