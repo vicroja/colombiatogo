@@ -132,6 +132,21 @@ class ToolsSchemaBuilder
         // ── TOOLS DE TOURS ───────────────────────────────────────────────────
         if ($hasTours) {
             $tools[] = [
+                'name'        => 'enviar_fotos_tour',
+                'description' => 'Envía fotos y/o videos de un tour específico al cliente por WhatsApp. Usar cuando el cliente quiera ver imágenes o videos de un tour, actividad o experiencia. Las fotos se obtienen del media del tour cargado en el PMS.',
+                'parameters'  => [
+                    'type'       => 'object',
+                    'required'   => ['tour_id'],
+                    'properties' => [
+                        'tour_id' => [
+                            'type'        => 'integer',
+                            'description' => 'ID del tour (del catálogo de tours en el contexto). Si el cliente pregunta por fotos genéricas de tours, usar el tour_id del tour más relevante a la conversación.',
+                        ],
+                    ],
+                ],
+            ];
+
+            $tools[] = [
                 'name'        => 'consultar_tours_disponibles',
                 'description' => 'Consulta qué tours tienen salidas disponibles con cupos libres. Usar cuando el cliente pregunte por tours, actividades, experiencias o planes. Devuelve tours con fechas, precios y cupos disponibles.',
                 'parameters'  => [

@@ -1094,4 +1094,104 @@ class WhatsappWebhookService
             'instruccion'    => 'Dile al cliente que su tour está confirmado y envíale los datos del punto de encuentro y hora de salida. Luego infórmale los medios de pago disponibles.',
         ]);
     }
+
+    /**
+     * Tool: Envía fotos y videos de un tour específico al cliente.
+     * Lee media_json del tour y envía las imágenes/videos por WhatsApp.
+     *
+     * Llamada por WhatsappToolExecutor cuando Gemini decide usar 'enviar_fotos_tour'.
+     */
+    public function toolEnviarFotosTour(array $args): string
+    {
+        $tourId = (int)($args['tour_id'] ?? 0);
+
+        if (!$tourId) {
+            return json_encode([
+                'error'       => 'No se especificó el tour_id.',
+                'instruccion' => 'Pregúntale al cliente de qué tour quiere ver fotos.',
+            ]);
+        }
+
+        // 1. Obtener el tour y verificar que pertenece al tenant
+        $tour = $this->db->table('tours')
+            ->where('id', $tourId)
+            ->where('tenant_id', $this->currentTenantId)
+            ->get()
+            ->getRow();
+
+        if (!$tour) {
+            return json_encode([
+                'error'       => 'Tour no encontrado para este establecimiento.',
+                'instruccion' => 'Informa al cliente que no encontraste ese tour y ofrece consultar los tours disponibles.',
+            ]);
+        }
+
+        // 2. Decodificar media_json
+        $mediaItems = json_decode($tour->media_json ?? '[]', true) ?? [];
+
+        if (empty($mediaItems)) {
+            return json_encode([
+                'error'       => 'Este tour no tiene fotos ni videos cargados aún.',
+                'instruccion' => "Dile al cliente que en este momento no hay fotos disponibles del tour \"{$tour->name}\", pero descríbele la experiencia con entusiasmo usando la información del catálogo.",
+            ]);
+        }
+
+        // 3. URL base del servidor
+        $baseUrl = rtrim(config('App')->baseURL, '/');
+
+        // 4. Enviar cada media (máx 5 para no saturar)
+        $enviadas   = 0;
+        $maxEnvios  = 5;
+        $itemsToSend = array_slice($mediaItems, 0, $maxEnvios);
+
+        foreach ($itemsToSend as $item) {
+            $mediaUrl = $baseUrl . '/' . ltrim($item['path'] ?? '', '/');
+            $caption  = $item['description'] ?? '';
+            $type     = $item['type'] ?? 'image';
+
+            if ($type === 'video') {
+                // Enviar como video
+                $result = $this->whatsappModel->sendVideoApi(
+                    $this->currentSenderPhone,
+                    $mediaUrl,
+                    $caption,
+                    $this->isSaas,
+                    $this->currentTenantId
+                );
+            } else {
+                // Enviar como imagen
+                $result = $this->whatsappModel->sendImageApi(
+                    $this->currentSenderPhone,
+                    $mediaUrl,
+                    $caption,
+                    $this->isSaas,
+                    $this->currentTenantId
+                );
+            }
+
+            if (isset($result['messages'][0]['id'])) {
+                $enviadas++;
+            } else {
+                log_message('warning', "[WebhookService/toolEnviarFotosTour] Fallo al enviar media '{$item['original']}' del tour {$tourId}: " . json_encode($result));
+            }
+
+            // Pausa entre envíos para no saturar la API de Meta
+            if (count($itemsToSend) > 1) {
+                usleep(400000); // 0.4 segundos
+            }
+        }
+
+        $totalMedia = count($mediaItems);
+        $tipoEnviado = $enviadas === 1 ? 'archivo' : 'archivos';
+
+        log_message('info', "[WebhookService/toolEnviarFotosTour] {$enviadas} de {$totalMedia} media enviadas del tour '{$tour->name}' (ID: {$tourId}) a {$this->currentSenderPhone}.");
+
+        return json_encode([
+            'success'     => true,
+            'tour_nombre' => $tour->name,
+            'enviadas'    => $enviadas,
+            'total_media' => $totalMedia,
+            'instruccion' => "Se enviaron {$enviadas} {$tipoEnviado} del tour \"{$tour->name}\" al cliente. Pregúntale qué le parecen las fotos y si quiere reservar una salida.",
+        ]);
+    }
 }

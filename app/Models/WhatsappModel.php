@@ -378,4 +378,19 @@ class WhatsappModel extends Model
         return null;
     }
 
+    public function sendVideoApi($recipientPhone, $videoUrl, $caption = '', $is_saas = false, $tenant_id_override = null)
+    {
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to'                => $recipientPhone,
+            'type'              => 'video',
+            'video'             => [
+                'link'    => $videoUrl,
+                'caption' => $caption
+            ]
+        ];
+
+        return $this->callWhatsappApi($payload, $is_saas, $tenant_id_override);
+    }
+
 }
