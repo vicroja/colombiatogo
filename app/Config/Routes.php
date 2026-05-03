@@ -16,6 +16,9 @@ $routes->get('/super/login', 'Super\AuthController::login');
 $routes->post('/super/login', 'Super\AuthController::authenticate');
 $routes->get('/super/logout', 'Super\AuthController::logout');
 
+$routes->get('/calculadora',          'Calculadora::index');
+$routes->post('/calculadora/analizar', 'Calculadora::analizar');
+
 // Rutas protegidas (Requieren sesión de SuperAdmin)
 $routes->group('super', ['filter' => 'superadmin_auth'], static function ($routes) {
     // Dashboard principal
