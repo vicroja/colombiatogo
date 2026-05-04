@@ -647,7 +647,7 @@ class TourController extends BaseController
             'document'  => $this->request->getPost('document'),
             'email'     => $this->request->getPost('email'),
             'phone'     => $this->request->getPost('phone'),
-            'ai_active' => 0, // Creado manualmente desde el panel
+            'ai_active' => 1, // Creado manualmente desde el panel
             'chat_state'=> 'CLOSED',
         ];
 
