@@ -103,6 +103,9 @@ $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
     $routes->post('settings/update', 'SettingsController::update');
     $routes->post('whatsapp/save_config', 'Whatsapp::saveConfig');
 
+    $routes->post('settings/documents/upload',       'SettingsController::uploadDocument');
+    $routes->post('settings/documents/delete/(:num)', 'SettingsController::deleteDocument/$1');
+
 
 
     $routes->get('reservations/calculate-price', 'ReservationController::calculatePrice');
