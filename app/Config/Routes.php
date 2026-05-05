@@ -45,6 +45,7 @@ $routes->get('/logout', 'AuthController::logout');
 // Rutas protegidas (Requieren sesión de empleado y tenant activo)
 $routes->group('/', ['filter' => 'tenant_auth'], static function ($routes) {
 
+    $routes->get('crm/pipeline', 'CrmController::pipeline');
 
     $routes->get('inventory/wizard/step/(:num)',  'InventoryController::wizardStep/$1');
     $routes->post('inventory/wizard/save/(:num)', 'InventoryController::wizardSave/$1');

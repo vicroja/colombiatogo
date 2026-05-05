@@ -500,4 +500,307 @@ class CrmController extends BaseController
             'total_revenue' => array_sum(array_column($guests, 'total_spent')),
         ];
     }
+    // =========================================================================
+// PIPELINE — Funnel de conversión en tiempo real (Kanban)
+// =========================================================================
+    public function pipeline(): string
+    {
+        // ── 1. Obtener todos los guests activos con su etapa del funnel ──────
+        $guests = $this->db->table('guests g')
+            ->select('
+            g.id, g.full_name, g.phone, g.funnel_stage, g.chat_state,
+            g.ai_active, g.conversation_context_json, g.updated_at,
+            TIMESTAMPDIFF(MINUTE, g.updated_at, NOW()) as minutos_en_etapa
+        ')
+            ->where('g.tenant_id', $this->tenantId)
+            ->whereIn('g.chat_state', ['ACTIVE', 'WAITING_USER', 'OMITTED'])
+            ->orderBy('g.updated_at', 'DESC')
+            ->get()
+            ->getResultArray();
+
+        // ── 2. Enriquecer cada guest con datos relevantes ───────────────────
+        foreach ($guests as &$g) {
+            // Contexto de conversación (objeciones, tour consultado, etc.)
+            $g['contexto'] = json_decode($g['conversation_context_json'] ?? '{}', true) ?? [];
+
+            // Último mensaje de la conversación (para saber si el bot o el cliente habló último)
+            $ultimoMsg = $this->db->table('whatsapp_messages')
+                ->select('direction, message_body, created_at')
+                ->where('tenant_id', $this->tenantId)
+                ->groupStart()
+                ->where('sender_phone', $g['phone'])
+                ->orWhere('recipient_phone', $g['phone'])
+                ->groupEnd()
+                ->where('message_body NOT LIKE', '[Consultando:%')
+                ->where('message_body NOT LIKE', '[RESULTADO DE HERRAMIENTAS]%')
+                ->orderBy('created_at', 'DESC')
+                ->limit(1)
+                ->get()
+                ->getRow();
+
+            $g['ultimo_msg_direction'] = $ultimoMsg->direction ?? null;
+            $g['ultimo_msg_time']     = $ultimoMsg->created_at ?? null;
+
+            // Total de mensajes intercambiados (para medir engagement)
+            $g['total_mensajes'] = $this->db->table('whatsapp_messages')
+                ->where('tenant_id', $this->tenantId)
+                ->groupStart()
+                ->where('sender_phone', $g['phone'])
+                ->orWhere('recipient_phone', $g['phone'])
+                ->groupEnd()
+                ->countAllResults();
+
+            // Tiene reservas activas? (para detectar post_booking legítimos)
+            $g['tiene_reserva'] = $this->db->table('reservations')
+                    ->where('guest_id', $g['id'])
+                    ->where('tenant_id', $this->tenantId)
+                    ->whereIn('status', ['pending', 'confirmed'])
+                    ->countAllResults() > 0;
+
+            // Tiene tours reservados?
+            $g['tiene_tour'] = $this->db->table('tour_reservations tr')
+                    ->join('tour_schedules ts', 'ts.id = tr.schedule_id')
+                    ->where('tr.guest_id', $g['id'])
+                    ->where('tr.tenant_id', $this->tenantId)
+                    ->whereIn('tr.status', ['pending', 'confirmed'])
+                    ->where('ts.start_datetime >=', date('Y-m-d H:i:s'))
+                    ->countAllResults() > 0;
+
+            // Calcular nivel de urgencia
+            $g['urgencia'] = $this->calcularUrgencia($g);
+        }
+        unset($g);
+
+        // ── 3. Agrupar por funnel_stage ─────────────────────────────────────
+        $stages = ['cold', 'interested', 'evaluating', 'objecting', 'ready_close', 'post_booking'];
+        $pipeline = [];
+        foreach ($stages as $stage) {
+            $pipeline[$stage] = array_values(array_filter($guests, fn($g) => $g['funnel_stage'] === $stage));
+        }
+
+        // ── 4. Generar alertas de intervención ──────────────────────────────
+        $alertas = $this->generarAlertas($guests);
+
+        // ── 5. Calcular métricas del pipeline ───────────────────────────────
+        $totalActivos = count($guests);
+        $stats = [
+            'total_activos'    => $totalActivos,
+            'requieren_accion' => count(array_filter($guests, fn($g) => $g['urgencia'] === 'danger')),
+            'ia_desactivada'   => count(array_filter($guests, fn($g) => $g['ai_active'] == 0)),
+            'esperando_cliente'=> count(array_filter($guests, fn($g) => $g['ultimo_msg_direction'] === 'outgoing')),
+            'por_etapa'        => array_map(fn($s) => count($pipeline[$s]), $stages),
+        ];
+
+        // Tasas de conversión entre etapas (últimos 30 días)
+        $stats['conversiones'] = $this->calcularTasasConversion();
+
+        return view('crm/pipeline', [
+            'pipeline' => $pipeline,
+            'alertas'  => $alertas,
+            'stats'    => $stats,
+            'stages'   => $stages,
+            'tenant'   => $this->tenant,
+        ]);
+    }
+
+// =========================================================================
+// HELPERS PRIVADOS PARA PIPELINE
+// =========================================================================
+
+    /**
+     * Calcula el nivel de urgencia de un lead según su etapa y tiempo estancado.
+     */
+    private function calcularUrgencia(array $guest): string
+    {
+        $minutos = (int) $guest['minutos_en_etapa'];
+        $stage   = $guest['funnel_stage'];
+        $ultimoDir = $guest['ultimo_msg_direction'];
+
+        // Si la IA está desactivada y no hay humano respondiendo → siempre danger
+        if ($guest['ai_active'] == 0 && $guest['chat_state'] === 'OMITTED') {
+            return 'danger';
+        }
+
+        // Umbrales por etapa (en minutos)
+        $umbrales = [
+            'cold'        => ['warn' =>  360, 'danger' => 1440],  //  6h / 24h
+            'interested'  => ['warn' =>  480, 'danger' => 1440],  //  8h / 24h
+            'evaluating'  => ['warn' =>  720, 'danger' => 2880],  // 12h / 48h
+            'objecting'   => ['warn' =>  360, 'danger' => 1440],  //  6h / 24h
+            'ready_close' => ['warn' =>  120, 'danger' =>  480],  //  2h /  8h (urgente!)
+            'post_booking'=> ['warn' => 2880, 'danger' => 10080], // 48h /  7d
+        ];
+
+        $u = $umbrales[$stage] ?? ['warn' => 720, 'danger' => 2880];
+
+        // Si el último mensaje fue del bot y el cliente no responde, bajar umbrales
+        if ($ultimoDir === 'outgoing') {
+            $u['warn']   = (int)($u['warn']   * 0.7);
+            $u['danger'] = (int)($u['danger'] * 0.7);
+        }
+
+        if ($minutos >= $u['danger']) return 'danger';
+        if ($minutos >= $u['warn'])   return 'warn';
+        return 'ok';
+    }
+
+    /**
+     * Genera alertas priorizadas para intervención humana.
+     */
+    private function generarAlertas(array $guests): array
+    {
+        $alertas = [];
+
+        foreach ($guests as $g) {
+            if ($g['urgencia'] === 'ok') continue;
+
+            $minutos  = (int) $g['minutos_en_etapa'];
+            $contexto = $g['contexto'];
+            $motivo   = '';
+            $prioridad = $g['urgencia'] === 'danger' ? 1 : 2;
+
+            // Construir motivo descriptivo
+            switch ($g['funnel_stage']) {
+                case 'cold':
+                    $motivo = 'Escribió pero no se ha identificado su interés';
+                    if ($g['ultimo_msg_direction'] === 'outgoing') {
+                        $motivo = 'El bot respondió pero el cliente no contestó';
+                    }
+                    break;
+
+                case 'interested':
+                    $tour = $contexto['ultimo_tour_consultado'] ?? null;
+                    $consultado = $contexto['disponibilidad_consultada'] ?? false;
+                    $motivo = $tour
+                        ? "Interesado en \"{$tour}\""
+                        : 'Mostró interés pero no especificó qué quiere';
+                    if (!$consultado) {
+                        $motivo .= ' — aún no se consultó disponibilidad';
+                    }
+                    break;
+
+                case 'evaluating':
+                    $objeciones = $contexto['objeciones_detectadas'] ?? [];
+                    $motivo = 'Ya conoce precios, está evaluando';
+                    if (!empty($objeciones)) {
+                        $objLabels = [
+                            'precio'               => 'precio',
+                            'politica_cancelacion'  => 'cancelación',
+                            'politica_pago'         => 'forma de pago',
+                            'fecha'                 => 'fechas',
+                        ];
+                        $objTexto = array_map(fn($o) => $objLabels[$o] ?? $o, $objeciones);
+                        $motivo .= ' — dudas sobre: ' . implode(', ', $objTexto);
+                    }
+                    break;
+
+                case 'objecting':
+                    $objeciones = $contexto['objeciones_detectadas'] ?? [];
+                    $motivo = 'Puso freno a la conversación';
+                    if (!empty($objeciones)) {
+                        $motivo .= ' (' . implode(', ', $objeciones) . ')';
+                    }
+                    if ($g['ultimo_msg_direction'] === 'outgoing') {
+                        $motivo .= ' — no respondió al bot';
+                    }
+                    break;
+
+                case 'ready_close':
+                    $motivo = 'Listo para reservar pero no se completó';
+                    if ($g['ai_active'] == 0) {
+                        $motivo .= ' — IA desactivada, requiere atención manual';
+                    }
+                    break;
+
+                case 'post_booking':
+                    if (!$g['tiene_reserva'] && !$g['tiene_tour']) {
+                        $motivo = 'Marcado post_booking pero sin reserva activa';
+                    } else {
+                        $motivo = 'Con reserva activa — posible duda de seguimiento';
+                    }
+                    break;
+            }
+
+            // Tiempo humanizado
+            $tiempoTexto = $this->humanizarTiempo($minutos);
+
+            $alertas[] = [
+                'guest'      => $g,
+                'motivo'     => $motivo,
+                'tiempo'     => $tiempoTexto,
+                'prioridad'  => $prioridad,
+                'urgencia'   => $g['urgencia'],
+            ];
+        }
+
+        // Ordenar por prioridad (danger primero) y luego por tiempo
+        usort($alertas, function($a, $b) {
+            if ($a['prioridad'] !== $b['prioridad']) {
+                return $a['prioridad'] <=> $b['prioridad'];
+            }
+            return $b['guest']['minutos_en_etapa'] <=> $a['guest']['minutos_en_etapa'];
+        });
+
+        return $alertas;
+    }
+
+    /**
+     * Calcula tasas de conversión entre etapas (últimos 30 días).
+     * Usa un approach simplificado: cuenta guests que están o pasaron por cada etapa.
+     */
+    private function calcularTasasConversion(): array
+    {
+        $stages = ['cold', 'interested', 'evaluating', 'objecting', 'ready_close', 'post_booking'];
+        $stageOrder = array_flip($stages);
+
+        // Contar guests que alcanzaron cada etapa o la superaron
+        $counts = [];
+        $guests = $this->db->table('guests')
+            ->select('funnel_stage')
+            ->where('tenant_id', $this->tenantId)
+            ->where('updated_at >=', date('Y-m-d', strtotime('-30 days')))
+            ->get()
+            ->getResultArray();
+
+        foreach ($stages as $s) {
+            $counts[$s] = 0;
+        }
+
+        foreach ($guests as $g) {
+            $guestStageIdx = $stageOrder[$g['funnel_stage']] ?? 0;
+            // Este guest "pasó" por todas las etapas hasta su etapa actual
+            foreach ($stages as $s) {
+                if ($stageOrder[$s] <= $guestStageIdx) {
+                    $counts[$s]++;
+                }
+            }
+        }
+
+        // Calcular tasas entre etapas consecutivas
+        $tasas = [];
+        for ($i = 0; $i < count($stages) - 1; $i++) {
+            $from = $stages[$i];
+            $to   = $stages[$i + 1];
+            $tasas["{$from}_to_{$to}"] = $counts[$from] > 0
+                ? round(($counts[$to] / $counts[$from]) * 100)
+                : 0;
+        }
+
+        // Tasa global cold → post_booking
+        $tasas['global'] = $counts['cold'] > 0
+            ? round(($counts['post_booking'] / $counts['cold']) * 100)
+            : 0;
+
+        return $tasas;
+    }
+
+    /**
+     * Convierte minutos a texto humanizado.
+     */
+    private function humanizarTiempo(int $minutos): string
+    {
+        if ($minutos < 60) return "{$minutos}m";
+        if ($minutos < 1440) return round($minutos / 60) . "h";
+        return round($minutos / 1440) . "d";
+    }
 }
