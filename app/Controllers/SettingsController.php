@@ -12,10 +12,20 @@ class SettingsController extends BaseController
 
     // ── Tipos MIME aceptados ───────────────────────────────────────
     private const ALLOWED_MIME = [
-        'image/jpeg', 'image/png', 'image/webp', 'application/pdf',
+        // Imágenes
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        // Documentos
+        'application/pdf',
+        // Videos
+        'video/mp4',
+        'video/quicktime',   // .mov
+        'video/x-msvideo',   // .avi
+        'video/webm',
     ];
 
-    private const MAX_SIZE_MB = 5;
+    private const MAX_SIZE_MB = 50; // sube el límite — 5 MB es muy poco para video
 
     // ══════════════════════════════════════════════════════════════
     //  VISTAS
@@ -133,7 +143,11 @@ class SettingsController extends BaseController
         $file->move($folder, $newName);
 
         $filePath = 'uploads/tenant_docs/' . $tenantId . '/' . $newName;
-        $fileType = ($mime === 'application/pdf') ? 'pdf' : 'image';
+        $fileType = match(true) {
+            $mime === 'application/pdf'          => 'pdf',
+            str_starts_with($mime, 'video/')     => 'video',
+            default                              => 'image',
+        };
 
         // ── Guardar en BD ──────────────────────────────────────────
         $mediaModel = new TenantMediaModel();

@@ -368,12 +368,12 @@
 
                     <!-- Drop zone -->
                     <div class="doc-dropzone" id="docDropzone">
-                        <input type="file" id="docFileInput" accept=".jpg,.jpeg,.png,.webp,.pdf">
+                        <input type="file" id="docFileInput" accept=".jpg,.jpeg,.png,.webp,.pdf,.mp4,.mov,.avi,.webm">
                         <i class="bi bi-file-earmark-arrow-up doc-dropzone-icon"></i>
                         <div class="doc-dropzone-text">
                             <strong>Arrastra el archivo aquí</strong> o haz clic para seleccionar
                         </div>
-                        <div class="doc-dropzone-hint">PDF, JPG, PNG, WEBP — máx. 5 MB</div>
+                        <div class="doc-dropzone-hint">PDF, JPG, PNG, WEBP, MP4, MOV — máx. 50 MB</div>
                     </div>
 
                     <!-- Archivo seleccionado -->
