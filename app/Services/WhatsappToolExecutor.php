@@ -65,6 +65,9 @@ class WhatsappToolExecutor
                 case 'enviar_fotos_tour':
                     $output = $this->webhookService->toolEnviarFotosTour($arguments);
                     break;
+                case 'enviar_documento':
+                    $output = $this->webhookService->toolEnviarDocumento($arguments);
+                    break;
                 default:
                     $output = json_encode(['error' => "Herramienta '{$functionName}' desconocida."]);
                     break;

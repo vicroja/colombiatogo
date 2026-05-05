@@ -1194,4 +1194,76 @@ class WhatsappWebhookService
             'instruccion' => "Se enviaron {$enviadas} {$tipoEnviado} del tour \"{$tour->name}\" al cliente. Pregúntale qué le parecen las fotos y si quiere reservar una salida.",
         ]);
     }
+    /**
+     * Tool: Envía un documento/archivo del tenant al cliente por WhatsApp.
+     * Lee el registro de tenant_media por ID y envía según file_type.
+     */
+    public function toolEnviarDocumento(array $args): string
+    {
+        $documentId = (int)($args['document_id'] ?? 0);
+
+        if (!$documentId) {
+            return json_encode([
+                'error'       => 'No se especificó el document_id.',
+                'instruccion' => 'Pregúntale al cliente qué documento necesita y consulta el listado de documentos_disponibles del contexto.',
+            ]);
+        }
+
+        // 1. Obtener el registro y verificar que pertenece al tenant
+        $media = $this->db->table('tenant_media')
+            ->where('id', $documentId)
+            ->where('tenant_id', $this->currentTenantId)
+            ->get()
+            ->getRow();
+
+        if (!$media) {
+            return json_encode([
+                'error'       => 'Documento no encontrado para este establecimiento.',
+                'instruccion' => 'Informa al cliente que no encontraste ese documento. Revisa el listado de documentos_disponibles del contexto.',
+            ]);
+        }
+
+        // 2. URL pública del archivo
+        $baseUrl  = rtrim(config('App')->baseURL, '/');
+        $mediaUrl = $baseUrl . '/' . ltrim($media->file_path, '/');
+        $caption  = $media->description ?? '';
+
+        // 3. Enviar según el tipo de archivo
+        $result = null;
+        switch ($media->file_type) {
+            case 'image':
+                $result = $this->whatsappModel->sendImageApi(
+                    $this->currentSenderPhone, $mediaUrl, $caption,
+                    $this->isSaas, $this->currentTenantId
+                );
+                break;
+            case 'video':
+                $result = $this->whatsappModel->sendVideoApi(
+                    $this->currentSenderPhone, $mediaUrl, $caption,
+                    $this->isSaas, $this->currentTenantId
+                );
+                break;
+            default: // pdf, doc, xlsx, etc.
+                $result = $this->whatsappModel->sendDocumentApi(
+                    $this->currentSenderPhone, $mediaUrl, $caption,
+                    $media->description ?? basename($media->file_path),
+                    $this->isSaas, $this->currentTenantId
+                );
+                break;
+        }
+
+        if (isset($result['messages'][0]['id'])) {
+            log_message('info', "[WebhookService/toolEnviarDocumento] Documento #{$documentId} ({$media->file_type}) enviado a {$this->currentSenderPhone}.");
+            return json_encode([
+                'success'     => true,
+                'instruccion' => "Se envió el documento \"{$media->description}\" ({$media->file_type}) al cliente. Pregúntale si necesita algo más.",
+            ]);
+        }
+
+        log_message('warning', "[WebhookService/toolEnviarDocumento] Fallo al enviar documento #{$documentId}: " . json_encode($result));
+        return json_encode([
+            'error'       => 'No se pudo enviar el documento. Hubo un error técnico.',
+            'instruccion' => 'Dile al cliente que hubo un problema técnico al enviar el archivo y que lo intente más tarde o escala al administrador.',
+        ]);
+    }
 }

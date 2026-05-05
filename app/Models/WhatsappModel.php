@@ -393,4 +393,20 @@ class WhatsappModel extends Model
         return $this->callWhatsappApi($payload, $is_saas, $tenant_id_override);
     }
 
+    public function sendDocumentApi($recipientPhone, $documentUrl, $caption = '', $filename = '', $is_saas = false, $tenant_id_override = null)
+    {
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to'                => $recipientPhone,
+            'type'              => 'document',
+            'document'          => [
+                'link'     => $documentUrl,
+                'caption'  => $caption,
+                'filename' => $filename ?: basename($documentUrl),
+            ]
+        ];
+
+        return $this->callWhatsappApi($payload, $is_saas, $tenant_id_override);
+    }
+
 }

@@ -26,6 +26,21 @@ class ToolsSchemaBuilder
         // ── TOOLS COMUNES (siempre disponibles) ──────────────────────────────
 
         $tools[] = [
+            'name'        => 'enviar_documento',
+            'description' => 'Envía un documento o archivo multimedia (PDF, video, etc.) del establecimiento al cliente por WhatsApp. Usar cuando el cliente pida certificaciones bancarias, documentos, videos informativos o cualquier archivo listado en documentos_disponibles del contexto.',
+            'parameters'  => [
+                'type'       => 'object',
+                'required'   => ['document_id'],
+                'properties' => [
+                    'document_id' => [
+                        'type'        => 'integer',
+                        'description' => 'ID del documento (del listado documentos_disponibles en el contexto). Nunca inventar este ID.',
+                    ],
+                ],
+            ],
+        ];
+
+        $tools[] = [
             'name'        => 'notificar_administrador',
             'description' => 'Escala la conversación a un humano cuando el cliente lo pide explícitamente, cuando hay un problema técnico grave, o cuando después de 3 intentos no se logra resolver la solicitud del cliente. Al llamar esta herramienta, la IA se desactiva automáticamente.',
             'parameters'  => [

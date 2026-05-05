@@ -269,6 +269,12 @@ if (!function_exists('build_guest_context_data')) {
             }
         }
 
+        // ── 7. DOCUMENTOS DISPONIBLES ─────────────────────────────────────────
+        // Solo exponemos id, tag y descripción — el file_path lo resuelve
+        // el Controller al momento de enviar (nunca se expone la ruta al modelo).
+        $documentosDisponibles = build_tenant_documents_context($db, $tenantId);
+
+
         $contexto = [
             'fecha_hora' => $dt->format('Y-m-d H:i:s'),
             'dia_semana' => translate_day_to_spanish($dt->format('l')),
@@ -281,6 +287,7 @@ if (!function_exists('build_guest_context_data')) {
                 'simbolo'  => $tenant->currency_symbol,
             ],
             'medios_de_pago'       => $mediosDePago,
+            'documentos_disponibles'=> $documentosDisponibles,
             'huesped'              => $datosHuesped,
             'reservas_activas'     => $reservasActivas,
             'tours_reservados'     => $toursReservados,
@@ -305,6 +312,7 @@ if (!function_exists('build_guest_context_data')) {
         return $jsonContexto;
     }
 }
+
 
 // ── FUNCIONES DE APOYO ────────────────────────────────────────────────────────
 
@@ -333,5 +341,46 @@ if (!function_exists('translate_reservation_status')) {
             'checked_out'=> 'FINALIZADA',
             'cancelled'  => 'CANCELADA',
         ][$status] ?? strtoupper($status);
+    }
+}
+
+if (!function_exists('build_tenant_documents_context')) {
+
+    /**
+     * Devuelve el listado de documentos del tenant listos para el contexto de Gemini.
+     * Solo expone id, tag y descripción — NUNCA el file_path.
+     * El agente usará el `id` para pedirle al Controller que lo envíe.
+     *
+     * Ejemplo de lo que Gemini recibe:
+     * [
+     *   { "id": 3, "tag": "rut",             "descripcion": "RUT actualizado 2025" },
+     *   { "id": 5, "tag": "cuenta_bancaria",  "descripcion": "Cuenta Bancolombia ahorros" },
+     *   { "id": 7, "tag": "poliza_seguro",    "descripcion": null }
+     * ]
+     *
+     * Ejemplo de instrucción al agente en el system prompt:
+     * "Si el cliente pide el RUT o datos de facturación, usa la herramienta
+     *  enviar_documento con el id del documento cuyo tag sea 'rut'."
+     */
+    function build_tenant_documents_context(\CodeIgniter\Database\BaseConnection $db, int $tenantId): array
+    {
+        $rows = $db->table('tenant_media')
+            ->select('id, tag, description')
+            ->where('tenant_id', $tenantId)
+            ->where('entity_type', 'tenant')
+            ->orderBy('tag', 'ASC')
+            ->orderBy('id',  'ASC')
+            ->get()
+            ->getResult();
+
+        if (empty($rows)) {
+            return [];
+        }
+
+        return array_map(fn($row) => [
+            'id'          => (int)$row->id,
+            'tag'         => $row->tag,
+            'descripcion' => $row->description ?: null,
+        ], $rows);
     }
 }
