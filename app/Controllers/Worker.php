@@ -179,25 +179,25 @@ class Worker extends Controller
         // 1. Buscar candidatos: Chats activos, IA encendida, último mensaje fue nuestro (outgoing)
         // y ocurrió entre hace 30 minutos y 24 horas.
         $sql = "
-            SELECT 
-                g.id as guest_id, g.phone, g.tenant_id, g.full_name,
-                last_m.created_at as last_time,
-                last_m.is_saas
-            FROM guests g
-            JOIN (
-                SELECT tenant_id, 
-                       IF(direction = 'incoming', sender_phone, recipient_phone) as phone_key, 
-                       MAX(id) as max_id
-                FROM whatsapp_messages 
-                GROUP BY tenant_id, phone_key
-            ) as lm ON lm.tenant_id = g.tenant_id AND lm.phone_key = g.phone
-            JOIN whatsapp_messages last_m ON last_m.id = lm.max_id
-            WHERE g.chat_state = 'ACTIVE'
-              AND g.ai_active = 1
-              AND last_m.direction = 'outgoing'
-              AND last_m.created_at <= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
-              AND last_m.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-        ";
+    SELECT 
+        g.id as guest_id, g.phone, g.tenant_id, g.full_name,
+        last_m.created_at as last_time,
+        last_m.is_saas,
+        last_m.direction as last_direction -- Opcional, pero útil para debug
+    FROM guests g
+    JOIN (
+        SELECT tenant_id, 
+               IF(direction = 'incoming', sender_phone, recipient_phone) as phone_key, 
+               MAX(id) as max_id
+        FROM whatsapp_messages
+        GROUP BY tenant_id, phone_key
+    ) as lm ON lm.tenant_id = g.tenant_id AND lm.phone_key = g.phone
+    JOIN whatsapp_messages last_m ON last_m.id = lm.max_id
+    WHERE g.chat_state = 'ACTIVE'
+      AND g.ai_active = 1
+      AND last_m.created_at <= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+      AND last_m.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+";
 
         $candidatos = $db->query($sql)->getResult();
 
@@ -236,13 +236,15 @@ class Worker extends Controller
 
             // 3. Prompt estricto del sistema para esta tarea específica
             $systemInstruction = "
-                Eres el gerente de ventas del hotel. Tu tarea es analizar los últimos mensajes de una conversación con el cliente '{$cliente->full_name}'.
-                Determina la acción a tomar:
-                - Si la conversación llegó a una conclusión natural (el cliente ya reservó, se despidió, dio las gracias finales o dijo expresamente que no le interesa), responde exactamente con: {\"action\": \"CLOSE\"}
-                - Si la conversación quedó abierta o en pausa (ej. le diste precios, información, o respondiste una duda y el cliente no volvió a contestar), redacta un mensaje de seguimiento muy corto (1 o 2 oraciones máximo), empático y sin sonar desesperado para incentivar la reserva. Responde con: {\"action\": \"FOLLOWUP\", \"message\": \"Tu mensaje de seguimiento aquí\"}
-                
-                IMPORTANTE: Tu respuesta debe ser ÚNICAMENTE un JSON válido.
-            ";
+Eres el gerente de ventas del hotel. Tu tarea es analizar los últimos mensajes de una conversación con el cliente '{$cliente->full_name}'.
+Determina la acción a tomar evaluando cómo terminó la conversación:
+
+1. CONCLUSIÓN: Si la conversación llegó a un fin natural (el cliente ya reservó, se despidió, dio las gracias finales o rechazó la oferta), responde con: {\"action\": \"CLOSE\"}
+2. CLIENTE NO RESPONDIÓ: Si el último mensaje fue nuestro (ej. le dimos precios) y el cliente no contestó, redacta un mensaje de seguimiento muy corto (1 o 2 oraciones máximo), empático y sin sonar desesperado para incentivar la reserva. Responde con: {\"action\": \"FOLLOWUP\", \"message\": \"Tu mensaje aquí\"}
+3. NOSOTROS NO RESPONDIMOS: Si el último mensaje es del cliente haciendo una pregunta o comentario que quedó sin respuesta por nuestra parte, asume el rol, discúlpate brevemente por la demora en responder y contesta a su inquietud para retomar la venta. Responde con: {\"action\": \"FOLLOWUP\", \"message\": \"Tu respuesta aquí\"}
+
+IMPORTANTE: Tu respuesta debe ser ÚNICAMENTE un JSON válido en todos los casos.
+";
 
             // 4. Llamar a Gemini
             $respuestaIa = $geminiModel->generateChatResponse($history, $systemInstruction, 'gemini-2.0-flash');
