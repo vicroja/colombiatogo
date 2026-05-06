@@ -231,4 +231,118 @@ class ToolsSchemaBuilder
     {
         return json_encode(self::build($hasAccommodation, $hasTours), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     }
+
+    /**
+     * Genera el array de tools disponibles para el modo ADMIN.
+     */
+    public static function buildAdmin(bool $hasAccommodation = true, bool $hasTours = false): array
+    {
+        $tools = [];
+
+        $tools[] = [
+            'name'        => 'admin_resumen_dia',
+            'description' => 'Muestra un resumen operativo del día: check-ins, check-outs, ocupación, tours del día, pagos recibidos y reservas pendientes de pago. Usar cuando el admin pregunte "¿cómo está el día?", "¿qué hay hoy?", "resumen" o cualquier consulta general del estado del negocio.',
+            'parameters'  => [
+                'type'       => 'object',
+                'properties' => [
+                    'fecha' => [
+                        'type'        => 'string',
+                        'description' => 'Fecha en formato YYYY-MM-DD. Si no se especifica, se usa la fecha actual.',
+                    ],
+                ],
+            ],
+        ];
+
+        $tools[] = [
+            'name'        => 'admin_listar_reservas',
+            'description' => 'Lista las reservas activas para una fecha específica. Muestra huésped, unidad/tour, estado, montos y saldos. Usar cuando el admin pida ver reservas, check-ins, check-outs, o la ocupación de un día.',
+            'parameters'  => [
+                'type'       => 'object',
+                'properties' => [
+                    'fecha' => [
+                        'type'        => 'string',
+                        'description' => 'Fecha en formato YYYY-MM-DD. Default: hoy.',
+                    ],
+                    'estado' => [
+                        'type'        => 'string',
+                        'enum'        => ['pending', 'confirmed', 'checked_in', 'checked_out', 'cancelled'],
+                        'description' => 'Filtrar por estado. Opcional — si no se envía, muestra pending + confirmed + checked_in.',
+                    ],
+                ],
+            ],
+        ];
+
+        $tools[] = [
+            'name'        => 'admin_consultar_pagos',
+            'description' => 'Consulta los pagos registrados. Puede ser por reserva específica (pasando reservation_id) o todos los pagos de un día (pasando fecha). Usar cuando el admin pregunte "¿cuánto han pagado?", "¿ya pagó fulano?", "pagos de hoy", etc.',
+            'parameters'  => [
+                'type'       => 'object',
+                'properties' => [
+                    'reservation_id' => [
+                        'type'        => 'integer',
+                        'description' => 'ID de la reserva para ver sus pagos específicos. Opcional.',
+                    ],
+                    'tipo_reserva' => [
+                        'type'        => 'string',
+                        'enum'        => ['reservation', 'tour_reservation'],
+                        'description' => 'Tipo de reserva: "reservation" para alojamiento, "tour_reservation" para tours. Default: reservation.',
+                    ],
+                    'fecha' => [
+                        'type'        => 'string',
+                        'description' => 'Fecha para consultar pagos del día (YYYY-MM-DD). Se usa si no se envía reservation_id.',
+                    ],
+                ],
+            ],
+        ];
+
+        $tools[] = [
+            'name'        => 'admin_buscar_reserva',
+            'description' => 'Busca reservas activas por nombre o teléfono del cliente. Usar cuando el admin diga "busca la reserva de Juan", "¿tiene reserva el 3001234567?", etc.',
+            'parameters'  => [
+                'type'       => 'object',
+                'required'   => ['busqueda'],
+                'properties' => [
+                    'busqueda' => [
+                        'type'        => 'string',
+                        'description' => 'Nombre parcial o número de teléfono del cliente. Mínimo 3 caracteres.',
+                    ],
+                ],
+            ],
+        ];
+
+        $tools[] = [
+            'name'        => 'admin_cambiar_estado_reserva',
+            'description' => 'Cambia el estado de una reserva existente. Usar cuando el admin diga "confirma la reserva 23", "cancela la reserva de Juan", "haz check-in de la 45", etc. SIEMPRE confirmar con el admin antes de ejecutar.',
+            'parameters'  => [
+                'type'       => 'object',
+                'required'   => ['reservation_id', 'nuevo_estado'],
+                'properties' => [
+                    'reservation_id' => [
+                        'type'        => 'integer',
+                        'description' => 'ID numérico de la reserva a modificar.',
+                    ],
+                    'nuevo_estado' => [
+                        'type'        => 'string',
+                        'enum'        => ['pending', 'confirmed', 'checked_in', 'checked_out', 'cancelled'],
+                        'description' => 'El nuevo estado a asignar.',
+                    ],
+                    'tipo_reserva' => [
+                        'type'        => 'string',
+                        'enum'        => ['alojamiento', 'tour'],
+                        'description' => 'Tipo de reserva. Default: alojamiento.',
+                    ],
+                ],
+            ],
+        ];
+
+        return $tools;
+    }
+
+    /**
+     * JSON string de tools admin, listo para ai_prompts.tools_schema_json
+     */
+    public static function buildAdminJson(bool $hasAccommodation = true, bool $hasTours = false): string
+    {
+        return json_encode(self::buildAdmin($hasAccommodation, $hasTours), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    }
 }

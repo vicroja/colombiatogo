@@ -384,3 +384,82 @@ if (!function_exists('build_tenant_documents_context')) {
         ], $rows);
     }
 }
+
+
+if (!function_exists('build_admin_context_data')) {
+
+    /**
+     * Construye el contexto operativo para el admin que gestiona por WhatsApp.
+     * Incluye un snapshot rápido del negocio, no datos de un guest específico.
+     */
+    function build_admin_context_data(int $tenantId, array $adminInfo): string
+    {
+        $db = \Config\Database::connect();
+
+        $tenant   = $db->table('tenants')->where('id', $tenantId)->get()->getRow();
+        $settings = json_decode($tenant->settings_json ?? '{}', true) ?? [];
+
+        $tz = $tenant->timezone ?? 'America/Bogota';
+        $dt = new \DateTime('now', new \DateTimeZone($tz));
+        $hoy = $dt->format('Y-m-d');
+
+        $hasAccommodation = (bool)($settings['has_accommodation'] ?? true);
+        $hasTours         = (bool)($settings['has_tours'] ?? false);
+
+        $contexto = [
+            'fecha_hora'  => $dt->format('Y-m-d H:i:s'),
+            'dia_semana'  => translate_day_to_spanish($dt->format('l')),
+            'admin'       => [
+                'nombre' => $adminInfo['name'] ?? 'Administrador',
+                'rol'    => $adminInfo['role'] ?? 'owner',
+            ],
+            'establecimiento' => [
+                'nombre'   => $tenant->name,
+                'ciudad'   => $tenant->city,
+                'moneda'   => $tenant->currency_code,
+                'simbolo'  => $tenant->currency_symbol,
+                'checkin'  => $tenant->checkin_time,
+                'checkout' => $tenant->checkout_time,
+            ],
+            'capacidades' => [
+                'tiene_alojamiento' => $hasAccommodation,
+                'tiene_tours'       => $hasTours,
+            ],
+        ];
+
+        // Snapshot rápido (conteos, no listados — eso lo hacen las tools)
+        if ($hasAccommodation) {
+            $contexto['snapshot_alojamiento'] = [
+                'check_ins_hoy' => (int)$db->table('reservations')
+                    ->where('tenant_id', $tenantId)
+                    ->where('check_in_date', $hoy)
+                    ->whereIn('status', ['pending', 'confirmed'])
+                    ->countAllResults(),
+                'hospedados' => (int)$db->table('reservations')
+                    ->where('tenant_id', $tenantId)
+                    ->where('status', 'checked_in')
+                    ->countAllResults(),
+                'pendientes_pago' => (int)$db->table('reservations')
+                    ->where('tenant_id', $tenantId)
+                    ->where('status', 'pending')
+                    ->countAllResults(),
+            ];
+        }
+
+        if ($hasTours) {
+            $contexto['snapshot_tours'] = [
+                'salidas_hoy' => (int)$db->query("
+                    SELECT COUNT(*) as c FROM tour_schedules ts
+                    JOIN tours t ON t.id = ts.tour_id
+                    WHERE t.tenant_id = ? AND DATE(ts.start_datetime) = ? AND ts.status = 'scheduled'
+                ", [$tenantId, $hoy])->getRow()->c,
+                'reservas_tours_activas' => (int)$db->table('tour_reservations')
+                    ->where('tenant_id', $tenantId)
+                    ->whereIn('status', ['pending', 'confirmed'])
+                    ->countAllResults(),
+            ];
+        }
+
+        return json_encode($contexto, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    }
+}

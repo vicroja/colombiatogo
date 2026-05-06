@@ -14,6 +14,9 @@ class WhatsappWebhookService
 
     protected $currentGuest = null; // ← agregar esta línea
 
+    protected $isAdminMode = false;
+    protected $adminInfo   = null; // datos del admin desde settings_json
+
 
     public function __construct()
     {
@@ -248,33 +251,48 @@ class WhatsappWebhookService
             'is_saas'           => $isSaas ? 1 : 0
         ]);
 
-        // 3. IDENTIFICAR O CREAR AL GUEST (Multi-tenant estricto)
-        $guest = $this->getOrCreateGuest($senderPhone, $contactName, $tenantId);
-        $this->currentGuest = $guest; // ← agregar esta línea
 
-        // --- INICIO CORRECCIÓN: INTERCEPTOR DE IMÁGENES ---
+        // 2.5. DETECTAR SI ES ADMIN O GUEST
+        $this->adminInfo = $this->detectAdminSender($senderPhone, $tenantId);
+        $this->isAdminMode = ($this->adminInfo !== null);
+
+        if ($this->isAdminMode) {
+            // ═══ FLUJO ADMIN ═══
+            log_message('info', "[WebhookService] Modo ADMIN detectado para {$senderPhone} (Tenant {$tenantId})");
+
+            // Solo soportamos texto e interactivos para admin por ahora
+            if ($messageType !== 'text' && $messageType !== 'interactive' && $messageType !== 'audio' && $messageType !== 'voice') {
+                $this->sendDirectReply($senderPhone, "Por el momento solo proceso mensajes de texto en modo gestión.", $isSaas, $tenantId);
+                return;
+            }
+
+            $this->processAdminMessage($messageBody, $senderPhone, $tenantId, $isSaas, $savedMessageId);
+            return;
+        }
+
+// ═══ FLUJO GUEST (sin cambios) ═══
+
+// 3. IDENTIFICAR O CREAR AL GUEST (Multi-tenant estricto)
+        $guest = $this->getOrCreateGuest($senderPhone, $contactName, $tenantId);
+        $this->currentGuest = $guest;
+
+// --- INICIO CORRECCIÓN: INTERCEPTOR DE IMÁGENES ---
         if ($messageType === 'image') {
             if($guest){
                 $this->handleImageReceipt($message, $guest, $tenantId, $isSaas);
-                return; // Detenemos el flujo conversacional normal
+                return;
             }
-            return; //no era un guest y mandó una imagen, todo: si un tenant manda algo implementar funcionalidad
+            return;
         }
 
-
-        // Si mandan imagen/audio y aún no lo soportamos
+// Si mandan imagen/audio y aún no lo soportamos
         if ($messageType !== 'text' && $messageType !== 'interactive') {
             $this->sendDirectReply($senderPhone, "Por el momento solo puedo leer mensajes de texto. ¿En qué te puedo ayudar?", $isSaas, $tenantId);
             return;
         }
 
-
-
-        // 4. CONSTRUIR CONTEXTO (Placeholder para Helpers)
-        // Aquí llamas a tu helper que busca citas, historial, etc., del tenant actual
 // 4. CONSTRUIR CONTEXTO PMS MULTI-TENANT
         $systemContext = build_guest_context_data($guest, $tenantId, $senderPhone);
-
 
         // 4.5. ACTUALIZAR ESTADO Y VERIFICAR HANDOFF (IA vs HUMANO)
         if ($guest) {
@@ -1264,6 +1282,510 @@ class WhatsappWebhookService
         return json_encode([
             'error'       => 'No se pudo enviar el documento. Hubo un error técnico.',
             'instruccion' => 'Dile al cliente que hubo un problema técnico al enviar el archivo y que lo intente más tarde o escala al administrador.',
+        ]);
+    }
+
+    /**
+     * Verifica si el teléfono remitente es un admin del tenant.
+     * Busca en settings_json.admin_phones[] y fallback a admin_whatsapp_phone.
+     *
+     * @return array|null  Datos del admin si es admin, null si es guest normal
+     */
+    private function detectAdminSender(string $senderPhone, int $tenantId): ?array
+    {
+        $tenant = $this->db->table('tenants')->where('id', $tenantId)->get()->getRow();
+        if (!$tenant) return null;
+
+        $settings = json_decode($tenant->settings_json ?? '{}', true) ?? [];
+
+        // 1. Buscar en el array nuevo admin_phones
+        $adminPhones = $settings['admin_phones'] ?? [];
+        foreach ($adminPhones as $admin) {
+            $normalizedAdmin = preg_replace('/[^0-9]/', '', $admin['phone'] ?? '');
+            $normalizedSender = preg_replace('/[^0-9]/', '', $senderPhone);
+            if ($normalizedAdmin === $normalizedSender) {
+                return [
+                    'phone' => $admin['phone'],
+                    'name'  => $admin['name'] ?? 'Administrador',
+                    'role'  => $admin['role'] ?? 'owner',
+                ];
+            }
+        }
+
+        // 2. Fallback: campo legacy admin_whatsapp_phone
+        $legacyPhone = preg_replace('/[^0-9]/', '', $settings['admin_whatsapp_phone'] ?? '');
+        $normalizedSender = preg_replace('/[^0-9]/', '', $senderPhone);
+        if (!empty($legacyPhone) && $legacyPhone === $normalizedSender) {
+            return [
+                'phone' => $settings['admin_whatsapp_phone'],
+                'name'  => $tenant->name ?? 'Administrador',
+                'role'  => 'owner',
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Procesa un mensaje del admin/propietario del tenant.
+     * Usa un prompt y tools diferentes al flujo de guests.
+     */
+    private function processAdminMessage(string $messageBody, string $senderPhone, int $tenantId, bool $isSaas, int $savedMessageId): void
+    {
+        // 1. Obtener prompt de admin (profile_role = 'admin')
+        $promptConfig = $this->getAiPrompt($tenantId, 'admin');
+        if (!$promptConfig) {
+            log_message('warning', "[WebhookService] Tenant {$tenantId} no tiene prompt admin. Usando fallback.");
+            $this->sendDirectReply($senderPhone, "El módulo de gestión por WhatsApp aún no está configurado para tu cuenta. Contacta soporte.", $isSaas, $tenantId);
+            return;
+        }
+
+        // 2. Construir contexto operativo del admin
+        $systemContext = build_admin_context_data($tenantId, $this->adminInfo);
+
+        // 3. Historial de chat (funciona igual, filtra por phone)
+        $chatHistory = $this->getChatHistory($senderPhone, $tenantId, 10, $savedMessageId);
+
+        // 4. Llamar a Gemini con el prompt y tools de admin
+        $aiResponseText = $this->callGemini(
+            $messageBody,
+            $promptConfig,
+            $systemContext,
+            $chatHistory
+        );
+
+        // 5. Responder
+        $this->sendDirectReply($senderPhone, $aiResponseText, $isSaas, $tenantId);
+    }
+    // =========================================================================
+// HERRAMIENTAS ADMIN (GESTIÓN POR WHATSAPP)
+// =========================================================================
+
+    /**
+     * Tool Admin: Lista reservas de hoy o de un rango de fechas.
+     */
+    public function toolAdminListarReservas(array $args): string
+    {
+        $fecha = $args['fecha'] ?? date('Y-m-d');
+        $estado = $args['estado'] ?? null; // opcional: pending, confirmed, etc.
+
+        $tenantId = $this->currentTenantId;
+        $settings = json_decode(
+            $this->db->table('tenants')->where('id', $tenantId)->get()->getRow()->settings_json ?? '{}',
+            true
+        );
+        $hasAccommodation = (bool)($settings['has_accommodation'] ?? true);
+        $hasTours         = (bool)($settings['has_tours'] ?? false);
+
+        $resultados = [];
+
+        // ── Reservas de alojamiento ──
+        if ($hasAccommodation) {
+            $builder = $this->db->table('reservations r')
+                ->select('r.id, r.status, r.check_in_date, r.check_out_date, r.total_price,
+                      r.num_adults, r.num_children,
+                      g.full_name, g.phone,
+                      u.name as unit_name')
+                ->join('guests g', 'g.id = r.guest_id')
+                ->join('accommodation_units u', 'u.id = r.accommodation_unit_id')
+                ->where('r.tenant_id', $tenantId)
+                ->where('r.check_in_date <=', $fecha)
+                ->where('r.check_out_date >=', $fecha);
+
+            if ($estado) {
+                $builder->where('r.status', $estado);
+            } else {
+                $builder->whereIn('r.status', ['pending', 'confirmed', 'checked_in']);
+            }
+
+            $reservas = $builder->orderBy('r.check_in_date', 'ASC')->get()->getResult();
+
+            foreach ($reservas as $r) {
+                $pagado = (float)($this->db->table('payments')
+                    ->selectSum('amount')
+                    ->where('reservation_id', $r->id)
+                    ->where('entity_type', 'reservation')
+                    ->get()->getRow()->amount ?? 0);
+
+                $resultados['reservas_alojamiento'][] = [
+                    'id'         => (int)$r->id,
+                    'huesped'    => $r->full_name,
+                    'telefono'   => $r->phone,
+                    'unidad'     => $r->unit_name,
+                    'check_in'   => $r->check_in_date,
+                    'check_out'  => $r->check_out_date,
+                    'adultos'    => (int)$r->num_adults,
+                    'ninos'      => (int)$r->num_children,
+                    'estado'     => $r->status,
+                    'total'      => (float)$r->total_price,
+                    'pagado'     => $pagado,
+                    'saldo'      => (float)$r->total_price - $pagado,
+                ];
+            }
+        }
+
+        // ── Reservas de tours ──
+        if ($hasTours) {
+            $builderTours = $this->db->table('tour_reservations tr')
+                ->select('tr.id, tr.status, tr.num_adults, tr.num_children, tr.total_price,
+                      g.full_name, g.phone,
+                      t.name as tour_name,
+                      ts.start_datetime')
+                ->join('guests g', 'g.id = tr.guest_id')
+                ->join('tour_schedules ts', 'ts.id = tr.schedule_id')
+                ->join('tours t', 't.id = ts.tour_id')
+                ->where('tr.tenant_id', $tenantId)
+                ->where('DATE(ts.start_datetime)', $fecha);
+
+            if ($estado) {
+                $builderTours->where('tr.status', $estado);
+            } else {
+                $builderTours->whereIn('tr.status', ['pending', 'confirmed']);
+            }
+
+            $tourRes = $builderTours->orderBy('ts.start_datetime', 'ASC')->get()->getResult();
+
+            foreach ($tourRes as $tr) {
+                $pagadoTour = (float)($this->db->table('payments')
+                    ->selectSum('amount')
+                    ->where('reservation_id', $tr->id)
+                    ->where('entity_type', 'tour_reservation')
+                    ->get()->getRow()->amount ?? 0);
+
+                $resultados['reservas_tours'][] = [
+                    'id'          => (int)$tr->id,
+                    'cliente'     => $tr->full_name,
+                    'telefono'    => $tr->phone,
+                    'tour'        => $tr->tour_name,
+                    'fecha_salida'=> $tr->start_datetime,
+                    'adultos'     => (int)$tr->num_adults,
+                    'ninos'       => (int)$tr->num_children,
+                    'estado'      => $tr->status,
+                    'total'       => (float)$tr->total_price,
+                    'pagado'      => $pagadoTour,
+                    'saldo'       => (float)$tr->total_price - $pagadoTour,
+                ];
+            }
+        }
+
+        if (empty($resultados)) {
+            return json_encode([
+                'mensaje' => "No hay reservas activas para la fecha {$fecha}.",
+            ]);
+        }
+
+        return json_encode([
+            'fecha_consultada' => $fecha,
+            'resultados'       => $resultados,
+        ]);
+    }
+
+    /**
+     * Tool Admin: Resumen del día (dashboard rápido).
+     */
+    public function toolAdminResumenDia(array $args): string
+    {
+        $fecha = $args['fecha'] ?? date('Y-m-d');
+        $tenantId = $this->currentTenantId;
+
+        $settings = json_decode(
+            $this->db->table('tenants')->where('id', $tenantId)->get()->getRow()->settings_json ?? '{}',
+            true
+        );
+        $hasAccommodation = (bool)($settings['has_accommodation'] ?? true);
+        $hasTours         = (bool)($settings['has_tours'] ?? false);
+
+        $resumen = ['fecha' => $fecha];
+
+        if ($hasAccommodation) {
+            // Check-ins del día
+            $checkIns = $this->db->table('reservations')
+                ->where('tenant_id', $tenantId)
+                ->where('check_in_date', $fecha)
+                ->whereIn('status', ['pending', 'confirmed'])
+                ->countAllResults();
+
+            // Check-outs del día
+            $checkOuts = $this->db->table('reservations')
+                ->where('tenant_id', $tenantId)
+                ->where('check_out_date', $fecha)
+                ->where('status', 'checked_in')
+                ->countAllResults();
+
+            // Hospedados actualmente
+            $hospedados = $this->db->table('reservations')
+                ->where('tenant_id', $tenantId)
+                ->where('status', 'checked_in')
+                ->countAllResults();
+
+            // Unidades totales
+            $totalUnidades = $this->db->table('accommodation_units')
+                ->where('tenant_id', $tenantId)
+                ->where('status', 'available')
+                ->countAllResults();
+
+            $resumen['alojamiento'] = [
+                'check_ins_hoy'    => $checkIns,
+                'check_outs_hoy'   => $checkOuts,
+                'hospedados_ahora' => $hospedados,
+                'unidades_totales' => $totalUnidades,
+                'ocupacion_pct'    => $totalUnidades > 0
+                    ? round(($hospedados / $totalUnidades) * 100) . '%'
+                    : 'N/A',
+            ];
+        }
+
+        if ($hasTours) {
+            // Tours del día
+            $toursHoy = $this->db->query("
+            SELECT t.name, ts.start_datetime, ts.max_pax, ts.current_pax,
+                   (ts.max_pax - ts.current_pax) as cupos_libres,
+                   tg.name as guia
+            FROM tour_schedules ts
+            JOIN tours t ON t.id = ts.tour_id
+            LEFT JOIN tour_guides tg ON tg.id = ts.guide_id
+            WHERE t.tenant_id = ?
+              AND DATE(ts.start_datetime) = ?
+              AND ts.status = 'scheduled'
+            ORDER BY ts.start_datetime ASC
+        ", [$tenantId, $fecha])->getResult();
+
+            $resumen['tours_del_dia'] = array_map(fn($ts) => [
+                'tour'    => $ts->name,
+                'hora'    => $ts->start_datetime,
+                'cupos'   => "{$ts->current_pax}/{$ts->max_pax}",
+                'libres'  => (int)$ts->cupos_libres,
+                'guia'    => $ts->guia ?? 'Sin asignar',
+            ], $toursHoy);
+        }
+
+        // Pagos recibidos hoy
+        $pagosHoy = $this->db->table('payments')
+            ->selectSum('amount')
+            ->where('tenant_id', $tenantId)
+            ->where('DATE(created_at)', $fecha)
+            ->get()->getRow();
+
+        $resumen['ingresos_hoy'] = (float)($pagosHoy->amount ?? 0);
+
+        // Reservas pendientes de pago (cualquier fecha)
+        $pendientes = $this->db->table('reservations')
+            ->where('tenant_id', $tenantId)
+            ->where('status', 'pending')
+            ->countAllResults();
+
+        $resumen['reservas_pendientes_pago'] = $pendientes;
+
+        return json_encode($resumen);
+    }
+
+    /**
+     * Tool Admin: Consultar pagos de una reserva o del día.
+     */
+    public function toolAdminConsultarPagos(array $args): string
+    {
+        $tenantId = $this->currentTenantId;
+
+        // Modo A: pagos de una reserva específica
+        if (!empty($args['reservation_id'])) {
+            $resId = (int)$args['reservation_id'];
+            $entityType = $args['tipo_reserva'] ?? 'reservation'; // 'reservation' o 'tour_reservation'
+
+            $pagos = $this->db->table('payments')
+                ->where('tenant_id', $tenantId)
+                ->where('reservation_id', $resId)
+                ->where('entity_type', $entityType)
+                ->orderBy('created_at', 'ASC')
+                ->get()->getResult();
+
+            if (empty($pagos)) {
+                return json_encode(['mensaje' => "No hay pagos registrados para la reserva #{$resId}."]);
+            }
+
+            $listaPagos = array_map(fn($p) => [
+                'monto'      => (float)$p->amount,
+                'metodo'     => $p->payment_method,
+                'referencia' => $p->reference,
+                'fecha'      => $p->created_at,
+            ], $pagos);
+
+            $totalPagado = array_sum(array_column($listaPagos, 'monto'));
+
+            return json_encode([
+                'reserva_id'   => $resId,
+                'pagos'        => $listaPagos,
+                'total_pagado' => $totalPagado,
+            ]);
+        }
+
+        // Modo B: pagos del día
+        $fecha = $args['fecha'] ?? date('Y-m-d');
+        $pagos = $this->db->table('payments')
+            ->where('tenant_id', $tenantId)
+            ->where('DATE(created_at)', $fecha)
+            ->orderBy('created_at', 'ASC')
+            ->get()->getResult();
+
+        if (empty($pagos)) {
+            return json_encode(['mensaje' => "No hay pagos registrados para el {$fecha}."]);
+        }
+
+        $listaPagos = array_map(fn($p) => [
+            'reserva_id' => (int)$p->reservation_id,
+            'tipo'       => $p->entity_type ?? 'reservation',
+            'monto'      => (float)$p->amount,
+            'metodo'     => $p->payment_method,
+            'referencia' => $p->reference,
+            'hora'       => $p->created_at,
+        ], $pagos);
+
+        return json_encode([
+            'fecha'        => $fecha,
+            'pagos'        => $listaPagos,
+            'total_del_dia'=> array_sum(array_column($listaPagos, 'monto')),
+        ]);
+    }
+
+    /**
+     * Tool Admin: Buscar reserva por nombre o teléfono del cliente.
+     */
+    public function toolAdminBuscarReserva(array $args): string
+    {
+        $tenantId = $this->currentTenantId;
+        $busqueda = $args['busqueda'] ?? '';
+
+        if (strlen($busqueda) < 3) {
+            return json_encode(['error' => 'El término de búsqueda debe tener al menos 3 caracteres.']);
+        }
+
+        $settings = json_decode(
+            $this->db->table('tenants')->where('id', $tenantId)->get()->getRow()->settings_json ?? '{}',
+            true
+        );
+        $hasAccommodation = (bool)($settings['has_accommodation'] ?? true);
+        $hasTours         = (bool)($settings['has_tours'] ?? false);
+
+        $resultados = [];
+
+        if ($hasAccommodation) {
+            $reservas = $this->db->table('reservations r')
+                ->select('r.id, r.status, r.check_in_date, r.check_out_date, r.total_price,
+                      g.full_name, g.phone, u.name as unit_name')
+                ->join('guests g', 'g.id = r.guest_id')
+                ->join('accommodation_units u', 'u.id = r.accommodation_unit_id')
+                ->where('r.tenant_id', $tenantId)
+                ->groupStart()
+                ->like('g.full_name', $busqueda)
+                ->orLike('g.phone', $busqueda)
+                ->groupEnd()
+                ->whereIn('r.status', ['pending', 'confirmed', 'checked_in'])
+                ->orderBy('r.check_in_date', 'DESC')
+                ->limit(5)
+                ->get()->getResult();
+
+            foreach ($reservas as $r) {
+                $resultados['alojamiento'][] = [
+                    'id'        => (int)$r->id,
+                    'huesped'   => $r->full_name,
+                    'telefono'  => $r->phone,
+                    'unidad'    => $r->unit_name,
+                    'check_in'  => $r->check_in_date,
+                    'check_out' => $r->check_out_date,
+                    'estado'    => $r->status,
+                    'total'     => (float)$r->total_price,
+                ];
+            }
+        }
+
+        if ($hasTours) {
+            $tourRes = $this->db->table('tour_reservations tr')
+                ->select('tr.id, tr.status, tr.total_price,
+                      g.full_name, g.phone,
+                      t.name as tour_name, ts.start_datetime')
+                ->join('guests g', 'g.id = tr.guest_id')
+                ->join('tour_schedules ts', 'ts.id = tr.schedule_id')
+                ->join('tours t', 't.id = ts.tour_id')
+                ->where('tr.tenant_id', $tenantId)
+                ->groupStart()
+                ->like('g.full_name', $busqueda)
+                ->orLike('g.phone', $busqueda)
+                ->groupEnd()
+                ->whereIn('tr.status', ['pending', 'confirmed'])
+                ->orderBy('ts.start_datetime', 'DESC')
+                ->limit(5)
+                ->get()->getResult();
+
+            foreach ($tourRes as $tr) {
+                $resultados['tours'][] = [
+                    'id'          => (int)$tr->id,
+                    'cliente'     => $tr->full_name,
+                    'telefono'    => $tr->phone,
+                    'tour'        => $tr->tour_name,
+                    'fecha_salida'=> $tr->start_datetime,
+                    'estado'      => $tr->status,
+                    'total'       => (float)$tr->total_price,
+                ];
+            }
+        }
+
+        if (empty($resultados)) {
+            return json_encode(['mensaje' => "No encontré reservas activas para \"{$busqueda}\"."]);
+        }
+
+        return json_encode(['resultados' => $resultados]);
+    }
+
+    /**
+     * Tool Admin: Cambiar estado de una reserva.
+     */
+    public function toolAdminCambiarEstadoReserva(array $args): string
+    {
+        $tenantId      = $this->currentTenantId;
+        $reservaId     = (int)($args['reservation_id'] ?? 0);
+        $nuevoEstado   = $args['nuevo_estado'] ?? '';
+        $tipoReserva   = $args['tipo_reserva'] ?? 'alojamiento'; // 'alojamiento' o 'tour'
+
+        $estadosValidos = ['pending', 'confirmed', 'checked_in', 'checked_out', 'cancelled'];
+        if (!in_array($nuevoEstado, $estadosValidos)) {
+            return json_encode(['error' => "Estado \"{$nuevoEstado}\" no válido. Opciones: " . implode(', ', $estadosValidos)]);
+        }
+
+        if ($tipoReserva === 'tour') {
+            $tabla = 'tour_reservations';
+            $estadosValidos = ['pending', 'confirmed', 'cancelled', 'refunded'];
+            if (!in_array($nuevoEstado, $estadosValidos)) {
+                return json_encode(['error' => "Para tours, estados válidos: " . implode(', ', $estadosValidos)]);
+            }
+        } else {
+            $tabla = 'reservations';
+        }
+
+        $reserva = $this->db->table($tabla)
+            ->where('id', $reservaId)
+            ->where('tenant_id', $tenantId)
+            ->get()->getRow();
+
+        if (!$reserva) {
+            return json_encode(['error' => "Reserva #{$reservaId} no encontrada."]);
+        }
+
+        $estadoAnterior = $reserva->status;
+
+        $this->db->table($tabla)
+            ->where('id', $reservaId)
+            ->update([
+                'status'     => $nuevoEstado,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+
+        log_message('info', "[AdminTool] Reserva #{$reservaId} ({$tabla}): {$estadoAnterior} → {$nuevoEstado} por admin {$this->currentSenderPhone}");
+
+        return json_encode([
+            'success'         => true,
+            'reservation_id'  => $reservaId,
+            'estado_anterior' => $estadoAnterior,
+            'estado_nuevo'    => $nuevoEstado,
+            'mensaje'         => "Reserva #{$reservaId} actualizada de {$estadoAnterior} a {$nuevoEstado}.",
         ]);
     }
 }

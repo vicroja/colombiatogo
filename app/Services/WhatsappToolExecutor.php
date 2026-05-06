@@ -68,6 +68,22 @@ class WhatsappToolExecutor
                 case 'enviar_documento':
                     $output = $this->webhookService->toolEnviarDocumento($arguments);
                     break;
+                // ── TOOLS DE ADMIN ───────────────────────────────────────
+                case 'admin_listar_reservas':
+                    $output = $this->webhookService->toolAdminListarReservas($arguments);
+                    break;
+                case 'admin_resumen_dia':
+                    $output = $this->webhookService->toolAdminResumenDia($arguments);
+                    break;
+                case 'admin_consultar_pagos':
+                    $output = $this->webhookService->toolAdminConsultarPagos($arguments);
+                    break;
+                case 'admin_buscar_reserva':
+                    $output = $this->webhookService->toolAdminBuscarReserva($arguments);
+                    break;
+                case 'admin_cambiar_estado_reserva':
+                    $output = $this->webhookService->toolAdminCambiarEstadoReserva($arguments);
+                    break;
                 default:
                     $output = json_encode(['error' => "Herramienta '{$functionName}' desconocida."]);
                     break;
