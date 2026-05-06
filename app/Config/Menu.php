@@ -100,6 +100,7 @@ class Menu extends BaseConfig
                 ['label' => 'CRM Huéspedes',     'url' => '/crm',                  'icon' => 'bi-person-lines-fill'],
                 ['label' => 'WhatsApp Simulator', 'url' => '/whatsapp/simulator',   'icon' => 'bi-robot'],
                 ['label' => 'Live Chat',          'url' => '/whatsapp/chat',        'icon' => 'bi-chat-dots'],
+                ['label' => 'Tunel',          'url' => '/crm/pipeline',        'icon' => 'bi-chat-dots'],
             ],
         ],
 
