@@ -68,6 +68,9 @@ class CrmController extends BaseController
     // =========================================================================
     // SHOW — Perfil individual del huésped
     // =========================================================================
+// =========================================================================
+// SHOW — Perfil individual del huésped (Centro de control)
+// =========================================================================
     public function show(int $guestId): string
     {
         $guest = $this->guestModel->find($guestId);
@@ -76,10 +79,10 @@ class CrmController extends BaseController
             return redirect()->to('/crm')->with('error', 'Huésped no encontrado.');
         }
 
-        // Historial completo de reservaciones
+        // ── Historial de reservaciones de alojamiento ────────────────────────
         $reservations = $this->db->table('reservations r')
             ->select('r.*, au.name as unit_name,
-                      DATEDIFF(r.check_out_date, r.check_in_date) as nights')
+                  DATEDIFF(r.check_out_date, r.check_in_date) as nights')
             ->join('accommodation_units au', 'au.id = r.accommodation_unit_id', 'left')
             ->where('r.guest_id', $guestId)
             ->where('r.tenant_id', $this->tenantId)
@@ -97,10 +100,61 @@ class CrmController extends BaseController
         }
         unset($res);
 
-        // Score RFM del huésped
+        // ── Historial de tours reservados ────────────────────────────────────
+        $tourReservations = $this->db->table('tour_reservations tr')
+            ->select('tr.*, t.name as tour_name, t.duration_minutes, t.meeting_point,
+                  ts.start_datetime, ts.status as schedule_status')
+            ->join('tour_schedules ts', 'ts.id = tr.schedule_id')
+            ->join('tours t', 't.id = ts.tour_id')
+            ->where('tr.guest_id', $guestId)
+            ->where('tr.tenant_id', $this->tenantId)
+            ->orderBy('ts.start_datetime', 'DESC')
+            ->get()->getResultArray();
+
+        // ── Pagos (de reservas de hotel y tours) ────────────────────────────
+        $payments = [];
+
+        // Pagos de reservas de hotel
+        $resIds = array_column($reservations, 'id');
+        if (!empty($resIds)) {
+            $hotelPayments = $this->db->table('payments')
+                ->where('tenant_id', $this->tenantId)
+                ->where('entity_type', 'reservation')
+                ->whereIn('reservation_id', $resIds)
+                ->orderBy('created_at', 'DESC')
+                ->get()->getResultArray();
+            foreach ($hotelPayments as &$p) {
+                $p['_label'] = 'Alojamiento';
+            }
+            unset($p);
+            $payments = array_merge($payments, $hotelPayments);
+        }
+
+        // Pagos de tours
+        $tourResIds = array_column($tourReservations, 'id');
+        if (!empty($tourResIds)) {
+            $tourPayments = $this->db->table('payments')
+                ->where('tenant_id', $this->tenantId)
+                ->where('entity_type', 'tour_reservation')
+                ->whereIn('reservation_id', $tourResIds)
+                ->orderBy('created_at', 'DESC')
+                ->get()->getResultArray();
+            foreach ($tourPayments as &$p) {
+                $p['_label'] = 'Tour';
+            }
+            unset($p);
+            $payments = array_merge($payments, $tourPayments);
+        }
+
+        // Ordenar todos los pagos por fecha
+        usort($payments, fn($a, $b) => strcmp($b['created_at'], $a['created_at']));
+
+        $totalPagado = array_sum(array_column($payments, 'amount'));
+
+        // ── Score RFM ───────────────────────────────────────────────────────
         $rfm = $this->calculateRfm($guest, $reservations);
 
-        // Notas del personal
+        // ── Notas del personal ──────────────────────────────────────────────
         $notes = $this->db->table('guest_notes')
             ->select('guest_notes.*, users.name as author_name')
             ->join('users', 'users.id = guest_notes.created_by', 'left')
@@ -109,24 +163,63 @@ class CrmController extends BaseController
             ->orderBy('guest_notes.created_at', 'DESC')
             ->get()->getResultArray();
 
-        // Historial de mensajes CRM enviados
+        // ── Mensajes CRM enviados ───────────────────────────────────────────
         $messages = $this->db->table('crm_messages')
             ->where('guest_id', $guestId)
             ->where('tenant_id', $this->tenantId)
             ->orderBy('created_at', 'DESC')
             ->get()->getResultArray();
 
-        // Preferencias detectadas automáticamente
+        // ── Preferencias detectadas ─────────────────────────────────────────
         $preferences = $this->detectPreferences($reservations);
 
+        // ── Contexto de conversación (funnel, objeciones, etc.) ─────────────
+        $convContext = json_decode($guest['conversation_context_json'] ?? '{}', true) ?? [];
+
+        // ── Timeline: últimos mensajes de WhatsApp ──────────────────────────
+        $recentChats = [];
+        if (!empty($guest['phone'])) {
+            $recentChats = $this->db->table('whatsapp_messages')
+                ->select('direction, message_body, created_at, message_type')
+                ->where('tenant_id', $this->tenantId)
+                ->groupStart()
+                ->where('sender_phone', $guest['phone'])
+                ->orWhere('recipient_phone', $guest['phone'])
+                ->groupEnd()
+                ->where('message_body NOT LIKE', '[RESULTADO DE HERRAMIENTAS]%')
+                ->orderBy('created_at', 'DESC')
+                ->limit(15)
+                ->get()->getResultArray();
+
+            $recentChats = array_reverse($recentChats);
+        }
+
+        // ── Totales para las cards de resumen ────────────────────────────────
+        $totalGastadoReservas = array_sum(array_column(
+            array_filter($reservations, fn($r) => $r['status'] !== 'cancelled'),
+            'total_price'
+        ));
+        $totalGastadoTours = array_sum(array_column(
+            array_filter($tourReservations, fn($r) => $r['status'] !== 'cancelled'),
+            'total_price'
+        ));
+        $saldoPendiente = ($totalGastadoReservas + $totalGastadoTours) - $totalPagado;
+        if ($saldoPendiente < 0) $saldoPendiente = 0;
+
         return view('crm/show', [
-            'guest'       => $guest,
-            'reservations'=> $reservations,
-            'rfm'         => $rfm,
-            'notes'       => $notes,
-            'messages'    => $messages,
-            'preferences' => $preferences,
-            'tenant'      => $this->tenant,
+            'guest'            => $guest,
+            'reservations'     => $reservations,
+            'tourReservations' => $tourReservations,
+            'payments'         => $payments,
+            'totalPagado'      => $totalPagado,
+            'saldoPendiente'   => $saldoPendiente,
+            'rfm'              => $rfm,
+            'notes'            => $notes,
+            'messages'         => $messages,
+            'preferences'      => $preferences,
+            'convContext'      => $convContext,
+            'recentChats'      => $recentChats,
+            'tenant'           => $this->tenant,
         ]);
     }
 
