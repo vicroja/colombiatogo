@@ -176,14 +176,15 @@ class Worker extends Controller
         $whatsappModel = model('App\Models\WhatsappModel');
         $geminiModel = model('App\Models\GeminiModel');
 
-        // 1. Buscar candidatos: Chats activos, IA encendida, último mensaje fue nuestro (outgoing)
-        // y ocurrió entre hace 30 minutos y 24 horas.
+// 1. Que PHP (y no MySQL) calcule las ventanas de tiempo usando su propia zona horaria
+        $limite_superior = date('Y-m-d H:i:s', strtotime('-30 minutes'));
+        $limite_inferior = date('Y-m-d H:i:s', strtotime('-24 hours'));
+
         $sql = "
     SELECT 
         g.id as guest_id, g.phone, g.tenant_id, g.full_name,
         last_m.created_at as last_time,
-        last_m.is_saas,
-        last_m.direction as last_direction -- Opcional, pero útil para debug
+        last_m.is_saas
     FROM guests g
     JOIN (
         SELECT tenant_id, 
@@ -195,9 +196,12 @@ class Worker extends Controller
     JOIN whatsapp_messages last_m ON last_m.id = lm.max_id
     WHERE g.chat_state = 'ACTIVE'
       AND g.ai_active = 1
-      AND last_m.created_at <= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
-      AND last_m.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+      AND last_m.created_at <= '{$limite_superior}'
+      AND last_m.created_at >= '{$limite_inferior}'
 ";
+
+// (Opcional) Si quieres imprimir en consola qué fechas se están evaluando para estar tranquilo:
+        echo "Buscando mensajes entre {$limite_inferior} y {$limite_superior}...\n";
 
         $candidatos = $db->query($sql)->getResult();
 
