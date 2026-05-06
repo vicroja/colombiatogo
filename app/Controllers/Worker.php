@@ -245,7 +245,7 @@ class Worker extends Controller
             ";
 
             // 4. Llamar a Gemini
-            $respuestaIa = $geminiModel->generateChatResponse($history, $systemInstruction, 'gemini-2.5-flash');
+            $respuestaIa = $geminiModel->generateChatResponse($history, $systemInstruction, 'gemini-2.0-flash');
 
             if (isset($respuestaIa['error'])) {
                 echo "Error de IA: {$respuestaIa['error']}\n";
