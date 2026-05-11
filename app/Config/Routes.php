@@ -344,7 +344,7 @@ $routes->group('sales', ['filter' => 'salesauth'], function ($routes) {
 });
 
 // Área superadmin (protegida con tu filtro existente de super_admin)
-$routes->group('super', ['filter' => 'superadminauth'], function ($routes) {
+$routes->group('super', ['filter' => 'superadmin_auth'], function ($routes) {
     // Vendedores
     $routes->get ('sales-users',                'Super\Leads\SalesUsersController::index');
     $routes->get ('sales-users/create',         'Super\Leads\SalesUsersController::create');
