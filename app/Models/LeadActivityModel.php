@@ -9,11 +9,11 @@ class LeadActivityModel extends Model
     protected $table         = 'lead_activities';
     protected $primaryKey    = 'id';
     protected $returnType    = 'array';
-    protected $allowedFields = ['lead_id','sales_user_id','type','subject','body','metadata_json','occurred_at'];
-    protected $useTimestamps = true;
-    protected $dateFormat    = 'datetime';
-    protected $createdField  = 'created_at';
-    protected $updatedField  = null; // las actividades son inmutables
+    protected $allowedFields = ['lead_id','sales_user_id','type','subject','body','metadata_json','occurred_at','created_at'];
+
+    // Desactivamos el manejo automático de timestamps
+    // porque actividades tienen 'occurred_at' propio y created_at lo seteamos en log()
+    protected $useTimestamps = false;
 
     /**
      * Timeline de un lead, más reciente primero
@@ -33,6 +33,7 @@ class LeadActivityModel extends Model
      */
     public function log(int $leadId, string $type, ?string $body = null, ?int $userId = null, ?string $subject = null, ?array $metadata = null): int|false
     {
+        $now = date('Y-m-d H:i:s');
         return $this->insert([
             'lead_id'       => $leadId,
             'sales_user_id' => $userId ?? session('sales_user_id'),
@@ -40,7 +41,8 @@ class LeadActivityModel extends Model
             'subject'       => $subject,
             'body'          => $body,
             'metadata_json' => $metadata ? json_encode($metadata) : null,
-            'occurred_at'   => date('Y-m-d H:i:s'),
+            'occurred_at'   => $now,
+            'created_at'    => $now,
         ]);
     }
 }
