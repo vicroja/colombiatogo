@@ -80,12 +80,21 @@ class WhatsappMessageQueueModel extends Model
 
             // 3. Lógica para enviar PLANTILLAS (Templates)
             if ($msg->whatsapp_message_format === 'META_TEMPLATE') {
-                $components = [];
-                $overrideData = json_decode($msg->shortcode_data_override_json ?? '{}', true);
+                $components   = [];
+                $overrideData = json_decode($msg->shortcode_data_override_json ?? '{}', true) ?: [];
 
                 if (!empty($overrideData)) {
+                    // Si las claves son numéricas ('1', '2', '3'), respetamos ese orden
+                    // explícitamente. Si son nombradas (legacy), mantenemos el orden de inserción.
+                    $isPositional = !empty(array_filter(array_keys($overrideData), 'is_numeric'))
+                        && count(array_filter(array_keys($overrideData), 'is_numeric')) === count($overrideData);
+
+                    if ($isPositional) {
+                        ksort($overrideData, SORT_NUMERIC);
+                    }
+
                     $parameters = [];
-                    foreach ($overrideData as $key => $value) {
+                    foreach ($overrideData as $value) {
                         $parameters[] = ['type' => 'text', 'text' => (string) $value];
                     }
                     $components[] = ['type' => 'body', 'parameters' => $parameters];

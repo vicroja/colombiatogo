@@ -635,64 +635,200 @@ class WhatsappWebhookService
     /**
      * Herramienta para alertar al personal humano de que el huésped necesita asistencia.
      */
+
+    /**
+     * Herramienta para escalar la conversación a un administrador humano.
+     * Decide automáticamente entre TEXTO LIBRE (si la ventana 24h está abierta)
+     * o PLANTILLA APROBADA (si está cerrada), maximizando la calidad del aviso.
+     */
     public function toolNotificarAdministrador(array $args)
     {
-        $mensajeUsuario = $args['mensaje'] ?? 'El huésped solicitó asistencia humana sin especificar el motivo.';
+        // ─── 1. Compatibilidad con schema viejo y nuevo ─────────────────────
+        $asunto    = $args['asunto']    ?? $args['mensaje'] ?? 'El cliente solicitó asistencia humana.';
+        $categoria = $args['categoria'] ?? 'otro';
+        $asunto    = mb_substr($asunto, 0, 250);
 
-        // 1. Obtener datos del Tenant para saber a qué número de administrador avisar
-        $tenant = $this->db->table('tenants')->where('id', $this->currentTenantId)->get()->getRow();
+        // ─── 2. Datos del huésped y del tenant ──────────────────────────────
+        $guest = $this->getOrCreateGuest(
+            $this->currentSenderPhone,
+            'Huésped',
+            $this->currentTenantId
+        );
+        $nombreHuesped   = $guest->full_name ?: 'Cliente sin nombre';
+        $telefonoHuesped = $this->currentSenderPhone;
 
-        // Asumimos que guardas el número del admin en settings_json, si no, usamos el teléfono general del tenant
-        $settings = json_decode($tenant->settings_json ?? '{}', true);
-        $adminPhone = $settings['admin_whatsapp_phone'] ?? $tenant->phone;
+        $tenant   = $this->db->table('tenants')->where('id', $this->currentTenantId)->get()->getRow();
+        $settings = json_decode($tenant->settings_json ?? '{}', true) ?: [];
 
-        if (empty($adminPhone)) {
-            log_message('error', "[WebhookService] No se pudo notificar al admin. Tenant {$this->currentTenantId} no tiene teléfono configurado.");
+        // Resolver lista de admins (mismo patrón que notify_admin)
+        $admins = [];
+        if (!empty($settings['admin_phones']) && is_array($settings['admin_phones'])) {
+            foreach ($settings['admin_phones'] as $a) {
+                if (empty($a['phone'])) continue;
+                $admins[] = [
+                    'phone' => preg_replace('/\D+/', '', $a['phone']),
+                    'name'  => $a['name'] ?? 'Administrador'
+                ];
+            }
+        } elseif (!empty($settings['admin_whatsapp_phone'])) {
+            $admins[] = [
+                'phone' => preg_replace('/\D+/', '', $settings['admin_whatsapp_phone']),
+                'name'  => $tenant->name ?: 'Administrador'
+            ];
+        }
+
+        if (empty($admins)) {
+            log_message('error', "[WebhookService/Tool] Tenant {$this->currentTenantId} sin admins configurados.");
+            // Igual desactivamos la IA — el chat queda OMITTED para revisión
+            $this->db->table('guests')->where('id', $guest->id)
+                ->update(['ai_active' => 0, 'chat_state' => 'OMITTED']);
             return json_encode([
-                'error' => 'No se pudo contactar al administrador internamente. Pídele disculpas al huésped y dile que intente llamar al número del hotel.'
+                'error' => 'No hay administradores configurados. El chat quedó marcado para revisión manual.',
+                'instruccion_para_ia' => 'Dile al cliente que su solicitud fue registrada y será atendida pronto. Este es tu ÚLTIMO mensaje.'
             ]);
         }
 
-        // 2. Obtener datos del huésped actual
-        // currentSenderPhone lo deberías tener definido en processNotification
-        $guest = $this->getOrCreateGuest($this->currentSenderPhone, 'Huésped', $this->currentTenantId);
-        $nombreHuesped = $guest->full_name;
-        $telefonoHuesped = $this->currentSenderPhone;
+        log_message('info', "[WebhookService/Tool] Escalamiento | tenant:{$this->currentTenantId} | guest:{$nombreHuesped} | categoria:{$categoria} | admins:" . count($admins));
 
-        // 3. Formatear la Alerta Interna para el Administrador
-        $alerta  = "🚨 *ALERTA DE ASISTENCIA HUMANA* 🚨\n\n";
-        $alerta .= "El bot requiere tu intervención para el huésped *{$nombreHuesped}* (+{$telefonoHuesped}).\n\n";
-        $alerta .= "*Motivo de escalamiento:*\n\"{$mensajeUsuario}\"\n\n";
-        $alerta .= "👉 *Acción requerida:* Ingresa al panel de PMS, busca el chat de este número, *Pausa al Bot* y respóndele manualmente.";
+        // ─── 3. Cargar helpers ──────────────────────────────────────────────
+        helper('whatsapp_window');
+        helper('notify_admin');
 
-        // 4. Enviar el mensaje por WhatsApp al Administrador
-        // Usamos el mismo canal/número del hotel para enviarse un mensaje a su propio dueño/staff
-        $apiResponse = $this->whatsappModel->sendTextApi($adminPhone, $alerta, $this->isSaas, $this->currentTenantId);
+        // ─── 4. Procesar cada admin individualmente ─────────────────────────
+        // Cada admin puede tener una ventana de 24h diferente: uno escribió
+        // hace 1h (ventana abierta), otro hace 3 días (cerrada).
+        $alMenosUnoEnviado = false;
 
-        if ($apiResponse && isset($apiResponse['messages'][0]['id'])) {
+        foreach ($admins as $admin) {
+            $ventanaAbierta = is_whatsapp_window_open($admin['phone'], $this->currentTenantId);
 
-            // --- NUEVO: APAGAR IA AUTOMÁTICAMENTE ---
-            // Ponemos el chat en manos humanas y marcamos el estado para que resalte en el panel
-            $this->db->table('guests')
-                ->where('id', $guest->id)
-                ->update(['ai_active' => 0, 'chat_state' => 'OMITTED']);
+            if ($ventanaAbierta) {
+                // ─── 4a. VENTANA ABIERTA → texto libre rico ─────────────────
+                $alerta = $this->buildAdminAlertFreeForm(
+                    $admin['name'],
+                    $nombreHuesped,
+                    $telefonoHuesped,
+                    $asunto,
+                    $categoria
+                );
 
-            log_message('info', "[WebhookService/Tool] Administrador notificado. IA auto-desactivada para {$telefonoHuesped}.");
+                $apiResponse = $this->whatsappModel->sendTextApi(
+                    $admin['phone'],
+                    $alerta,
+                    $this->isSaas,
+                    $this->currentTenantId
+                );
 
-            // Éxito: Le decimos a Gemini que ya hicimos el trabajo para que tranquilice al cliente (será su último mensaje)
+                if ($apiResponse && isset($apiResponse['messages'][0]['id'])) {
+                    log_message('info', "[WebhookService/Tool] Alerta (texto libre) enviada a {$admin['name']} ({$admin['phone']}).");
+                    $alMenosUnoEnviado = true;
+
+                    // Registrar en el historial para que aparezca en el panel
+                    $this->whatsappModel->saveMessage([
+                        'whatsapp_message_id' => $apiResponse['messages'][0]['id'],
+                        'direction'           => 'outgoing',
+                        'recipient_phone'     => $admin['phone'],
+                        'message_body'        => $alerta,
+                        'message_type'        => 'text',
+                        'tenant_id'           => $this->currentTenantId,
+                        'is_saas'             => $this->isSaas ? 1 : 0,
+                        'created_at'          => date('Y-m-d H:i:s')
+                    ]);
+                } else {
+                    log_message('warning', "[WebhookService/Tool] Falló texto libre a {$admin['phone']}, intentando plantilla como fallback.");
+                    // Fallback: intentar con plantilla si el texto libre falla
+                    $ok = notify_admin(
+                        $this->currentTenantId, $nombreHuesped, $asunto,
+                        [
+                            'guest_id'         => $guest->id,
+                            'admin_phone'      => $admin['phone'],
+                            'admin_name'      => $admin['name'],
+                            'send_immediately' => true,
+                            'throttle_minutes' => 0  // ya estamos en fallback, no throttlear
+                        ]
+                    );
+                    if ($ok) $alMenosUnoEnviado = true;
+                }
+            } else {
+                // ─── 4b. VENTANA CERRADA → plantilla aprobada ───────────────
+                log_message('info', "[WebhookService/Tool] Ventana cerrada para {$admin['phone']} → usando plantilla.");
+                $ok = notify_admin(
+                    $this->currentTenantId,
+                    $nombreHuesped,
+                    $asunto,
+                    [
+                        'guest_id'         => $guest->id,
+                        'admin_phone'      => $admin['phone'],
+                        'admin_name'       => $admin['name'],
+                        'send_immediately' => true,
+                        'throttle_minutes' => 10
+                    ]
+                );
+                if ($ok) $alMenosUnoEnviado = true;
+            }
+        }
+
+        // ─── 5. Desactivar IA SIEMPRE (aunque envíos hayan fallado) ─────────
+        $this->db->table('guests')
+            ->where('id', $guest->id)
+            ->update(['ai_active' => 0, 'chat_state' => 'OMITTED']);
+
+        log_message('info', "[WebhookService/Tool] IA desactivada para guest {$guest->id}.");
+
+        // ─── 6. Respuesta a Gemini ──────────────────────────────────────────
+        if ($alMenosUnoEnviado) {
             return json_encode([
                 'success' => true,
-                'resultado' => 'El administrador fue notificado exitosamente.',
-                'instruccion_para_ia' => 'Dile al cliente que ya notificaste a un asesor humano y que se pondrán en contacto con él a la brevedad posible.'
+                'resultado' => 'Administrador(es) notificado(s) correctamente. IA desactivada.',
+                'instruccion_para_ia' => 'Da un mensaje de cierre cálido: dile al cliente que ya avisaste al equipo, '
+                    . 'que un asesor humano se pondrá en contacto pronto, y agradece su paciencia. '
+                    . 'Este es tu ÚLTIMO mensaje en esta conversación — no llames más herramientas.'
             ]);
         } else {
-            // Fallo en la API de Meta
-            log_message('error', "[WebhookService] Falló el envío de la alerta al admin: " . json_encode($apiResponse));
             return json_encode([
-                'error' => 'Hubo un fallo técnico al intentar avisar al administrador. Dile al cliente que hubo un error y que intente más tarde.'
+                'success' => false,
+                'resultado' => 'Falló el envío automático al admin, pero el chat quedó marcado para revisión humana.',
+                'instruccion_para_ia' => 'Dile al cliente que su solicitud fue registrada y que un asesor lo contactará pronto. '
+                    . 'Este es tu ÚLTIMO mensaje — no llames más herramientas.'
             ]);
         }
     }
+
+
+    /**
+     * Construye el texto libre rico para enviar al admin cuando la ventana de
+     * 24h está abierta. Aprovechamos para meter contexto que la plantilla
+     * de Meta no permite (emojis, negritas, links al panel, etc.).
+     */
+    private function buildAdminAlertFreeForm(
+        string $adminName,
+        string $guestName,
+        string $guestPhone,
+        string $asunto,
+        string $categoria
+    ): string {
+        // Emoji por categoría para que el admin reconozca de un vistazo
+        $emoji = [
+            'solicita_humano'     => '🙋',
+            'cliente_molesto'     => '😠',
+            'cotizacion_especial' => '💰',
+            'problema_tecnico'    => '⚠️',
+            'ia_no_resuelve'      => '🤖',
+            'otro'                => '📌',
+        ][$categoria] ?? '🚨';
+
+        $txt  = "{$emoji} *Aviso para {$adminName}*\n\n";
+        $txt .= "Hay un nuevo asunto para revisar.\n\n";
+        $txt .= "👤 *Cliente:* {$guestName}\n";
+        $txt .= "📱 *Teléfono:* +{$guestPhone}\n";
+        $txt .= "🗂️ *Categoría:* " . str_replace('_', ' ', $categoria) . "\n\n";
+        $txt .= "📝 *Asunto:*\n{$asunto}\n\n";
+        $txt .= "👉 Ingresa al panel PMS, busca el chat de este número y respóndele. ";
+        $txt .= "La IA ya quedó desactivada para este cliente.";
+
+        return $txt;
+    }
+
 
     public function toolEnviarFotosCabana(array $args): string
     {
