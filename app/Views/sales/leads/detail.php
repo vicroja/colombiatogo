@@ -102,26 +102,46 @@
 </style>
 
 <script>
-const LEAD_ID = <?= $lead['id'] ?>;
+    const LEAD_ID = <?= $lead['id'] ?>;
 
-async function addActivity() {
-    const fd = new FormData();
-    fd.append('lead_id', LEAD_ID);
-    fd.append('type', document.getElementById('actType').value);
-    fd.append('body', document.getElementById('actBody').value);
-    const r = await fetch('/sales/leads/addActivity',{method:'POST',body:fd});
-    const d = await r.json();
-    if (d.ok) location.reload();
-}
+    function getCsrf() {
+        return {
+            name: document.querySelector('meta[name="csrf-token-name"]').content,
+            hash: document.querySelector('meta[name="csrf-token-hash"]').content
+        };
+    }
+    function updateCsrf(newHash) {
+        if (newHash) document.querySelector('meta[name="csrf-token-hash"]').content = newHash;
+    }
+    async function postJSON(url, payload = {}) {
+        const csrf = getCsrf();
+        const fd = new FormData();
+        fd.append(csrf.name, csrf.hash);
+        for (const [k,v] of Object.entries(payload)) fd.append(k, v);
+        const res = await fetch(url, {method: 'POST', body: fd});
+        const data = await res.json();
+        if (data.csrfHash) updateCsrf(data.csrfHash);
+        return data;
+    }
 
-async function setNextAction() {
-    const fd = new FormData();
-    fd.append('lead_id', LEAD_ID);
-    fd.append('next_action_at', document.getElementById('naAt').value);
-    fd.append('next_action_note', document.getElementById('naNote').value);
-    const r = await fetch('/sales/leads/setNextAction',{method:'POST',body:fd});
-    const d = await r.json();
-    if (d.ok) location.reload();
-}
+    async function addActivity() {
+        const d = await postJSON('/sales/leads/addActivity', {
+            lead_id: LEAD_ID,
+            type:    document.getElementById('actType').value,
+            body:    document.getElementById('actBody').value
+        });
+        if (d.ok) location.reload();
+        else alert('Error: ' + (d.msg || 'no se pudo guardar'));
+    }
+
+    async function setNextAction() {
+        const d = await postJSON('/sales/leads/setNextAction', {
+            lead_id: LEAD_ID,
+            next_action_at:   document.getElementById('naAt').value,
+            next_action_note: document.getElementById('naNote').value
+        });
+        if (d.ok) location.reload();
+        else alert('Error: ' + (d.msg || 'no se pudo guardar'));
+    }
 </script>
 <?= $this->endSection() ?>

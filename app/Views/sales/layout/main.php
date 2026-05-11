@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title><?= esc($title ?? 'Sales') ?> - MAVILUSA</title>
+
+    <meta name="csrf-token-name" content="<?= csrf_token() ?>">
+    <meta name="csrf-token-hash" content="<?= csrf_hash() ?>">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>body{background:#f8f9fa}</style>
 </head>

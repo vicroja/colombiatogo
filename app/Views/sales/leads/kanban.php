@@ -95,67 +95,94 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
-document.querySelectorAll('.kanban-cards').forEach(col => {
-    new Sortable(col, {
-        group: 'leads',
-        animation: 150,
-        ghostClass: 'sortable-ghost',
-        onEnd: async (evt) => {
-            const leadId  = evt.item.dataset.leadId;
-            const stageId = evt.to.parentElement.dataset.stageId;
-
-            const fd = new FormData();
-            fd.append('lead_id', leadId);
-            fd.append('stage_id', stageId);
-
-            const res = await fetch('/sales/leads/move', {method:'POST', body:fd});
-            const data = await res.json();
-
-            if (!data.ok) {
-                alert(data.msg || 'Error al mover el lead');
-                location.reload();
-                return;
-            }
-            if (data.needs_won_modal) {
-                openWonModal(leadId);
-            } else if (data.needs_lost_modal) {
-                openLostModal(leadId, data.reasons);
-            }
+    // Helper para obtener y actualizar el token CSRF
+    function getCsrf() {
+        return {
+            name: document.querySelector('meta[name="csrf-token-name"]').content,
+            hash: document.querySelector('meta[name="csrf-token-hash"]').content
+        };
+    }
+    function updateCsrf(newHash) {
+        if (newHash) {
+            document.querySelector('meta[name="csrf-token-hash"]').content = newHash;
         }
-    });
-});
+    }
+    // Wrapper de fetch que SIEMPRE manda CSRF y refresca el hash
+    async function postJSON(url, payload = {}) {
+        const csrf = getCsrf();
+        const fd = new FormData();
+        fd.append(csrf.name, csrf.hash);
+        for (const [k,v] of Object.entries(payload)) {
+            fd.append(k, v);
+        }
+        const res = await fetch(url, {method: 'POST', body: fd});
+        const data = await res.json();
+        // CI4 puede devolver el nuevo hash en el JSON
+        if (data.csrfHash) updateCsrf(data.csrfHash);
+        return data;
+    }
 
-function openLostModal(leadId, reasons) {
-    const reason = prompt("Razón de pérdida:\n\n" +
-        reasons.map((r,i)=>`${i+1}. ${r.name}`).join('\n') +
-        "\n\nIngresa el número:");
-    if (!reason) { location.reload(); return; }
-    const reasonId = reasons[parseInt(reason)-1]?.id;
-    const notes = prompt("Notas (opcional):") || '';
+    document.querySelectorAll('.kanban-cards').forEach(col => {
+        new Sortable(col, {
+            group: 'leads',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: async (evt) => {
+                const leadId  = evt.item.dataset.leadId;
+                const stageId = evt.to.parentElement.dataset.stageId;
 
-    const fd = new FormData();
-    fd.append('lead_id', leadId);
-    fd.append('loss_reason_id', reasonId);
-    fd.append('loss_notes', notes);
-    fetch('/sales/leads/markLost',{method:'POST',body:fd}).then(()=>location.reload());
-}
+                try {
+                    const data = await postJSON('/sales/leads/move', {lead_id: leadId, stage_id: stageId});
 
-function openWonModal(leadId) {
-    const planId = prompt("ID del plan de suscripción a asignar:");
-    if (!planId) { location.reload(); return; }
-    const pass = prompt("Password inicial para el admin del hotel (vacío = aleatorio):") || '';
-
-    const fd = new FormData();
-    fd.append('lead_id', leadId);
-    fd.append('plan_id', planId);
-    fd.append('admin_password', pass);
-    fetch('/sales/leads/markWon',{method:'POST',body:fd})
-        .then(r=>r.json())
-        .then(d=>{
-            if (d.ok) alert('Cliente creado. Tenant ID: '+d.tenant_id);
-            else alert('Error: '+d.msg);
-            location.reload();
+                    if (!data.ok) {
+                        alert(data.msg || 'Error al mover el lead');
+                        location.reload();
+                        return;
+                    }
+                    if (data.needs_won_modal) {
+                        openWonModal(leadId);
+                    } else if (data.needs_lost_modal) {
+                        openLostModal(leadId, data.reasons);
+                    }
+                } catch (err) {
+                    alert('Error de comunicación. Recargando...');
+                    location.reload();
+                }
+            }
         });
-}
+    });
+
+    async function openLostModal(leadId, reasons) {
+        const reason = prompt("Razón de pérdida:\n\n" +
+            reasons.map((r,i)=>`${i+1}. ${r.name}`).join('\n') +
+            "\n\nIngresa el número:");
+        if (!reason) { location.reload(); return; }
+        const reasonId = reasons[parseInt(reason)-1]?.id;
+        const notes = prompt("Notas (opcional):") || '';
+
+        await postJSON('/sales/leads/markLost', {
+            lead_id: leadId,
+            loss_reason_id: reasonId,
+            loss_notes: notes
+        });
+        location.reload();
+    }
+
+    async function openWonModal(leadId) {
+        const planId = prompt("ID del plan de suscripción a asignar:");
+        if (!planId) { location.reload(); return; }
+        const pass = prompt("Password inicial para el admin del hotel (vacío = aleatorio):") || '';
+
+        const data = await postJSON('/sales/leads/markWon', {
+            lead_id: leadId,
+            plan_id: planId,
+            admin_password: pass
+        });
+
+        if (data.ok) alert('Cliente creado. Tenant ID: '+data.tenant_id);
+        else alert('Error: '+data.msg);
+        location.reload();
+    }
 </script>
+
 <?= $this->endSection() ?>

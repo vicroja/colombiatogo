@@ -119,7 +119,7 @@ class LeadsController extends BaseController
             "Cambio de etapa: {$newStage['name']}"
         );
 
-        return $this->response->setJSON(['ok'=>true]);
+        return $this->response->setJSON(['ok'=>true, 'csrfHash'=>csrf_hash()]);
     }
 
     /**
@@ -143,7 +143,7 @@ class LeadsController extends BaseController
         ]);
 
         $this->activities->log($leadId,'stage_change','Lead marcado como perdido', session('sales_user_id'), 'Perdido');
-        return $this->response->setJSON(['ok'=>true]);
+        return $this->response->setJSON(['ok'=>true, 'csrfHash'=>csrf_hash()]);
     }
 
     /**
@@ -266,7 +266,7 @@ class LeadsController extends BaseController
         $this->activities->log($leadId, $type, $body, session('sales_user_id'));
         $this->leads->update($leadId, ['last_activity_at'=>date('Y-m-d H:i:s'), 'is_cold'=>0]);
 
-        return $this->response->setJSON(['ok'=>true]);
+        return $this->response->setJSON(['ok'=>true, 'csrfHash'=>csrf_hash()]);
     }
 
     /**
@@ -284,6 +284,6 @@ class LeadsController extends BaseController
         ]);
         $this->activities->log($leadId,'system',"Próxima acción: {$note} ({$at})", session('sales_user_id'), 'Acción programada');
 
-        return $this->response->setJSON(['ok'=>true]);
+        return $this->response->setJSON(['ok'=>true, 'csrfHash'=>csrf_hash()]);
     }
 }
