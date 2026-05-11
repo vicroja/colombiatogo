@@ -15,6 +15,7 @@ class LeadActivityModel extends Model
     // porque actividades tienen 'occurred_at' propio y created_at lo seteamos en log()
     protected $useTimestamps = false;
 
+
     /**
      * Timeline de un lead, más reciente primero
      */
