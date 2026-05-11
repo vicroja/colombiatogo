@@ -316,6 +316,50 @@ $routes->group('onboarding', ['filter' => 'tenant_auth', 'namespace' => 'App\Con
 $routes->get('/register',  'AuthController::register');
 $routes->post('/register', 'AuthController::processRegister');
 
+// Login de vendedores (sin filtro)
+$routes->get ('sales/login',        'Sales\AuthController::login');
+$routes->post('sales/login',        'Sales\AuthController::authenticate');
+$routes->get ('sales/logout',       'Sales\AuthController::logout');
+
+// Webhook público de captura inbound
+$routes->post('api/leads/intake',   'Api\LeadsWebhookController::intake');
+
+// Área de vendedores (protegida con SalesAuthFilter)
+$routes->group('sales', ['filter' => 'salesauth'], function ($routes) {
+    $routes->get ('dashboard',          'Sales\DashboardController::index');
+
+    // Pipeline / Kanban
+    $routes->get ('leads',              'Sales\LeadsController::kanban');
+    $routes->get ('leads/kanban',       'Sales\LeadsController::kanban');
+    $routes->get ('leads/create',       'Sales\LeadsController::create');
+    $routes->post('leads/store',        'Sales\LeadsController::store');
+    $routes->get ('leads/detail/(:num)','Sales\LeadsController::detail/$1');
+
+    // AJAX
+    $routes->post('leads/move',         'Sales\LeadsController::move');
+    $routes->post('leads/markLost',     'Sales\LeadsController::markLost');
+    $routes->post('leads/markWon',      'Sales\LeadsController::markWon');
+    $routes->post('leads/addActivity',  'Sales\LeadsController::addActivity');
+    $routes->post('leads/setNextAction','Sales\LeadsController::setNextAction');
+});
+
+// Área superadmin (protegida con tu filtro existente de super_admin)
+$routes->group('super', ['filter' => 'superadminauth'], function ($routes) {
+    // Vendedores
+    $routes->get ('sales-users',                'Super\Leads\SalesUsersController::index');
+    $routes->get ('sales-users/create',         'Super\Leads\SalesUsersController::create');
+    $routes->post('sales-users/store',          'Super\Leads\SalesUsersController::store');
+    $routes->get ('sales-users/toggle/(:num)',  'Super\Leads\SalesUsersController::toggle/$1');
+
+    // Reportes
+    $routes->get ('leads/reports',              'Super\Leads\ReportsController::index');
+});
+
+// CLI Worker
+$routes->cli('leadworker/processReminders', 'LeadWorker::processReminders');
+$routes->cli('leadworker/reassignInactive', 'LeadWorker::reassignInactive');
+$routes->cli('leadworker/detectColdLeads',  'LeadWorker::detectColdLeads');
+
 
 
 
