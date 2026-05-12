@@ -341,6 +341,9 @@ $routes->group('sales', ['filter' => 'salesauth'], function ($routes) {
     $routes->post('leads/markWon',      'Sales\LeadsController::markWon');
     $routes->post('leads/addActivity',  'Sales\LeadsController::addActivity');
     $routes->post('leads/setNextAction','Sales\LeadsController::setNextAction');
+
+    $routes->get('commissions', 'Sales\CommissionsController::index');
+
 });
 
 // Área superadmin (protegida con tu filtro existente de super_admin)
@@ -353,7 +356,29 @@ $routes->group('super', ['filter' => 'superadmin_auth'], function ($routes) {
 
     // Reportes
     $routes->get ('leads/reports',              'Super\Leads\ReportsController::index');
+
+    $routes->get ('sales-users/edit/(:num)',     'Super\Leads\SalesUsersController::edit/$1');
+    $routes->post('sales-users/update/(:num)',   'Super\Leads\SalesUsersController::update/$1');
+
+    // Comisiones (NUEVO)
+    $routes->get ('leads/commissions',               'Super\Leads\CommissionsController::index');
+    $routes->get ('leads/commissions/detail',        'Super\Leads\CommissionsController::detail');
+    $routes->get ('leads/commissions/approve/(:num)','Super\Leads\CommissionsController::approve/$1');
+    $routes->post('leads/commissions/approve-all',   'Super\Leads\CommissionsController::approveAll');
+    $routes->post('leads/commissions/pay/(:num)',    'Super\Leads\CommissionsController::pay/$1');
+    $routes->post('leads/commissions/cancel/(:num)', 'Super\Leads\CommissionsController::cancel/$1');
+
 });
+
+
+
+
+
+// ========== DENTRO de tu grupo: $routes->group('sales', ['filter' => 'salesauth'], ...) ==========
+// (AGREGAR estas líneas)
+
+// Mis comisiones (NUEVO)
+$routes->get('commissions', 'Sales\CommissionsController::index');
 
 // CLI Worker
 $routes->cli('leadworker/processReminders', 'LeadWorker::processReminders');

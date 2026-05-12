@@ -8,19 +8,11 @@ use App\Models\TenantModel;
 use App\Models\TenantSubscriptionModel;
 
 /**
- * LeadConversionService
- * Convierte un lead "Ganado" en un tenant real, reutilizando la lógica
- * que ya existe en AuthController::processRegister.
+ * LeadConversionService — V2 con generación de comisiones.
+ * REEMPLAZA el archivo existente en app/Services/LeadConversionService.php
  */
 class LeadConversionService
 {
-    /**
-     * Convierte un lead en tenant + admin user + suscripción.
-     *
-     * @param int   $leadId
-     * @param array $params ['plan_id'=>int, 'admin_name'=>str, 'admin_email'=>str, 'admin_password'=>str]
-     * @return array ['success'=>bool, 'tenant_id'=>?int, 'message'=>str]
-     */
     public function convert(int $leadId, array $params): array
     {
         $db          = \Config\Database::connect();
@@ -40,7 +32,7 @@ class LeadConversionService
         $db->transBegin();
 
         try {
-            // 1. Generar slug único para el tenant a partir del nombre del hotel
+            // 1. Generar slug único
             $slug = url_title(strtolower($lead['property_name']), '-', true);
             $base = $slug; $i = 1;
             while ($tenantModel->where('slug', $slug)->first()) {
@@ -64,10 +56,9 @@ class LeadConversionService
                 'is_active'         => 1,
                 'onboarding_status' => 'pending',
             ]);
-
             if (!$tenantId) throw new \Exception('Error creando tenant');
 
-            // 3. Crear usuario admin del nuevo hotel
+            // 3. Crear usuario admin del hotel
             $userId = $db->table('users')->insert([
                 'tenant_id'     => $tenantId,
                 'name'          => $params['admin_name'] ?? $lead['contact_name'],
@@ -80,7 +71,7 @@ class LeadConversionService
             ]);
             if (!$userId) throw new \Exception('Error creando usuario admin');
 
-            // 4. Crear suscripción inicial si se pasó plan
+            // 4. Suscripción inicial
             if (!empty($params['plan_id'])) {
                 $subModel->insert([
                     'tenant_id'            => $tenantId,
@@ -93,7 +84,7 @@ class LeadConversionService
                 ]);
             }
 
-            // 5. Marcar el lead como ganado y vincular al tenant
+            // 5. Marcar lead como ganado y vincular al tenant
             $leadModel->update($leadId, [
                 'converted_tenant_id' => $tenantId,
                 'won_at'              => date('Y-m-d H:i:s'),
@@ -106,8 +97,18 @@ class LeadConversionService
                 'Conversión a cliente'
             );
 
+            // 6. 🆕 GENERAR COMISIONES (directa + override si aplica)
+            $commSvc = new CommissionService();
+            $commResult = $commSvc->generateForWonLead($leadId, $tenantId);
+
             $db->transCommit();
-            return ['success'=>true, 'tenant_id'=>$tenantId, 'message'=>'Cliente creado correctamente'];
+
+            return [
+                'success'        => true,
+                'tenant_id'      => $tenantId,
+                'message'        => 'Cliente creado correctamente',
+                'commission'     => $commResult,
+            ];
 
         } catch (\Throwable $e) {
             $db->transRollback();
