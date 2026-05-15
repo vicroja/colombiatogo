@@ -6,13 +6,17 @@ use CodeIgniter\Model;
 
 class PurchasePaymentModel extends Model
 {
-    protected $table            = 'purchasepayments';
+    protected $table = 'purchase_payments';  // corregir de 'purchasepayments'
+    protected $allowedFields = [
+        'purchase_id', 'amount', 'payment_method',
+        'payment_date', 'reference', 'notes', 'created_by',
+    ];
     protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = [];
+
 
     protected bool $allowEmptyInserts = false;
     protected bool $updateOnlyChanged = true;
