@@ -43,7 +43,9 @@
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-outline-secondary">Editar</button>
+                                <a href="<?= base_url('/super/tenants/edit/' . $t['id']) ?>" class="btn btn-sm btn-outline-primary">
+                                    Editar
+                                </a>
                             </td>
                         </tr>
                     <?php endforeach; ?>

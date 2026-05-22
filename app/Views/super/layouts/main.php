@@ -23,6 +23,9 @@
                     <a class="nav-link" href="<?= base_url('/super/tenants') ?>">Propiedades</a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('/super/plans') ?>">Planes</a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link" href="<?= base_url('/super/billing') ?>">Facturación</a>
                 </li>
 

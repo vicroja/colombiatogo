@@ -375,6 +375,22 @@ $routes->group('super', ['filter' => 'superadmin_auth'], function ($routes) {
     $routes->post('leads/commissions/pay/(:num)',    'Super\Leads\CommissionsController::pay/$1');
     $routes->post('leads/commissions/cancel/(:num)', 'Super\Leads\CommissionsController::cancel/$1');
 
+    $routes->get('plans',              'Super\PlanController::index');
+    $routes->get('plans/create',       'Super\PlanController::create');
+    $routes->post('plans/store',       'Super\PlanController::store');
+    $routes->get('plans/edit/(:num)',  'Super\PlanController::edit/$1');
+    $routes->post('plans/update/(:num)', 'Super\PlanController::update/$1');
+    $routes->post('plans/toggle/(:num)', 'Super\PlanController::toggle/$1');
+
+    // Tenants (edición y acciones)
+    $routes->get('tenants/edit/(:num)',           'Super\TenantController::edit/$1');
+    $routes->post('tenants/update/(:num)',        'Super\TenantController::update/$1');
+    $routes->post('tenants/change-plan/(:num)',   'Super\TenantController::changePlan/$1');
+    $routes->post('tenants/toggle-suspend/(:num)','Super\TenantController::toggleSuspend/$1');
+
+// Billing - historial
+    $routes->get('billing/history/(:num)', 'Super\BillingController::history/$1');
+
 });
 
 

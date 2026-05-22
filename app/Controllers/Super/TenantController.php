@@ -9,59 +9,50 @@ use App\Models\TenantSubscriptionModel;
 
 class TenantController extends BaseController
 {
-    // Muestra la lista de todas las propiedades (tenants)
     public function index()
     {
         $tenantModel = new TenantModel();
 
         $data = [
             'title'   => 'Gestión de Propiedades',
-            'tenants' => $tenantModel->findAll()
+            'tenants' => $tenantModel->orderBy('name', 'ASC')->findAll()
         ];
 
         return view('super/tenants/index', $data);
     }
 
-    // Muestra el formulario para crear una nueva propiedad
     public function create()
     {
         $planModel = new SubscriptionPlanModel();
 
         $data = [
             'title' => 'Crear Nueva Propiedad',
-            // Solo traemos los planes activos para mostrar en el select
-            'plans' => $planModel->where('is_active', 1)->findAll()
+            'plans' => $planModel->where('is_active', 1)->orderBy('sort_order')->findAll()
         ];
 
         return view('super/tenants/create', $data);
     }
 
-    // Procesa el formulario y guarda la propiedad y su suscripción en la BD
     public function store()
     {
-        // 1. Instanciamos los modelos
-        $tenantModel = new TenantModel();
+        $tenantModel       = new TenantModel();
         $subscriptionModel = new TenantSubscriptionModel();
-        $planModel = new SubscriptionPlanModel();
+        $planModel         = new SubscriptionPlanModel();
 
-        // 2. Recibimos los datos básicos
         $planId = $this->request->getPost('plan_id');
-        $plan = $planModel->find($planId);
+        $plan   = $planModel->find($planId);
 
         if (!$plan) {
             return redirect()->back()->withInput()->with('error', 'El plan seleccionado no es válido.');
         }
 
-        // Calculamos la fecha de fin del trial (si el plan tiene días de prueba)
         $trialEndsAt = null;
         if ($plan['trial_days'] > 0) {
             $trialEndsAt = date('Y-m-d', strtotime("+{$plan['trial_days']} days"));
         }
 
-        // 3. Iniciamos la transacción (Todo o Nada)
         $tenantModel->db->transStart();
 
-        // A. Insertamos el Tenant
         $tenantData = [
             'name'              => $this->request->getPost('name'),
             'slug'              => strtolower(trim($this->request->getPost('slug'))),
@@ -74,7 +65,6 @@ class TenantController extends BaseController
 
         $tenantId = $tenantModel->insert($tenantData);
 
-        // B. Insertamos la suscripción inicial del Tenant
         $subscriptionData = [
             'tenant_id'            => $tenantId,
             'plan_id'              => $planId,
@@ -82,22 +72,166 @@ class TenantController extends BaseController
             'started_at'           => date('Y-m-d'),
             'trial_ends_at'        => $trialEndsAt,
             'current_period_start' => date('Y-m-d'),
-            // Por defecto damos 1 mes de periodo si es mensual.
-            // En la fase de facturación esto se calculará dinámicamente.
             'current_period_end'   => date('Y-m-d', strtotime('+1 month')),
             'created_by'           => session('superadmin_id')
         ];
 
         $subscriptionModel->insert($subscriptionData);
 
-        // 4. Completamos la transacción
         $tenantModel->db->transComplete();
 
-        // Verificamos si hubo algún error en las consultas
         if ($tenantModel->db->transStatus() === false) {
             return redirect()->back()->withInput()->with('error', 'Error en la base de datos al crear la propiedad.');
         }
 
         return redirect()->to('/super/tenants')->with('success', 'Propiedad creada y suscripción asignada con éxito.');
+    }
+
+    /**
+     * Vista de edición / detalle del tenant.
+     */
+    public function edit($id)
+    {
+        $tenantModel = new TenantModel();
+        $subModel    = new TenantSubscriptionModel();
+        $planModel   = new SubscriptionPlanModel();
+
+        $tenant = $tenantModel->find($id);
+        if (!$tenant) {
+            return redirect()->to('/super/tenants')->with('error', 'Propiedad no encontrada.');
+        }
+
+        $subscription = $subModel->where('tenant_id', $id)->first();
+        $currentPlan  = $subscription ? $planModel->find($subscription['plan_id']) : null;
+        $allPlans     = $planModel->where('is_active', 1)->orderBy('sort_order')->findAll();
+
+        $data = [
+            'title'        => 'Editar Propiedad: ' . $tenant['name'],
+            'tenant'       => $tenant,
+            'subscription' => $subscription,
+            'currentPlan'  => $currentPlan,
+            'allPlans'     => $allPlans,
+        ];
+
+        return view('super/tenants/edit', $data);
+    }
+
+    /**
+     * Procesa la actualización de datos del tenant.
+     */
+    public function update($id)
+    {
+        $tenantModel = new TenantModel();
+        $tenant = $tenantModel->find($id);
+
+        if (!$tenant) {
+            return redirect()->to('/super/tenants')->with('error', 'Propiedad no encontrada.');
+        }
+
+        $data = [
+            'name'              => $this->request->getPost('name'),
+            'email'             => $this->request->getPost('email'),
+            'phone'             => $this->request->getPost('phone'),
+            'address'           => $this->request->getPost('address'),
+            'city'              => $this->request->getPost('city'),
+            'country'           => $this->request->getPost('country'),
+            'website'           => $this->request->getPost('website'),
+            'is_active'         => $this->request->getPost('is_active') ? 1 : 0,
+            'onboarding_status' => $this->request->getPost('onboarding_status'),
+        ];
+
+        $tenantModel->update($id, $data);
+
+        return redirect()->to('/super/tenants/edit/' . $id)
+            ->with('success', 'Datos del tenant actualizados.');
+    }
+
+    /**
+     * Cambia el plan de un tenant (upgrade / downgrade).
+     * El nuevo plan aplica desde el siguiente periodo (no rompe el actual).
+     */
+    public function changePlan($id)
+    {
+        $tenantModel = new TenantModel();
+        $subModel    = new TenantSubscriptionModel();
+        $planModel   = new SubscriptionPlanModel();
+
+        $newPlanId = $this->request->getPost('new_plan_id');
+        $applyMode = $this->request->getPost('apply_mode'); // 'immediate' o 'next_period'
+
+        $tenant = $tenantModel->find($id);
+        $newPlan = $planModel->find($newPlanId);
+        $subscription = $subModel->where('tenant_id', $id)->first();
+
+        if (!$tenant || !$newPlan || !$subscription) {
+            return redirect()->back()->with('error', 'Datos inválidos para el cambio de plan.');
+        }
+
+        $subModel->db->transStart();
+
+        $updateData = [
+            'plan_id' => $newPlanId,
+            'notes'   => "Cambio de plan a {$newPlan['name']} el " . date('Y-m-d H:i:s')
+                . " por " . session('superadmin_name'),
+        ];
+
+        // Si el cambio es inmediato, reiniciamos el periodo
+        if ($applyMode === 'immediate') {
+            $updateData['current_period_start'] = date('Y-m-d');
+            $updateData['current_period_end']   = date('Y-m-d', strtotime('+1 month'));
+            $updateData['status']               = 'active';
+        }
+        // Si es "next_period", mantenemos las fechas actuales y el plan nuevo
+        // entrará en vigor cuando se renueve.
+
+        $subModel->update($subscription['id'], $updateData);
+
+        // Actualizar el slug del plan en el tenant (para consistencia)
+        $tenantModel->update($id, [
+            'current_plan_slug' => $newPlan['slug'],
+        ]);
+
+        $subModel->db->transComplete();
+
+        if ($subModel->db->transStatus() === false) {
+            return redirect()->back()->with('error', 'Error al cambiar el plan.');
+        }
+
+        return redirect()->to('/super/tenants/edit/' . $id)
+            ->with('success', "Plan cambiado a {$newPlan['name']} correctamente.");
+    }
+
+    /**
+     * Suspender o reactivar manualmente un tenant.
+     */
+    public function toggleSuspend($id)
+    {
+        $tenantModel = new TenantModel();
+        $subModel    = new TenantSubscriptionModel();
+
+        $tenant = $tenantModel->find($id);
+        if (!$tenant) {
+            return redirect()->to('/super/tenants')->with('error', 'No encontrado.');
+        }
+
+        $newState = $tenant['is_suspended'] ? 0 : 1;
+        $reason   = $this->request->getPost('reason') ?: 'Suspensión manual por super-admin';
+
+        $tenantModel->update($id, [
+            'is_suspended'     => $newState,
+            'suspended_reason' => $newState ? $reason : null,
+        ]);
+
+        // Sincronizamos también la suscripción
+        $subscription = $subModel->where('tenant_id', $id)->first();
+        if ($subscription) {
+            $subModel->update($subscription['id'], [
+                'status'       => $newState ? 'suspended' : 'active',
+                'suspended_at' => $newState ? date('Y-m-d H:i:s') : null,
+            ]);
+        }
+
+        $msg = $newState ? 'Tenant suspendido manualmente.' : 'Tenant reactivado.';
+        return redirect()->back()->with('success', $msg);
     }
 }
