@@ -150,15 +150,16 @@ class WizardController extends BaseController
         $result = match($stepNumber) {
             1  => $this->saveStep1(),
             2  => $this->saveStep2Profile(),   // nuevo paso de perfil
-            3  => $this->saveStep3Media(),     // era paso 2
-            4  => $this->saveStep4Unit(),      // era paso 3
-            5  => $this->saveStep5Rates(),     // era paso 4
-            6  => $this->saveStep6Tour(),      // nuevo
-            7  => $this->saveStep7TourSchedule(), // nuevo
-            8  => $this->saveStep8AiPrompt(),  // era paso 5
-            9  => $this->saveStep9Product(),   // era paso 6
-            10 => $this->saveStep10Whatsapp(), // era paso 7
-            11 => $this->saveStep11Preview(),  // era paso 8
+            3  => $this->saveStepImport(),   // ← NUEVO
+            4  => $this->saveStep3Media(),     // era paso 2
+            5  => $this->saveStep4Unit(),      // era paso 3
+            6  => $this->saveStep5Rates(),     // era paso 4
+            7  => $this->saveStep6Tour(),      // nuevo
+            8  => $this->saveStep7TourSchedule(), // nuevo
+            9  => $this->saveStep8AiPrompt(),  // era paso 5
+            10  => $this->saveStep9Product(),   // era paso 6
+            11 => $this->saveStep10Whatsapp(), // era paso 7
+            12 => $this->saveStep11Preview(),  // era paso 8
             default => ['success' => false, 'message' => 'Paso inválido']
         };
 
@@ -172,9 +173,15 @@ class WizardController extends BaseController
         $this->markStepCompleted($stepNumber);
         $nextStep = $stepNumber + 1;
 
-        if ($nextStep > count($this->steps)) {
+        $stepKeys = array_keys($this->steps);
+        sort($stepKeys);
+        $currentIdx = array_search($stepNumber, $stepKeys, true);
+        $nextStep = $stepKeys[$currentIdx + 1] ?? null;
+
+        if ($nextStep === null) {
             return redirect()->to('/onboarding/complete');
         }
+        return redirect()->to("/onboarding/step/{$nextStep}");
 
         return redirect()->to("/onboarding/step/{$nextStep}")
             ->with('success', '✅ ' . $this->steps[$stepNumber]['title'] . ' guardado correctamente.');
@@ -437,6 +444,20 @@ class WizardController extends BaseController
         $this->updateSettings(['onboarding_unit_id' => $unitId]);
 
         log_message('info', "[Onboarding/Paso3] Unidad #{$unitId} modo '{$mode}' creada para tenant {$this->tenantId}");
+        return ['success' => true];
+    }
+
+    private function saveStepImport(): array
+    {
+        // Solo lo invoca el botón "Saltar". El botón "Importar" hace navigate
+        // directo a /onboarding/import, y ese flujo marca el paso completado
+        // automáticamente desde ImportController::confirm().
+        $decision = $this->request->getPost('decision') ?? 'skip';
+
+        $this->updateSettings([
+            'onboarding_import_decision' => $decision === 'skip' ? 'skipped' : 'in_progress',
+        ]);
+
         return ['success' => true];
     }
 
@@ -963,7 +984,6 @@ class WizardController extends BaseController
     // =========================================================================
 
 
-    // Reemplazar getStepData() completo:
     private function getStepData(int $step): array
     {
         // Obtenemos la vista del paso actual para saber qué datos cargar
@@ -1006,6 +1026,13 @@ class WizardController extends BaseController
             ],
             'whatsapp' => [
                 'whatsapp_configured' => !empty($this->settings['whatsapp_phone_number_id']),
+            ],
+            'import' => [
+                'latestStaging' => (new \App\Models\ImportStagingModel())->latestForTenant($this->tenantId),
+                'profile' => [
+                    'has_accommodation' => (bool)($this->settings['has_accommodation'] ?? true),
+                    'has_tours'         => (bool)($this->settings['has_tours']         ?? false),
+                ],
             ],
             'preview' => [
                 'website'  => $this->websiteModel->first(),
@@ -1103,8 +1130,15 @@ class WizardController extends BaseController
             'view'     => 'profile',
         ];
 
-        // Paso 3: fotos — siempre presente, opcional
         $steps[3] = [
+            'title'    => 'Importar tu negocio',
+            'icon'     => 'bi-magic',
+            'required' => false,
+            'view'     => 'import',
+        ];
+
+        // Paso 3: fotos — siempre presente, opcional
+        $steps[4] = [
             'title'    => 'Fotos',
             'icon'     => 'bi-images',
             'required' => false,
@@ -1113,13 +1147,13 @@ class WizardController extends BaseController
 
         // Pasos exclusivos de alojamiento
         if ($hasAccommodation) {
-            $steps[4] = [
+            $steps[5] = [
                 'title'    => 'Primera Habitación',
                 'icon'     => 'bi-door-open',
                 'required' => true,
                 'view'     => 'unit',
             ];
-            $steps[5] = [
+            $steps[6] = [
                 'title'    => 'Plan Tarifario',
                 'icon'     => 'bi-currency-dollar',
                 'required' => true,
@@ -1129,13 +1163,13 @@ class WizardController extends BaseController
 
         // Pasos exclusivos de tours
         if ($hasTours) {
-            $steps[6] = [
+            $steps[7] = [
                 'title'    => 'Primer Tour',
                 'icon'     => 'bi-compass',
                 'required' => true,
                 'view'     => 'tour_basic',
             ];
-            $steps[7] = [
+            $steps[8] = [
                 'title'    => 'Primera Salida',
                 'icon'     => 'bi-calendar-event',
                 'required' => true,
@@ -1144,25 +1178,25 @@ class WizardController extends BaseController
         }
 
         // Pasos finales: siempre presentes
-        $steps[8] = [
+        $steps[9] = [
             'title'    => 'Asistente IA',
             'icon'     => 'bi-robot',
             'required' => false,
             'view'     => 'ai_prompt',
         ];
-        $steps[9] = [
+        $steps[10] = [
             'title'    => 'Producto / Servicio',
             'icon'     => 'bi-box-seam',
             'required' => false,
             'view'     => 'product',
         ];
-        $steps[10] = [
+        $steps[11] = [
             'title'    => 'WhatsApp Business',
             'icon'     => 'bi-whatsapp',
             'required' => false,
             'view'     => 'whatsapp',
         ];
-        $steps[11] = [
+        $steps[12] = [
             'title'    => 'Vista Previa',
             'icon'     => 'bi-eye',
             'required' => false,

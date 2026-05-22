@@ -312,6 +312,13 @@ $routes->group('onboarding', ['filter' => 'tenant_auth', 'namespace' => 'App\Con
 
 });
 
+$routes->group('onboarding/import', ['filter' => 'tenant_auth'], function($routes) {
+    $routes->get('/',                    'Onboarding\ImportController::form');
+    $routes->post('extract',             'Onboarding\ImportController::extract');
+    $routes->get('review/(:num)',        'Onboarding\ImportController::review/$1');
+    $routes->post('confirm/(:num)',      'Onboarding\ImportController::confirm/$1');
+});
+
 // Rutas públicas de registro
 $routes->get('/register',  'AuthController::register');
 $routes->post('/register', 'AuthController::processRegister');
