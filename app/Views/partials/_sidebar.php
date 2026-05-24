@@ -3,14 +3,16 @@
  * app/Views/partials/_sidebar.php
  *
  * Menú lateral retraíble del PMS.
- * Requiere: Bootstrap 5, Bootstrap Icons, sidebar.css
+ * Requiere: Bootstrap 5, Bootstrap Icons, sidebar.css, tenant_helper.
  */
 
 use App\Config\Menu;
 
+helper('tenant'); // carga las funciones tenant_features, menu_can_see_features...
+
 $menuConfig  = new Menu();
 $menuItems   = $menuConfig->items;
-$currentPath = '/' . ltrim(uri_string(), '/');   // ruta actual
+$currentPath = '/' . ltrim(uri_string(), '/');
 $userRole    = session('user_role') ?? '';
 
 /**
@@ -35,6 +37,18 @@ function menuIsActive(array $item, string $current): bool
 function menuCanSee(array $item, string $role): bool
 {
     return empty($item['roles']) || in_array($role, $item['roles'], true);
+}
+
+/**
+ * Verifica si un item con hijos debe mostrarse.
+ * Un grupo con hijos se muestra si:
+ *   - El grupo en sí pasa el filtro de features
+ *   - O al menos uno de sus hijos pasa el filtro
+ * Y los hijos visibles se filtran individualmente.
+ */
+function menuFilterChildren(array $children): array
+{
+    return array_values(array_filter($children, fn($c) => menu_can_see_features($c)));
 }
 ?>
 
@@ -61,10 +75,26 @@ function menuCanSee(array $item, string $role): bool
     <nav class="sidebar-nav" id="sidebar-nav">
         <ul class="sidebar-menu">
             <?php foreach ($menuItems as $i => $item):
+
+                // ── Filtros en cascada ────────────────────────
+                // 1. Rol del usuario
                 if (!menuCanSee($item, $userRole)) continue;
-                $isActive  = menuIsActive($item, $currentPath);
+
+                // 2. Features del tenant (a nivel del item padre)
+                if (!menu_can_see_features($item)) continue;
+
                 $hasChildren = !empty($item['children']);
-                $collapseId  = 'smenu-' . $i;
+
+                // 3. Si tiene hijos, filtrarlos por features.
+                //    Si no queda ningún hijo visible, saltamos el grupo entero.
+                $visibleChildren = [];
+                if ($hasChildren) {
+                    $visibleChildren = menuFilterChildren($item['children']);
+                    if (empty($visibleChildren)) continue;
+                }
+
+                $isActive   = menuIsActive($item, $currentPath);
+                $collapseId = 'smenu-' . $i;
                 ?>
 
                 <?php if (!empty($item['divider'])): ?>
@@ -86,7 +116,7 @@ function menuCanSee(array $item, string $role): bool
                     <div id="<?= $collapseId ?>"
                          class="collapse <?= $isActive ? 'show' : '' ?>">
                         <ul class="sidebar-submenu">
-                            <?php foreach ($item['children'] as $child):
+                            <?php foreach ($visibleChildren as $child):
                                 if (!menuCanSee($child, $userRole)) continue;
                                 $childActive = str_starts_with($currentPath, $child['url'] ?? '');
                                 ?>
