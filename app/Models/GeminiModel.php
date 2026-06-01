@@ -8,7 +8,7 @@ class GeminiModel extends Model
 {
     protected $apiKey;
     protected $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/';
-    protected $defaultModel = 'gemini-2.0-flash';
+    protected $defaultModel = 'gemini-2.5-flash-lite';
 
     // Configuración de Resiliencia (Heredada de tu sistema anterior)
     protected $maxRetries = 3;
@@ -16,7 +16,7 @@ class GeminiModel extends Model
 
     // Cadena de Fallback
     protected $fallbackModels = [
-        'gemini-2.0-flash',
+        'gemini-2.5-flash-lite',
         'gemini-2.5-flash',
         'gemini-1.5-flash'
     ];

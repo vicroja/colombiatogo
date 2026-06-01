@@ -251,7 +251,7 @@ IMPORTANTE: Tu respuesta debe ser ÚNICAMENTE un JSON válido en todos los casos
 ";
 
             // 4. Llamar a Gemini
-            $respuestaIa = $geminiModel->generateChatResponse($history, $systemInstruction, 'gemini-2.0-flash');
+            $respuestaIa = $geminiModel->generateChatResponse($history, $systemInstruction, 'gemini-2.5-flash-lite');
 
             if (isset($respuestaIa['error'])) {
                 echo "Error de IA: {$respuestaIa['error']}\n";
